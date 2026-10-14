@@ -11,6 +11,7 @@ use tell_tail::{
     platform::StdoutWriter,
     prometheus::MetricsFile,
     runtime::{Running, Signals},
+    tui,
 };
 
 fn run(args: &Args) -> io::Result<i32> {
@@ -18,8 +19,12 @@ fn run(args: &Args) -> io::Result<i32> {
         Args::command().print_help()?;
         return Ok(0);
     }
-    if args.output == Output::Tui {
-        return Err(io::Error::other("this output is not implemented yet"));
+    let use_tui = args.output == Output::Tui
+        || (args.output == Output::Auto && !args.once && tui::available());
+    if use_tui && !tui::available() {
+        return Err(io::Error::other(
+            "dashboard needs terminal stdout and a controlling terminal; use --output text or json",
+        ));
     }
     let metrics = args
         .metrics_file
@@ -29,6 +34,14 @@ fn run(args: &Args) -> io::Result<i32> {
     let signals = Signals::install()?;
     let mut running = Running::start(args, signals.requested.clone())?;
     let mut writer = StdoutWriter::new(signals.requested.clone())?;
+    if use_tui {
+        let snapshot = tui::run(&mut running, writer, signals.requested.clone())?;
+        running.join()?;
+        let mut writer = StdoutWriter::new(signals.requested.clone())?;
+        writer.write_all(output::render(&snapshot, Output::Text)?.as_bytes())?;
+        let signal = signals.requested.load(Ordering::Relaxed);
+        return Ok(if signal > 1 { 128 + signal as i32 } else { 0 });
+    }
     let mut published = Instant::now();
     loop {
         let snapshot = running.snapshot();
