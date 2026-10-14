@@ -1,0 +1,344 @@
+[
+  {
+    "name": "text_severities",
+    "input": "TRACE a\nDEBUG b\nINFO c\nWARN d\nERROR e\nFATAL f\n",
+    "levels": [
+      "trace",
+      "debug",
+      "info",
+      "warn",
+      "error",
+      "fatal"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  {
+    "name": "aliases_and_case",
+    "input": "warning a\nCrItIcAl b\nPANIC c",
+    "levels": [
+      "warn",
+      "fatal",
+      "fatal"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  {
+    "name": "brackets_and_colon",
+    "input": "[WARN] a\r\nERROR: b\n[INFO]\n",
+    "levels": [
+      "warn",
+      "error",
+      "info"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  {
+    "name": "iso_prefix",
+    "input": "2026-10-14T10:01:02.123Z ERROR failed\n[2026-10-14T10:01:02+01:00] INFO started",
+    "levels": [
+      "error",
+      "info"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  {
+    "name": "blank_and_whitespace",
+    "input": "\n \t\n\r\n",
+    "levels": [
+      "unknown",
+      "unknown",
+      "unknown"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  {
+    "name": "empty",
+    "input": "",
+    "levels": [],
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  {
+    "name": "no_message_word_matching",
+    "input": "request returned ERROR\nINFO mentions FATAL\n[ERROR]suffix\nERRORFUL no",
+    "levels": [
+      "unknown",
+      "info",
+      "unknown",
+      "unknown"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  {
+    "name": "tracing_shaped_json",
+    "input": "{\"timestamp\":\"2026-10-14T10:01:02Z\",\"level\":\"ERROR\",\"fields\":{\"message\":\"failure\"},\"target\":\"example\"}\n",
+    "levels": [
+      "error"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  {
+    "name": "escaped_value_and_key",
+    "input": "{\"le\\u0076el\":\"W\\u0041RN\",\"message\":\"ERROR\"}",
+    "levels": [
+      "warn"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  {
+    "name": "custom_level_field",
+    "input": "{\"level\":\"ERROR\",\"severity\":\"INFO\"}",
+    "levels": [
+      "info"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0,
+    "level_field": "severity"
+  },
+  {
+    "name": "literal_dotted_field",
+    "input": "{\"log.level\":\"DEBUG\",\"log\":{\"level\":\"FATAL\"}}",
+    "levels": [
+      "debug"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0,
+    "level_field": "log.level"
+  },
+  {
+    "name": "nested_field_is_not_selected",
+    "input": "{\"nested\":{\"level\":\"ERROR\"}}",
+    "levels": [
+      "unknown"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  {
+    "name": "numeric_profile_is_unsupported",
+    "input": "{\"level\":50,\"msg\":\"error\"}",
+    "levels": [
+      "unknown"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  {
+    "name": "null_level",
+    "input": "{\"level\":null}",
+    "levels": [
+      "unknown"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  {
+    "name": "array_level",
+    "input": "{\"level\":[\"ERROR\"]}",
+    "levels": [
+      "unknown"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  {
+    "name": "unrecognized_level",
+    "input": "{\"level\":\"NOTICE\"}",
+    "levels": [
+      "unknown"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  {
+    "name": "missing_level",
+    "input": "{\"message\":\"WARN\"}",
+    "levels": [
+      "unknown"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  {
+    "name": "duplicate_level",
+    "input": "{\"level\":\"INFO\",\"level\":\"WARN\"}",
+    "levels": [
+      "unknown"
+    ],
+    "parse_failures": 1,
+    "oversized_records": 0
+  },
+  {
+    "name": "escaped_duplicate_level",
+    "input": "{\"level\":\"INFO\",\"le\\u0076el\":\"WARN\"}",
+    "levels": [
+      "unknown"
+    ],
+    "parse_failures": 1,
+    "oversized_records": 0
+  },
+  {
+    "name": "duplicate_other_field",
+    "input": "{\"level\":\"INFO\",\"x\":1,\"x\":2}",
+    "levels": [
+      "info"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  {
+    "name": "trailing_junk",
+    "input": "{\"level\":\"INFO\"} ERROR",
+    "levels": [
+      "unknown"
+    ],
+    "parse_failures": 1,
+    "oversized_records": 0
+  },
+  {
+    "name": "malformed_tail",
+    "input": "{\"level\":\"INFO\",\"x\":[1,]}",
+    "levels": [
+      "unknown"
+    ],
+    "parse_failures": 1,
+    "oversized_records": 0
+  },
+  {
+    "name": "invalid_escape",
+    "input": "{\"level\":\"INFO\",\"message\":\"\\q\"}",
+    "levels": [
+      "unknown"
+    ],
+    "parse_failures": 1,
+    "oversized_records": 0
+  },
+  {
+    "name": "unterminated_object",
+    "input": "{\"level\":\"INFO\"",
+    "levels": [
+      "unknown"
+    ],
+    "parse_failures": 1,
+    "oversized_records": 0
+  },
+  {
+    "name": "forced_json_array",
+    "input": "[1,2]",
+    "levels": [
+      "unknown"
+    ],
+    "parse_failures": 1,
+    "oversized_records": 0,
+    "format": "json"
+  },
+  {
+    "name": "forced_json_text",
+    "input": "ERROR plain",
+    "levels": [
+      "unknown"
+    ],
+    "parse_failures": 1,
+    "oversized_records": 0,
+    "format": "json"
+  },
+  {
+    "name": "forced_text_object",
+    "input": "{\"level\":\"ERROR\"}",
+    "levels": [
+      "unknown"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0,
+    "format": "text"
+  },
+  {
+    "name": "auto_array_is_text",
+    "input": "[1,2]",
+    "levels": [
+      "unknown"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  {
+    "name": "logfmt_is_unsupported",
+    "input": "level=error msg=failed",
+    "levels": [
+      "unknown"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  {
+    "name": "ansi_prefix_is_unsupported",
+    "input": "\u001b[31mERROR\u001b[0m failed",
+    "levels": [
+      "unknown"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  {
+    "name": "physical_stacktrace",
+    "input": "ERROR failed\n  at example.rs:10\n  caused by timeout",
+    "levels": [
+      "error",
+      "unknown",
+      "unknown"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  {
+    "name": "limit_boundary_and_recovery",
+    "input": "INFO\nWARN!\nERROR",
+    "levels": [
+      "info",
+      "unknown",
+      "unknown"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 2,
+    "max_record_bytes": 4
+  },
+  {
+    "name": "cr_counts_toward_limit",
+    "input": "INFO\r\nWARN\n",
+    "levels": [
+      "unknown",
+      "warn"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 1,
+    "max_record_bytes": 4
+  },
+  {
+    "name": "invalid_utf8_json",
+    "input": null,
+    "levels": [
+      "unknown"
+    ],
+    "parse_failures": 1,
+    "oversized_records": 0,
+    "hex": "7b226c6576656c223a22494e464f222c2278223a22ff227d"
+  },
+  {
+    "name": "invalid_utf8_text_message",
+    "input": null,
+    "levels": [
+      "error"
+    ],
+    "parse_failures": 0,
+    "oversized_records": 0,
+    "hex": "4552524f5220ff"
+  }
+]

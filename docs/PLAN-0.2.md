@@ -26,6 +26,8 @@ Completed increments:
 - Step 6: live tests synchronize on reports and cover observed truncation, missing
   paths, partial-line boundaries, SIGINT/SIGTERM, and repeated replacement while
   draining. Tests also characterize the documented unobservable rotation losses.
+- Step 7: 35 synthetic classification fixtures cover supported formats and
+  intentional unknowns across six read chunk sizes, including invalid UTF-8.
 
 ## Scope and starting point
 
