@@ -15,3 +15,9 @@ serde_json = { version = "1", features = ["raw_value"] }
 lto = "thin"
 codegen-units = 1
 strip = true
+
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1", features = ["event", "fs"] }
+
+[dev-dependencies]
+tempfile = "3"
