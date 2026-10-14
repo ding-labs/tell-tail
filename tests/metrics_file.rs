@@ -84,3 +84,48 @@ fn metrics_cannot_replace_input_through_a_path_alias() {
     assert!(String::from_utf8_lossy(&out.stderr).contains("input"));
     assert_eq!(std::fs::read_to_string(input).unwrap(), "INFO preserved\n");
 }
+
+#[test]
+fn metrics_file_does_not_touch_inherited_stdout() {
+    use std::{
+        fs::File,
+        os::{fd::OwnedFd, unix::net::UnixStream},
+    };
+    let (_peer, socket) = UnixStream::pair().unwrap();
+    for stdout in [
+        File::open("/dev/null").unwrap(),
+        File::from(OwnedFd::from(socket)),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let metrics = dir.path().join("metrics.prom");
+        let flags = rustix::fs::fcntl_getfl(&stdout).unwrap();
+        let mut child = Process(
+            Command::new(env!("CARGO_BIN_EXE_tell-tail"))
+                .arg(dir.path().join("missing.log"))
+                .args([
+                    "--output",
+                    "prometheus",
+                    "--interval-ms",
+                    "100",
+                    "--metrics-file",
+                ])
+                .arg(&metrics)
+                .stdin(Stdio::null())
+                .stdout(stdout.try_clone().unwrap())
+                .spawn()
+                .unwrap(),
+        );
+        wait_for(&metrics, |s| s.contains("tell_tail_running 1\n"));
+        assert_eq!(rustix::fs::fcntl_getfl(&stdout).unwrap(), flags);
+        assert!(
+            Command::new("kill")
+                .args(["-TERM", &child.0.id().to_string()])
+                .status()
+                .unwrap()
+                .success()
+        );
+        wait_for(&metrics, |s| s.contains("tell_tail_running 0\n"));
+        assert_eq!(child.0.wait().unwrap().code(), Some(143));
+        assert_eq!(rustix::fs::fcntl_getfl(&stdout).unwrap(), flags);
+    }
+}

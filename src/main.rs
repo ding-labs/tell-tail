@@ -33,8 +33,8 @@ fn run(args: &Args) -> io::Result<i32> {
         .transpose()?;
     let signals = Signals::install()?;
     let mut running = Running::start(args, signals.requested.clone())?;
-    let mut writer = StdoutWriter::new(signals.requested.clone())?;
     if use_tui {
+        let writer = StdoutWriter::new(signals.requested.clone())?;
         let snapshot = tui::run(&mut running, writer, signals.requested.clone())?;
         running.join()?;
         let mut writer = StdoutWriter::new(signals.requested.clone())?;
@@ -42,6 +42,10 @@ fn run(args: &Args) -> io::Result<i32> {
         let signal = signals.requested.load(Ordering::Relaxed);
         return Ok(if signal > 1 { 128 + signal as i32 } else { 0 });
     }
+    let mut writer = metrics
+        .is_none()
+        .then(|| StdoutWriter::new(signals.requested.clone()))
+        .transpose()?;
     let mut published = Instant::now();
     loop {
         let snapshot = running.snapshot();
@@ -49,7 +53,10 @@ fn run(args: &Args) -> io::Result<i32> {
             if let Some(file) = &metrics {
                 file.publish(&snapshot)?;
             } else {
-                writer.write_all(output::render(&snapshot, args.output)?.as_bytes())?;
+                writer
+                    .as_mut()
+                    .expect("stdout output selected")
+                    .write_all(output::render(&snapshot, args.output)?.as_bytes())?;
             }
             running.join()?;
             break;
@@ -65,7 +72,10 @@ fn run(args: &Args) -> io::Result<i32> {
             if let Some(file) = &metrics {
                 file.publish(&snapshot)?;
             } else {
-                writer.write_all(output::render(&snapshot, args.output)?.as_bytes())?;
+                writer
+                    .as_mut()
+                    .expect("stdout output selected")
+                    .write_all(output::render(&snapshot, args.output)?.as_bytes())?;
             }
             published = Instant::now();
         }

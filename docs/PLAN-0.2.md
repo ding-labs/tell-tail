@@ -5,8 +5,13 @@ release candidate. The work concentrates on I/O isolation, predictable rolling
 statistics, adversarial correctness tests, and reproducible operating limits.
 It preserves bounded state and discards raw logs after processing.
 
-Status: planned, October 14, 2026. The implementation remains at 0.1.0. This plan
-defines the next increments; its release gates have not yet been satisfied.
+Status: in progress, October 14, 2026. The package remains at 0.1.0 until candidate
+validation. Release gates have not yet been satisfied.
+
+Completed increments:
+
+- Step 1: metrics-file output no longer initializes or changes stdout; regression
+  tests cover retained socket descriptors and read-only stdout.
 
 ## Scope and starting point
 
