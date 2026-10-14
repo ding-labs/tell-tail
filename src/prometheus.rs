@@ -233,7 +233,7 @@ mod tests {
         assert!(MetricsFile::new(alias, Some(input.clone())).is_err());
         let destination = dir.path().join("metrics.prom");
         let file = MetricsFile::new(destination.clone(), Some(input)).unwrap();
-        let stats = Stats::new(60, "test".into());
+        let mut stats = Stats::new(60, "test".into());
         let s = stats.snapshot(Duration::from_secs(1), State::Following, 0, None);
         file.publish(&s).unwrap();
         file.publish(&s).unwrap();

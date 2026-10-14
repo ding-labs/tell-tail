@@ -55,6 +55,14 @@ impl Counts {
         self.parse_failures += other.parse_failures;
         self.oversized_records += other.oversized_records;
     }
+    fn subtract(&mut self, other: Self) {
+        self.records -= other.records;
+        self.parse_failures -= other.parse_failures;
+        self.oversized_records -= other.oversized_records;
+        for (a, b) in self.levels.0.iter_mut().zip(other.levels.0) {
+            *a -= b;
+        }
+    }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -74,6 +82,7 @@ impl State {
 #[derive(Clone, Debug, Serialize)]
 pub struct Window {
     pub configured_seconds: u32,
+    pub resolution_seconds: f64,
     pub observed_seconds: f64,
     pub counts: Counts,
     pub bytes_read: u64,
@@ -105,16 +114,25 @@ pub struct Snapshot {
 }
 #[derive(Clone, Copy, Default)]
 struct Bucket {
-    second: Option<u64>,
     counts: Counts,
     bytes: u64,
 }
+#[derive(Clone, Copy, Default)]
+struct HistoryBucket {
+    second: u64,
+    records: u64,
+}
+const TICKS_PER_SECOND: u64 = 10;
 pub struct Stats {
     pub totals: Counts,
     pub bytes_read: u64,
     pub skipped_bytes: u64,
     pub discarded_partial_records: u64,
     buckets: Vec<Bucket>,
+    tick: u64,
+    closed_counts: Counts,
+    closed_bytes: u64,
+    history: [HistoryBucket; 61],
     window: u32,
     source: String,
     session_id: String,
@@ -130,68 +148,97 @@ impl Stats {
                 .unwrap_or_default()
                 .as_nanos()
         );
-        // Keep one extra slot so the completed-second history survives rollover.
         Self {
             totals: Counts::default(),
             bytes_read: 0,
             skipped_bytes: 0,
             discarded_partial_records: 0,
-            buckets: vec![Bucket::default(); window.max(60) as usize + 1],
+            buckets: vec![Bucket::default(); window as usize * TICKS_PER_SECOND as usize + 1],
+            tick: 0,
+            closed_counts: Counts::default(),
+            closed_bytes: 0,
+            history: [HistoryBucket::default(); 61],
             window,
             source,
             session_id,
         }
     }
-    fn bucket(&mut self, at: Duration) -> &mut Bucket {
-        let second = at.as_secs();
-        let index = second as usize % self.buckets.len();
-        let slot = &mut self.buckets[index];
-        if slot.second != Some(second) {
-            *slot = Bucket {
-                second: Some(second),
-                ..Bucket::default()
-            };
+    // Time advances once per input batch or snapshot. The aggregate excludes the
+    // current bucket, avoiding another counter update for every individual log.
+    pub(crate) fn advance(&mut self, at: Duration) {
+        let tick = at
+            .as_secs()
+            .saturating_mul(TICKS_PER_SECOND)
+            .saturating_add(u64::from(at.subsec_millis()) / 100);
+        assert!(tick >= self.tick, "processing time must be monotonic");
+        if tick == self.tick {
+            return;
         }
-        slot
+        if tick - self.tick >= self.buckets.len() as u64 {
+            self.buckets.fill(Bucket::default());
+            self.closed_counts = Counts::default();
+            self.closed_bytes = 0;
+        } else {
+            let old = self.buckets[self.tick as usize % self.buckets.len()];
+            self.closed_counts.merge(old.counts);
+            self.closed_bytes += old.bytes;
+            for next in self.tick + 1..=tick {
+                let index = next as usize % self.buckets.len();
+                let expired = std::mem::take(&mut self.buckets[index]);
+                self.closed_counts.subtract(expired.counts);
+                self.closed_bytes -= expired.bytes;
+            }
+        }
+        self.tick = tick;
     }
     pub fn add_bytes(&mut self, bytes: u64, at: Duration) {
+        self.advance(at);
         self.bytes_read += bytes;
-        self.bucket(at).bytes += bytes;
+        let index = self.tick as usize % self.buckets.len();
+        self.buckets[index].bytes += bytes;
     }
     pub fn record(&mut self, class: Classification, oversized: bool, at: Duration) {
+        self.advance(at);
+        self.record_current(class, oversized);
+    }
+    pub(crate) fn record_current(&mut self, class: Classification, oversized: bool) {
         self.totals.record(class, oversized);
-        self.bucket(at).counts.record(class, oversized);
+        let index = self.tick as usize % self.buckets.len();
+        self.buckets[index].counts.record(class, oversized);
+        let second = self.tick / TICKS_PER_SECOND;
+        let history = &mut self.history[second as usize % 61];
+        if history.second != second {
+            *history = HistoryBucket { second, records: 0 };
+        }
+        history.records += 1;
     }
     pub fn snapshot(
-        &self,
+        &mut self,
         at: Duration,
         state: State,
         pending_bytes: u64,
         backlog_bytes: Option<u64>,
     ) -> Snapshot {
+        self.advance(at);
+        let first_tick = self
+            .tick
+            .saturating_sub(u64::from(self.window) * TICKS_PER_SECOND);
+        let start = Duration::from_secs(first_tick / TICKS_PER_SECOND)
+            + Duration::from_millis((first_tick % TICKS_PER_SECOND) * 100);
+        let duration = at.saturating_sub(start).as_secs_f64();
+        let current = self.buckets[self.tick as usize % self.buckets.len()];
+        let mut counts = self.closed_counts;
+        counts.merge(current.counts);
+        let bytes = self.closed_bytes + current.bytes;
         let now = at.as_secs();
-        let first = now.saturating_sub(u64::from(self.window) - 1);
-        let duration = at.as_secs_f64() - first as f64;
-        let mut counts = Counts::default();
-        let mut bytes = 0;
-        for b in &self.buckets {
-            if b.second.is_some_and(|s| s >= first && s <= now) {
-                counts.merge(b.counts);
-                bytes += b.bytes;
-            }
-        }
         let history = (now.saturating_sub(60)..now)
             .map(|s| {
-                let b = &self.buckets[s as usize % self.buckets.len()];
-                if b.second == Some(s) {
-                    b.counts.records
-                } else {
-                    0
-                }
+                let b = self.history[s as usize % 61];
+                if b.second == s { b.records } else { 0 }
             })
             .collect();
         Snapshot {
-            schema_version: 1,
+            schema_version: 2,
             kind: if state.is_final() {
                 "final"
             } else {
@@ -215,6 +262,7 @@ impl Stats {
             error_ratio: self.totals.levels.error_ratio(),
             window: Window {
                 configured_seconds: self.window,
+                resolution_seconds: 0.1,
                 observed_seconds: duration,
                 counts,
                 bytes_read: bytes,
@@ -256,7 +304,7 @@ mod tests {
         record(&mut s, 2.1, Level::Fatal);
         let a = s.snapshot(Duration::from_millis(2500), State::Reading, 0, None);
         assert_eq!(a.window.counts.records, 2);
-        assert_eq!(a.window.observed_seconds, 1.5);
+        assert_eq!(a.window.observed_seconds, 2.0);
         assert_eq!(a.window.error_ratio, Some(0.5));
         assert_eq!(a.totals.records, 3);
         assert_eq!(a.totals.records, a.totals.levels.total());
@@ -279,12 +327,71 @@ mod tests {
             record(&mut s, i as f64 + 0.5, Level::Unknown);
         }
         let a = s.snapshot(Duration::from_millis(999500), State::Complete, 4, None);
-        assert_eq!(a.window.counts.records, 1);
+        assert_eq!(a.window.counts.records, 2);
         assert_eq!(a.window.records_per_second, 2.0);
         assert_eq!(a.history, vec![1; 60]);
         assert_eq!(a.totals.records, 1000);
         assert_eq!(a.warning_ratio, Some(0.0));
         assert_eq!(a.kind, "final");
-        assert_eq!(s.buckets.len(), 61);
+        assert_eq!(s.buckets.len(), 11);
+    }
+    #[test]
+    fn quantized_window_matches_event_ledger_across_boundaries_and_jumps() {
+        for window in [1, 60, 3600] {
+            let mut stats = Stats::new(window, "ledger".into());
+            let mut ledger = Vec::new();
+            for (index, ms) in [
+                0, 1, 99, 100, 950, 999, 1000, 1001, 1999, 2000, 60_099, 60_100, 3_600_000,
+                3_600_099, 7_200_001,
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                let at = Duration::from_millis(ms);
+                let level = Level::ALL[index % 7];
+                let bytes = index as u64 + 5;
+                stats.add_bytes(bytes, at);
+                stats.record(
+                    Classification {
+                        level,
+                        parse_failure: false,
+                    },
+                    false,
+                    at,
+                );
+                ledger.push((ms, level, bytes));
+                let report = stats.snapshot(at, State::Reading, 0, None);
+                let start = ms.saturating_sub(u64::from(window) * 1000) / 100 * 100;
+                let mut levels = Levels::default();
+                let mut byte_count = 0;
+                for &(_, level, bytes) in ledger.iter().filter(|(time, _, _)| *time >= start) {
+                    levels.0[level as usize] += 1;
+                    byte_count += bytes;
+                }
+                assert_eq!(report.window.counts.levels, levels);
+                assert_eq!(report.window.counts.records, levels.total());
+                assert_eq!(report.window.bytes_read, byte_count);
+                assert_eq!(report.window.observed_seconds, (ms - start) as f64 / 1000.0);
+                assert_eq!(report.totals.records, ledger.len() as u64);
+                assert_eq!(report.schema_version, 2);
+                assert_eq!(report.window.resolution_seconds, 0.1);
+            }
+        }
+    }
+    #[test]
+    fn one_second_window_survives_the_second_boundary() {
+        let mut stats = Stats::new(1, "boundary".into());
+        record(&mut stats, 0.95, Level::Warn);
+        for ms in [999, 1000, 1999] {
+            let s = stats.snapshot(Duration::from_millis(ms), State::Following, 0, None);
+            assert_eq!(s.window.counts.records, 1);
+            assert_eq!(s.window.warning_ratio, Some(1.0));
+        }
+        let s = stats.snapshot(Duration::from_millis(2000), State::Following, 0, None);
+        assert_eq!(s.window.counts.records, 0);
+        assert_eq!(s.window.warning_ratio, None);
+        assert_eq!(s.window.observed_seconds, 1.0);
+        assert_eq!(s.totals.records, 1);
+        assert_eq!(s.history, vec![1, 0]);
     }
 }

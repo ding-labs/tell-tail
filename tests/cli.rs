@@ -20,8 +20,9 @@ fn executable_counts_mixed_records_exactly() {
     let input =
         b"INFO mentions ERROR\n[WARN] slow\r\n{\"level\":\"ERROR\"}\n{bad}\n\nFATAL stopped";
     let s = run(input, &[]);
-    assert_eq!(s["schema_version"], 1);
+    assert_eq!(s["schema_version"], 2);
     assert_eq!(s["kind"], "final");
+    assert_eq!(s["window"]["resolution_seconds"], 0.1);
     assert_eq!(s["totals"]["records"], 6);
     assert_eq!(s["totals"]["levels"]["unknown"], 2);
     assert_eq!(s["totals"]["levels"]["info"], 1);

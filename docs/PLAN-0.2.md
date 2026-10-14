@@ -21,6 +21,8 @@ Completed increments:
 - Step 4: stdin validates and caches its descriptor type at startup. Unsupported
   devices and datagram sockets are rejected; file/null and stream readiness have
   direct tests.
+- Step 5: 100 ms rolling buckets, constant-time snapshots, separate second history,
+  and JSON schema 2 are implemented with deterministic ledger/boundary tests.
 
 ## Scope and starting point
 

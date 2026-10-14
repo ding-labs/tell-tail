@@ -58,7 +58,7 @@ terminal descriptor for keyboard input. Dashboard completion restores the screen
 and prints a final text report. Small terminals show a compact view.
 
 Text and JSON default to one snapshot per second (`--interval-ms 1000`) plus a
-final report. JSON has `schema_version: 1`; ratios are fractions between zero and
+final report. JSON has `schema_version: 2`; ratios are fractions between zero and
 one, with `null` for empty denominators. Counts and byte totals are cumulative
 since process start; `window` contains recent measurements. Diagnostics use stderr.
 
@@ -90,11 +90,12 @@ on process restart. An HTTP scrape endpoint is a later increment.
   failure rates.
 
 Rates use monotonic processing time, not timestamps embedded in logs. A fast scan
-of an old file measures scan throughput. Windows have one-second resolution: the
-current partial second plus up to W−1 prior seconds. `observed_seconds` reports
-actual coverage, including startup. At a bucket boundary a one-second window can
-be empty until another record arrives. Idle windows expire while session totals
-remain. The chart shows completed seconds only.
+of an old file measures scan throughput. Windows use 100 ms buckets and retain at least the requested duration
+once warmed up, with less than 100 ms of extra coverage at the left edge.
+`observed_seconds` reports that actual duration, including startup;
+`window.resolution_seconds` is 0.1. Counts are exact for the included buckets.
+Idle windows expire while session totals remain. The chart shows completed seconds.
+See [the 0.2 migration notes](CHANGELOG.md) for the change from schema 1.
 
 ## Operational behavior
 

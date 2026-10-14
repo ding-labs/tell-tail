@@ -51,7 +51,7 @@ pub struct Running {
 impl Running {
     pub fn start(args: &Args, stop: Arc<AtomicUsize>) -> io::Result<Self> {
         let input = Input::open(args)?;
-        let engine = Engine::new(args);
+        let mut engine = Engine::new(args);
         let latest = Arc::new(Mutex::new(engine.snapshot(
             Duration::ZERO,
             State::Reading,

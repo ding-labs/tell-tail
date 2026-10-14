@@ -40,10 +40,11 @@ impl Engine {
             } else {
                 classifier.classify(line)
             };
-            stats.record(class, oversized, at);
+            stats.record_current(class, oversized);
         });
     }
     pub fn finish(&mut self, at: Duration) {
+        self.stats.advance(at);
         let Self {
             stats,
             framer,
@@ -55,7 +56,7 @@ impl Engine {
             } else {
                 classifier.classify(line)
             };
-            stats.record(class, oversized, at);
+            stats.record_current(class, oversized);
         });
     }
     pub fn discard_partial(&mut self) {
@@ -66,7 +67,7 @@ impl Engine {
         }
         self.framer.clear();
     }
-    pub fn snapshot(&self, at: Duration, state: State, backlog: Option<u64>) -> Snapshot {
+    pub fn snapshot(&mut self, at: Duration, state: State, backlog: Option<u64>) -> Snapshot {
         self.stats
             .snapshot(at, state, self.framer.pending_bytes(), backlog)
     }
