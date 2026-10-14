@@ -161,6 +161,15 @@ integration tests on macOS/Linux; do not assert hardware-specific speed in CI.
 Each coherent change and its related tests is verified and committed before the
 next independent change. Keep the small commits when publishing.
 
+## Implementation status
+
+The v0.1 command-line engine, file following, dashboard, text/JSON output,
+Prometheus exposition, atomic metrics publication, tests, and runnable demo are
+implemented. The project uses Rust 1.88.0 with a committed dependency lockfile.
+See [validation results](VALIDATION.md) for platform coverage, synthetic throughput,
+sustained-load measurements, and the remaining controlled-overhead and multi-hour
+soak checks. Usage and operational limits are in the [README](../README.md).
+
 ## Later increments
 
 Multiple sources, Windows support, logfmt/numeric severity profiles, an HTTP scrape
