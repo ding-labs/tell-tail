@@ -1,15 +1,45 @@
 #![cfg(unix)]
 use std::{
     fs::File,
-    io::{Read, Write},
+    io::Write,
+    path::Path,
     process::{Child, Command, Stdio},
     thread,
     time::{Duration, Instant},
 };
-fn stop(child: &mut Child) {
+struct Process(Child);
+impl Drop for Process {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+fn wait_report(path: &Path, predicate: impl Fn(&serde_json::Value) -> bool) -> serde_json::Value {
+    let deadline = Instant::now() + Duration::from_secs(4);
+    loop {
+        let text = std::fs::read_to_string(path).unwrap_or_default();
+        // A report in progress is not an acknowledgment; inspect complete lines.
+        for line in text
+            .split_inclusive('\n')
+            .rev()
+            .filter(|l| l.ends_with('\n'))
+        {
+            let value = serde_json::from_str(line).unwrap();
+            if predicate(&value) {
+                return value;
+            }
+        }
+        assert!(
+            Instant::now() < deadline,
+            "expected report not observed: {text}"
+        );
+        thread::sleep(Duration::from_millis(10));
+    }
+}
+fn stop(child: &mut Child, signal: &str, code: i32) {
     assert!(
         Command::new("kill")
-            .args(["-TERM", &child.id().to_string()])
+            .args([signal, &child.id().to_string()])
             .status()
             .unwrap()
             .success()
@@ -17,83 +47,133 @@ fn stop(child: &mut Child) {
     let began = Instant::now();
     loop {
         if let Some(status) = child.try_wait().unwrap() {
-            assert_eq!(status.code(), Some(143));
+            assert_eq!(status.code(), Some(code));
             break;
         }
-        if began.elapsed() > Duration::from_secs(3) {
-            child.kill().unwrap();
-            panic!("shutdown timed out");
-        }
-        thread::sleep(Duration::from_millis(10));
+        assert!(
+            began.elapsed() < Duration::from_secs(1),
+            "shutdown timed out"
+        );
+        thread::sleep(Duration::from_millis(5));
     }
-    assert!(began.elapsed() < Duration::from_secs(1));
+}
+fn append(path: &Path, bytes: &[u8]) {
+    File::options()
+        .append(true)
+        .open(path)
+        .unwrap()
+        .write_all(bytes)
+        .unwrap();
 }
 #[test]
 fn idle_stdin_is_interruptible_and_reports_pending_bytes() {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_tell-tail"))
-        .args(["--output", "json"])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .spawn()
-        .unwrap();
-    child
-        .stdin
-        .as_mut()
-        .unwrap()
-        .write_all(b"WARN complete\nINFO partial")
-        .unwrap();
-    thread::sleep(Duration::from_millis(200));
-    stop(&mut child);
-    let mut output = String::new();
-    child
-        .stdout
-        .take()
-        .unwrap()
-        .read_to_string(&mut output)
-        .unwrap();
-    let report: serde_json::Value = serde_json::from_str(output.lines().last().unwrap()).unwrap();
-    assert_eq!(report["state"], "stopped");
-    assert_eq!(report["totals"]["records"], 1);
-    assert_eq!(report["pending_bytes"], 12);
+    for (signal, code) in [("-TERM", 143), ("-INT", 130)] {
+        let dir = tempfile::tempdir().unwrap();
+        let reports = dir.path().join("reports.ndjson");
+        let mut child = Process(
+            Command::new(env!("CARGO_BIN_EXE_tell-tail"))
+                .args(["--output", "json", "--interval-ms", "100"])
+                .stdin(Stdio::piped())
+                .stdout(File::create(&reports).unwrap())
+                .spawn()
+                .unwrap(),
+        );
+        child
+            .0
+            .stdin
+            .as_mut()
+            .unwrap()
+            .write_all(b"WARN complete\nINFO partial")
+            .unwrap();
+        wait_report(&reports, |s| {
+            s["totals"]["records"] == 1 && s["pending_bytes"] == 12
+        });
+        stop(&mut child.0, signal, code);
+        let report = wait_report(&reports, |s| s["kind"] == "final");
+        assert_eq!(report["state"], "stopped");
+        assert_eq!(report["totals"]["records"], 1);
+        assert_eq!(report["pending_bytes"], 12);
+    }
 }
 #[test]
 fn live_append_rotation_and_idle_window() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("app.log");
     std::fs::write(&path, b"INFO old\n").unwrap();
-    let report_path = dir.path().join("reports.ndjson");
-    let report_file = File::create(&report_path).unwrap();
-    let mut child = Command::new(env!("CARGO_BIN_EXE_tell-tail"))
-        .arg(&path)
-        .args([
-            "--from",
-            "start",
-            "--output",
-            "json",
-            "--interval-ms",
-            "100",
-            "--window",
-            "1",
-        ])
-        .stdout(report_file)
-        .spawn()
-        .unwrap();
-    thread::sleep(Duration::from_millis(200));
-    File::options()
-        .append(true)
-        .open(&path)
-        .unwrap()
-        .write_all(b"WARN appended\nunfinished")
-        .unwrap();
-    thread::sleep(Duration::from_millis(200));
+    let reports = dir.path().join("reports.ndjson");
+    let mut child = Process(
+        Command::new(env!("CARGO_BIN_EXE_tell-tail"))
+            .arg(&path)
+            .args([
+                "--from",
+                "start",
+                "--output",
+                "json",
+                "--interval-ms",
+                "100",
+                "--window",
+                "1",
+            ])
+            .stdout(File::create(&reports).unwrap())
+            .spawn()
+            .unwrap(),
+    );
+    wait_report(&reports, |s| s["totals"]["records"] == 1);
+    append(&path, b"WARN appended\nunfinished");
+    wait_report(&reports, |s| {
+        s["totals"]["records"] == 2 && s["pending_bytes"] == 10
+    });
     std::fs::rename(&path, dir.path().join("old.log")).unwrap();
     std::fs::write(&path, b"ERROR rotated\n").unwrap();
-    thread::sleep(Duration::from_millis(1300));
-    stop(&mut child);
-    let output = std::fs::read_to_string(&report_path).unwrap();
-    let report: serde_json::Value = serde_json::from_str(output.lines().last().unwrap()).unwrap();
+    wait_report(&reports, |s| {
+        s["totals"]["records"] == 3 && s["window"]["counts"]["records"] == 0
+    });
+    stop(&mut child.0, "-TERM", 143);
+    let report = wait_report(&reports, |s| s["kind"] == "final");
     assert_eq!(report["totals"]["records"], 3);
     assert_eq!(report["totals"]["levels"]["error"], 1);
     assert_eq!(report["discarded_partial_records"], 1);
-    assert_eq!(report["window"]["counts"]["records"], 0);
+    assert_eq!(report["skipped_bytes"], 10);
+}
+#[test]
+fn observed_truncation_and_reappearance_never_join_partial_generations() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("app.log");
+    std::fs::write(&path, b"INFO old partial").unwrap();
+    let reports = dir.path().join("reports.ndjson");
+    let mut child = Process(
+        Command::new(env!("CARGO_BIN_EXE_tell-tail"))
+            .arg(&path)
+            .args(["--output", "json", "--interval-ms", "100"])
+            .stdout(File::create(&reports).unwrap())
+            .spawn()
+            .unwrap(),
+    );
+    wait_report(&reports, |s| s["state"] == "following");
+    append(&path, b" suffix\nWARN new\nINFO pending");
+    wait_report(&reports, |s| {
+        s["totals"]["records"] == 1 && s["pending_bytes"] == 12
+    });
+    File::options()
+        .write(true)
+        .open(&path)
+        .unwrap()
+        .set_len(0)
+        .unwrap();
+    wait_report(&reports, |s| {
+        s["discarded_partial_records"] == 1 && s["pending_bytes"] == 0
+    });
+    append(&path, b"ERROR new generation\n");
+    wait_report(&reports, |s| s["totals"]["records"] == 2);
+    std::fs::remove_file(&path).unwrap();
+    wait_report(&reports, |s| s["state"] == "waiting");
+    std::fs::write(&path, b"FATAL reappeared\n").unwrap();
+    wait_report(&reports, |s| s["totals"]["records"] == 3);
+    stop(&mut child.0, "-TERM", 143);
+    let report = wait_report(&reports, |s| s["kind"] == "final");
+    assert_eq!(report["skipped_bytes"], 20);
+    for level in ["warn", "error", "fatal"] {
+        assert_eq!(report["totals"]["levels"][level], 1);
+    }
+    assert_eq!(report["totals"]["records"], 3);
 }
