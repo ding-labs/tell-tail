@@ -18,6 +18,9 @@ Completed increments:
 - Step 3: complete-report deadlines, bounded error/terminal cleanup, and explicit
   output-failure precedence are implemented. Regressions cover slow/stalled sinks
   and terminal restoration with a full PTY.
+- Step 4: stdin validates and caches its descriptor type at startup. Unsupported
+  devices and datagram sockets are rejected; file/null and stream readiness have
+  direct tests.
 
 ## Scope and starting point
 

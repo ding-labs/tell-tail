@@ -20,5 +20,5 @@ codegen-units = 1
 strip = true
 
 [target.'cfg(unix)'.dependencies]
-rustix = { version = "1", features = ["event", "fs"] }
+rustix = { version = "1", features = ["event", "fs", "net"] }
 signal-hook = "0.3"

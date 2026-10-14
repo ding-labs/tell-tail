@@ -7,7 +7,7 @@ mod unix {
     };
     use std::{
         fs::{File, Metadata},
-        io,
+        io::{self, Read},
         os::unix::fs::{FileTypeExt, MetadataExt},
         path::Path,
     };
@@ -29,19 +29,51 @@ mod unix {
         }
         Ok(file)
     }
-    pub fn stdin_file() -> io::Result<File> {
-        Ok(File::from(rustix::io::fcntl_dupfd_cloexec(
-            std::io::stdin(),
-            3,
-        )?))
+    pub struct Stdin {
+        file: File,
+        polled: bool,
     }
-    pub fn readable(file: &File) -> io::Result<bool> {
-        // Darwin poll does not support /dev/null; redirected regular/character
-        // files can be read directly. Interactive stdin is rejected by main.
-        let ty = file.metadata()?.file_type();
-        if ty.is_file() || ty.is_char_device() {
-            return Ok(true);
+    impl Stdin {
+        pub fn open() -> io::Result<Self> {
+            Self::from_file(File::from(rustix::io::fcntl_dupfd_cloexec(
+                std::io::stdin(),
+                3,
+            )?))
         }
+        fn from_file(file: File) -> io::Result<Self> {
+            let meta = file.metadata()?;
+            let ty = meta.file_type();
+            let polled = if ty.is_file()
+                || (ty.is_char_device() && meta.rdev() == std::fs::metadata("/dev/null")?.rdev())
+            {
+                false
+            } else if ty.is_fifo()
+                || (ty.is_socket()
+                    && rustix::net::sockopt::socket_type(&file)? == rustix::net::SocketType::STREAM)
+            {
+                true
+            } else {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "stdin must be a regular file, pipe, stream socket, or /dev/null",
+                ));
+            };
+            Ok(Self { file, polled })
+        }
+        pub fn readable(&self) -> io::Result<bool> {
+            if self.polled {
+                readable(&self.file)
+            } else {
+                Ok(true)
+            }
+        }
+    }
+    impl Read for Stdin {
+        fn read(&mut self, bytes: &mut [u8]) -> io::Result<usize> {
+            self.file.read(bytes)
+        }
+    }
+    fn readable(file: &File) -> io::Result<bool> {
         let mut fds = [PollFd::new(file, PollFlags::IN)];
         match poll(
             &mut fds,
@@ -53,6 +85,40 @@ mod unix {
             Ok(n) => Ok(n > 0),
             Err(rustix::io::Errno::INTR) => Ok(false),
             Err(e) => Err(e.into()),
+        }
+    }
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use std::{
+            io::Write,
+            os::{
+                fd::OwnedFd,
+                unix::net::{UnixDatagram, UnixStream},
+            },
+        };
+        #[test]
+        fn stdin_types_and_readiness_are_explicit() {
+            let mut null = Stdin::from_file(File::open("/dev/null").unwrap()).unwrap();
+            assert!(null.readable().unwrap());
+            assert_eq!(null.read(&mut [0; 1]).unwrap(), 0);
+            assert!(Stdin::from_file(File::open("/dev/zero").unwrap()).is_err());
+            let (socket, mut peer) = UnixStream::pair().unwrap();
+            let mut input = Stdin::from_file(File::from(OwnedFd::from(socket))).unwrap();
+            assert!(!input.readable().unwrap());
+            peer.write_all(b"INFO\n").unwrap();
+            assert!(input.readable().unwrap());
+            let mut bytes = [0; 5];
+            assert_eq!(input.read(&mut bytes).unwrap(), 5);
+            assert_eq!(&bytes, b"INFO\n");
+            drop(peer);
+            assert!(input.readable().unwrap());
+            assert_eq!(input.read(&mut bytes).unwrap(), 0);
+            let (datagram, _peer) = UnixDatagram::pair().unwrap();
+            assert!(Stdin::from_file(File::from(OwnedFd::from(datagram))).is_err());
+            let file = tempfile::tempfile().unwrap();
+            let regular = Stdin::from_file(file).unwrap();
+            assert!(!regular.polled);
         }
     }
 }

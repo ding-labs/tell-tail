@@ -111,7 +111,8 @@ pending bytes without treating the unfinished record as complete.
 
 There are no durable checkpoints: restarts reset statistics. Late writes to an old
 rotated file after handoff and truncate/regrow cycles between polls can be missed.
-Named file inputs must be regular files; use stdin for pipes. Backlog is reported
+Named file inputs must be regular files. Stdin accepts regular files, pipes,
+stream sockets, and `/dev/null`; other devices and datagram sockets are rejected. Backlog is reported
 for the current followed descriptor and is unknown for stdin.
 
 A slow output consumer cannot grow a report queue or stop the ingestion worker.

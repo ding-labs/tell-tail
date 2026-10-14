@@ -18,7 +18,7 @@ pub enum Event {
 }
 pub enum Input {
     Finite(File),
-    Stdin(File),
+    Stdin(platform::Stdin),
     Follow(Follower),
 }
 impl Input {
@@ -29,26 +29,15 @@ impl Input {
                 path.to_owned(),
                 args.from.unwrap_or(From::End),
             )?)),
-            None => Ok(Self::Stdin(platform::stdin_file()?)),
+            None => Ok(Self::Stdin(platform::Stdin::open()?)),
         }
     }
     pub fn next(&mut self, buffer: &mut [u8]) -> io::Result<Event> {
         match self {
             Self::Follow(f) => f.next(buffer),
-            Self::Stdin(file) if !platform::readable(file)? => Ok(Event::Idle(State::Reading)),
-            Self::Stdin(file) | Self::Finite(file) => match file.read(buffer) {
-                Ok(0) => Ok(Event::End),
-                Ok(len) => Ok(Event::Data { len, skip: 0 }),
-                Err(e)
-                    if matches!(
-                        e.kind(),
-                        io::ErrorKind::Interrupted | io::ErrorKind::WouldBlock
-                    ) =>
-                {
-                    Ok(Event::Idle(State::Reading))
-                }
-                Err(e) => Err(e),
-            },
+            Self::Stdin(file) if !file.readable()? => Ok(Event::Idle(State::Reading)),
+            Self::Stdin(file) => read_event(file, buffer),
+            Self::Finite(file) => read_event(file, buffer),
         }
     }
     pub fn backlog(&self) -> Option<u64> {
@@ -65,6 +54,22 @@ impl Input {
         matches!(self, Self::Follow(_))
     }
 }
+fn read_event(reader: &mut impl Read, buffer: &mut [u8]) -> io::Result<Event> {
+    match reader.read(buffer) {
+        Ok(0) => Ok(Event::End),
+        Ok(len) => Ok(Event::Data { len, skip: 0 }),
+        Err(e)
+            if matches!(
+                e.kind(),
+                io::ErrorKind::Interrupted | io::ErrorKind::WouldBlock
+            ) =>
+        {
+            Ok(Event::Idle(State::Reading))
+        }
+        Err(e) => Err(e),
+    }
+}
+
 pub struct Follower {
     path: PathBuf,
     file: Option<File>,
