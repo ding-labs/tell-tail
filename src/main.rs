@@ -100,7 +100,7 @@ fn main() {
         Ok(code) => std::process::exit(code),
         Err(error) if error.kind() == io::ErrorKind::BrokenPipe => (),
         Err(error) => {
-            eprintln!("tell-tail: {error}");
+            tell_tail::writer::diagnostic(&format!("tell-tail: {error}\n"));
             std::process::exit(1);
         }
     }

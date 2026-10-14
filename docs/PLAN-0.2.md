@@ -14,7 +14,10 @@ Completed increments:
   tests cover retained socket descriptors and read-only stdout.
 - Step 2: stdout uses an isolated helper with bounded IPC; descriptor flags,
   parent death, broken pipes, and helper teardown have regression coverage. See
-  [output design](OUTPUT.md). Full terminal cleanup is the next increment.
+  [output design](OUTPUT.md).
+- Step 3: complete-report deadlines, bounded error/terminal cleanup, and explicit
+  output-failure precedence are implemented. Regressions cover slow/stalled sinks
+  and terminal restoration with a full PTY.
 
 ## Scope and starting point
 

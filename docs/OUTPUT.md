@@ -35,3 +35,15 @@ regression checks caller-controlled status flags rather than opaque kernel bits.
 The helper adds process startup and IPC overhead. Candidate benchmarks must count
 its CPU and RSS as part of Tell-Tail and measure paired dashboard/headless runs.
 The existing ingestion architecture and latest-snapshot handoff remain unchanged.
+
+Terminal cleanup stops the original writer before Ratatui's drop handling, then
+restores termios and attempts cursor/alternate-screen cleanup through a fresh
+bounded writer. Cleanup writes and runtime diagnostics each receive a 250 ms
+budget. An undrained terminal may not display escape sequences or diagnostics;
+restoring termios and exiting must still complete. Fullscreen initialization uses
+explicit clear/move commands instead of a blocking cursor-position query.
+
+The stalled-PTY regression keeps a supervisor alive to inspect termios after the
+application exits. It acknowledges application shutdown before closing its own
+controlling-terminal descriptor, whose close can drain on Darwin. This separates
+the application's shutdown latency from the test supervisor's lifetime.

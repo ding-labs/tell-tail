@@ -109,13 +109,17 @@ pub struct StdoutWriter {
     cancelled: Option<Instant>,
     stop: Arc<AtomicUsize>,
     failed: bool,
+    discarded: bool,
 }
 impl StdoutWriter {
     pub fn new(stop: Arc<AtomicUsize>) -> io::Result<Self> {
+        Self::spawn(stop, Stdio::inherit())
+    }
+    fn spawn(stop: Arc<AtomicUsize>, destination: Stdio) -> io::Result<Self> {
         let mut child = Command::new(std::env::current_exe()?)
             .arg(HELPER_ARG)
             .stdin(Stdio::piped())
-            .stdout(Stdio::inherit())
+            .stdout(destination)
             .stderr(Stdio::piped())
             .spawn()?;
         let input = child.stdin.take().expect("piped helper stdin");
@@ -142,7 +146,16 @@ impl StdoutWriter {
             cancelled: None,
             stop,
             failed: false,
+            discarded: false,
         })
+    }
+    /// Stop pending output before the terminal library performs its drop writes.
+    /// Those writes are discarded; the terminal guard restores via a fresh sink.
+    pub fn discard(&mut self) {
+        self.discarded = true;
+        self.buffer.clear();
+        let _ = self.child.kill();
+        let _ = self.child.wait();
     }
     fn check_deadline(&mut self) -> io::Result<()> {
         if self.stop.load(Ordering::Relaxed) != 0 {
@@ -224,6 +237,12 @@ impl StdoutWriter {
 }
 impl Write for StdoutWriter {
     fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        if self.discarded {
+            return Ok(bytes.len());
+        }
+        if self.failed {
+            return Err(io::Error::other("output writer has failed"));
+        }
         if bytes.is_empty() {
             return Ok(0);
         }
@@ -237,11 +256,25 @@ impl Write for StdoutWriter {
         Ok(len)
     }
     fn flush(&mut self) -> io::Result<()> {
+        if self.discarded {
+            return Ok(());
+        }
         self.send_pending()?;
         self.started = None;
         self.cancelled = None;
         Ok(())
     }
+}
+
+/// Error reporting must not reintroduce an unbounded wait on a stalled stderr.
+pub fn diagnostic(message: &str) {
+    let result = (|| -> io::Result<()> {
+        let fd = rustix::io::fcntl_dupfd_cloexec(io::stderr(), 3)?;
+        let mut writer = StdoutWriter::spawn(Arc::new(AtomicUsize::new(1)), Stdio::from(fd))?;
+        writer.write_all(message.as_bytes())?;
+        writer.flush()
+    })();
+    let _ = result;
 }
 impl Drop for StdoutWriter {
     fn drop(&mut self) {

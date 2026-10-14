@@ -9,6 +9,7 @@ import signal
 import socket
 import subprocess
 import time
+import threading
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--binary', type=pathlib.Path,
@@ -30,13 +31,16 @@ def stopped(pid):
     return not result.stdout.strip() or result.stdout.strip().startswith('Z')
 
 
-for action in ['term', 'kill', 'deadline', 'broken-pipe']:
+for action in ['term', 'kill', 'deadline', 'slow', 'broken-pipe']:
     reader, writer = socket.socketpair()
     writer.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 1024)
     initial = (fcntl.fcntl(writer, fcntl.F_GETFL) & STATUS_FLAGS)
     child = subprocess.Popen([str(args.binary), '--output', 'json', '--interval-ms', '100'],
                              stdin=subprocess.PIPE, stdout=writer, stderr=subprocess.PIPE)
     helpers = []
+    draining = threading.Event()
+    consumer = None
+    progress = []
     try:
         # Observe a complete report rather than sleeping to guess initialization.
         reader.settimeout(3)
@@ -60,18 +64,37 @@ for action in ['term', 'kill', 'deadline', 'broken-pipe']:
                 expected = -signal.SIGKILL
             else:
                 expected = 1
+        if action == 'slow':
+            reader.settimeout(.1)
+            def trickle():
+                while not draining.is_set():
+                    try:
+                        data = reader.recv(1)
+                        if not data:
+                            return
+                        progress.append(len(data))
+                    except socket.timeout:
+                        pass
+                    draining.wait(.1)
+            consumer = threading.Thread(target=trickle)
+            consumer.start()
         start = time.monotonic()
-        child.wait(timeout=3 if action == 'deadline' else 1)
+        child.wait(timeout=3 if action in ('deadline', 'slow') else 1)
         assert child.returncode == expected, (action, child.returncode, child.stderr.read())
-        if action == 'deadline':
+        if action in ('deadline', 'slow'):
             assert b'exceeded two seconds' in child.stderr.read()
         assert (fcntl.fcntl(writer, fcntl.F_GETFL) & STATUS_FLAGS) == initial
+        if action == 'slow':
+            assert sum(progress) > 0, 'consumer made no progress'
         until = time.monotonic() + 1
         while not all(stopped(pid) for pid in helpers) and time.monotonic() < until:
             time.sleep(.01)
         assert all(stopped(pid) for pid in helpers), 'output helper survived parent'
         print(f'{action}: flags preserved, helper stopped, exit in {time.monotonic() - start:.3f}s')
     finally:
+        draining.set()
+        if consumer is not None:
+            consumer.join(timeout=1)
         if child.poll() is None:
             child.kill()
             child.wait()
@@ -79,3 +102,26 @@ for action in ['term', 'kill', 'deadline', 'broken-pipe']:
         child.stderr.close()
         reader.close()
         writer.close()
+
+# Even the diagnostic sink may be full when an output error is reported.
+error_reader, error_writer = socket.socketpair()
+error_writer.setblocking(False)
+try:
+    while True:
+        error_writer.send(b'x' * 65536)
+except BlockingIOError:
+    pass
+error_writer.setblocking(True)
+child = subprocess.Popen([str(args.binary), '--output', 'tui'], stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=error_writer)
+try:
+    child.wait(timeout=1)
+    assert child.returncode == 1
+    assert not (fcntl.fcntl(error_writer, fcntl.F_GETFL) & os.O_NONBLOCK)
+    print('stalled stderr: error reporting exits within one second')
+finally:
+    if child.poll() is None:
+        child.kill()
+        child.wait()
+    error_writer.close()
+    error_reader.close()

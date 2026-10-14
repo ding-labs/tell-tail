@@ -115,13 +115,16 @@ Named file inputs must be regular files; use stdin for pipes. Backlog is reporte
 for the current followed descriptor and is unknown for stdin.
 
 A slow output consumer cannot grow a report queue or stop the ingestion worker.
-Intermediate snapshots may be skipped. A stdout write blocked for two seconds
-fails the process; cancellation interrupts that wait promptly. An output failure
+Intermediate snapshots may be skipped. A complete stdout report or terminal frame exceeding two seconds
+fails the process; cancellation allows up to 250 ms for output to finish.
+Inherited stdout flags remain unchanged. An output failure
 may leave an incomplete final report. Metrics-file failures are fatal. Missing
 input files are represented by a waiting state rather than repeated diagnostics.
 
 Exit status: 0 on EOF or `q`, 2 for argument errors, 1 for runtime failures,
-130 for SIGINT, and 143 for SIGTERM. A closed downstream pipe exits quietly.
+130 for SIGINT, and 143 for SIGTERM. A closed downstream pipe exits quietly. An output failure takes precedence over
+a signal exit code and returns 1; an undrained sink may prevent its diagnostic
+from being displayed.
 A service manager can supervise long-running headless processes.
 
 ## Development

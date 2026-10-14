@@ -56,7 +56,9 @@ with open('/dev/tty', 'rb', buffering=0) as tty:
     try:
         child.stdin.write(b'INFO first\n')
         child.stdin.flush()
-        drain(0.4)
+        ready_by = time.monotonic() + 3
+        while b'TELL-TAIL' not in output and time.monotonic() < ready_by:
+            drain(0.05)
         assert b'TELL-TAIL' in output, output.decode(errors='replace')
         os.write(master, b' ')
         drain(0.3)

@@ -2,10 +2,10 @@ use crate::{
     output::percent, parse::Level, platform::StdoutWriter, runtime::Running, stats::Snapshot,
 };
 use crossterm::{
-    cursor::Show,
+    cursor::{MoveTo, Show},
     event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
     execute,
-    terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{
     Frame, Terminal,
@@ -16,7 +16,9 @@ use ratatui::{
     widgets::{Block, Borders, Cell, Paragraph, Row, Sparkline, Table},
 };
 use std::{
-    io::{self, IsTerminal},
+    cell::RefCell,
+    io::{self, IsTerminal, Write},
+    rc::Rc,
     sync::{
         Arc,
         atomic::{AtomicUsize, Ordering},
@@ -29,11 +31,31 @@ pub fn available() -> bool {
         && std::env::var("TERM").is_ok_and(|term| term != "dumb")
         && std::fs::File::open("/dev/tty").is_ok()
 }
-struct Restore;
+struct SharedWriter(Rc<RefCell<StdoutWriter>>);
+impl Write for SharedWriter {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.0.borrow_mut().write(bytes)
+    }
+    fn flush(&mut self) -> io::Result<()> {
+        self.0.borrow_mut().flush()
+    }
+}
+struct Restore {
+    terminal: Option<Terminal<CrosstermBackend<SharedWriter>>>,
+    writer: Rc<RefCell<StdoutWriter>>,
+}
+fn restore_screen() {
+    let _ = terminal::disable_raw_mode();
+    if let Ok(mut writer) = StdoutWriter::new(Arc::new(AtomicUsize::new(1))) {
+        let _ = execute!(writer, LeaveAlternateScreen, Show);
+    }
+}
 impl Drop for Restore {
     fn drop(&mut self) {
-        let _ = terminal::disable_raw_mode();
-        let _ = execute!(io::stdout(), LeaveAlternateScreen, Show);
+        // Stop an in-flight frame before sending cleanup through a fresh writer.
+        self.writer.borrow_mut().discard();
+        drop(self.terminal.take());
+        restore_screen();
     }
 }
 pub fn run(
@@ -41,17 +63,27 @@ pub fn run(
     writer: StdoutWriter,
     stop: Arc<AtomicUsize>,
 ) -> io::Result<Snapshot> {
-    let previous_hook = std::panic::take_hook();
-    std::panic::set_hook(Box::new(move |info| {
+    std::panic::set_hook(Box::new(|info| {
         let _ = terminal::disable_raw_mode();
-        let _ = execute!(io::stdout(), LeaveAlternateScreen, Show);
-        previous_hook(info);
+        crate::writer::diagnostic(&format!("tell-tail: {info}\n"));
+        // The guard restores the screen during unwinding, after stopping output.
     }));
-    let mut terminal = Terminal::new(CrosstermBackend::new(writer))?;
+    let writer = Rc::new(RefCell::new(writer));
+    let terminal = Terminal::new(CrosstermBackend::new(SharedWriter(writer.clone())))?;
+    let mut restore = Restore {
+        terminal: Some(terminal),
+        writer,
+    };
     terminal::enable_raw_mode()?;
-    let _restore = Restore;
-    execute!(terminal.backend_mut(), EnterAlternateScreen)?;
-    terminal.clear()?;
+    let terminal = restore.terminal.as_mut().expect("active terminal");
+    // Fullscreen output does not need a cursor-position query (which can wait
+    // several seconds for a terminal response and bypass our output writer).
+    execute!(
+        terminal.backend_mut(),
+        EnterAlternateScreen,
+        Clear(ClearType::All),
+        MoveTo(0, 0)
+    )?;
     let mut frozen: Option<Snapshot> = None;
     let mut help = false;
     loop {
