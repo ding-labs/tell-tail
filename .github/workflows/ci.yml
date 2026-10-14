@@ -14,4 +14,9 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --all-targets --locked -- -D warnings
       - run: cargo test --locked
+      - run: cargo build --locked
+      - run: python3 scripts/check_terminal.py
+      - run: python3 scripts/check_backpressure.py
       - run: cargo build --release --locked
+      - run: python3 scripts/soak.py --seconds 3
+      - run: python3 scripts/soak.py --seconds 3 --tui
