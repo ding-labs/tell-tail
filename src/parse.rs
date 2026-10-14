@@ -70,7 +70,7 @@ impl Classifier {
         if self.format == Format::Json
             || (self.format == Format::Auto && line.first() == Some(&b'{'))
         {
-            if std::str::from_utf8(line).is_err() {
+            if std::str::from_utf8(line).is_err() || !valid_unicode_escapes(line) {
                 return Classification {
                     level: Level::Unknown,
                     parse_failure: true,
@@ -93,6 +93,40 @@ impl Classifier {
             }
         }
     }
+}
+// serde's IgnoredAny validates JSON syntax but skips surrogate pairing in
+// ignored strings. Validate escapes without allocating or parsing numbers into
+// floats; large numeric values in ignored fields remain supported.
+fn valid_unicode_escapes(mut bytes: &[u8]) -> bool {
+    fn hex(bytes: &[u8]) -> Option<u16> {
+        bytes.get(..4)?.iter().try_fold(0, |value, &digit| {
+            let digit = (digit as char).to_digit(16)? as u16;
+            Some(value * 16 + digit)
+        })
+    }
+    while let Some(index) = memchr::memchr(b'\\', bytes) {
+        bytes = &bytes[index + 1..];
+        if bytes.first() != Some(&b'u') {
+            bytes = bytes.get(1..).unwrap_or_default();
+            continue;
+        }
+        let Some(code) = hex(&bytes[1..]) else {
+            return false;
+        };
+        bytes = &bytes[5..];
+        if (0xD800..=0xDBFF).contains(&code) {
+            let Some(low) = bytes.strip_prefix(b"\\u").and_then(hex) else {
+                return false;
+            };
+            if !(0xDC00..=0xDFFF).contains(&low) {
+                return false;
+            }
+            bytes = &bytes[6..];
+        } else if (0xDC00..=0xDFFF).contains(&code) {
+            return false;
+        }
+    }
+    true
 }
 fn trim_start(bytes: &[u8]) -> &[u8] {
     bytes.trim_ascii_start()
@@ -244,5 +278,34 @@ mod tests {
                 .parse_failure
         );
         assert_eq!(c.classify(b"INFO \xff").level, Level::Info);
+    }
+    #[test]
+    fn validates_surrogate_pairs_even_in_ignored_fields() {
+        let classifier = Classifier::new(Format::Json, "level".into());
+        for escape in [
+            r"\uD800",
+            r"\uDC00",
+            r"\uD800\u0041",
+            r"\uD800\uD800",
+            r"\uD8",
+            r"\uD800x",
+        ] {
+            let line = format!(r#"{{"level":"INFO","nested":[{{"message":"{escape}"}}]}}"#);
+            let result = classifier.classify(line.as_bytes());
+            assert_eq!(result.level, Level::Unknown, "{line}");
+            assert!(result.parse_failure, "{line}");
+        }
+        for escape in [
+            r"\uD83D\uDE00",
+            r"\\uD800",
+            r#"\"quoted\""#,
+            r"\u0041",
+            r"\\\uD83D\uDE00",
+        ] {
+            let line = format!(r#"{{"level":"INFO","message":"{escape}","large":1e400}}"#);
+            let result = classifier.classify(line.as_bytes());
+            assert_eq!(result.level, Level::Info, "{line}");
+            assert!(!result.parse_failure, "{line}");
+        }
     }
 }

@@ -19,6 +19,9 @@
 
 ### Fixed
 
+- Unpaired Unicode surrogate escapes in ignored JSON fields now count as parse
+  failures. Valid escaped pairs and large numbers in ignored fields still work.
+
 - Stdout status flags are preserved. A bounded helper isolates blocked writes;
   metrics-file output does not initialize stdout.
 - A complete stdout report/frame has a two-second deadline. Shutdown, terminal
