@@ -12,6 +12,9 @@ Completed increments:
 
 - Step 1: metrics-file output no longer initializes or changes stdout; regression
   tests cover retained socket descriptors and read-only stdout.
+- Step 2: stdout uses an isolated helper with bounded IPC; descriptor flags,
+  parent death, broken pipes, and helper teardown have regression coverage. See
+  [output design](OUTPUT.md). Full terminal cleanup is the next increment.
 
 ## Scope and starting point
 

@@ -39,6 +39,7 @@ fn run(args: &Args) -> io::Result<i32> {
         running.join()?;
         let mut writer = StdoutWriter::new(signals.requested.clone())?;
         writer.write_all(output::render(&snapshot, Output::Text)?.as_bytes())?;
+        writer.flush()?;
         let signal = signals.requested.load(Ordering::Relaxed);
         return Ok(if signal > 1 { 128 + signal as i32 } else { 0 });
     }
@@ -57,6 +58,7 @@ fn run(args: &Args) -> io::Result<i32> {
                     .as_mut()
                     .expect("stdout output selected")
                     .write_all(output::render(&snapshot, args.output)?.as_bytes())?;
+                writer.as_mut().expect("stdout output selected").flush()?;
             }
             running.join()?;
             break;
@@ -76,6 +78,7 @@ fn run(args: &Args) -> io::Result<i32> {
                     .as_mut()
                     .expect("stdout output selected")
                     .write_all(output::render(&snapshot, args.output)?.as_bytes())?;
+                writer.as_mut().expect("stdout output selected").flush()?;
             }
             published = Instant::now();
         }
@@ -85,6 +88,9 @@ fn run(args: &Args) -> io::Result<i32> {
     Ok(if signal > 1 { 128 + signal as i32 } else { 0 })
 }
 fn main() {
+    if tell_tail::writer::is_helper() {
+        std::process::exit(tell_tail::writer::run_helper());
+    }
     let args = Args::parse();
     if let Err(message) = args.validate() {
         eprintln!("tell-tail: {message}");
