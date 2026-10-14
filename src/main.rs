@@ -9,6 +9,7 @@ use tell_tail::{
     cli::{Args, Output},
     output,
     platform::StdoutWriter,
+    prometheus::MetricsFile,
     runtime::{Running, Signals},
 };
 
@@ -17,9 +18,14 @@ fn run(args: &Args) -> io::Result<i32> {
         Args::command().print_help()?;
         return Ok(0);
     }
-    if matches!(args.output, Output::Tui | Output::Prometheus) {
+    if args.output == Output::Tui {
         return Err(io::Error::other("this output is not implemented yet"));
     }
+    let metrics = args
+        .metrics_file
+        .as_ref()
+        .map(|p| MetricsFile::new(p.clone(), args.path().map(|p| p.to_owned())))
+        .transpose()?;
     let signals = Signals::install()?;
     let mut running = Running::start(args, signals.requested.clone())?;
     let mut writer = StdoutWriter::new(signals.requested.clone())?;
@@ -27,7 +33,11 @@ fn run(args: &Args) -> io::Result<i32> {
     loop {
         let snapshot = running.snapshot();
         if snapshot.state.is_final() {
-            writer.write_all(output::render(&snapshot, args.output)?.as_bytes())?;
+            if let Some(file) = &metrics {
+                file.publish(&snapshot)?;
+            } else {
+                writer.write_all(output::render(&snapshot, args.output)?.as_bytes())?;
+            }
             running.join()?;
             break;
         }
@@ -35,8 +45,15 @@ fn run(args: &Args) -> io::Result<i32> {
             running.join()?;
             continue;
         }
-        if !args.once && published.elapsed() >= Duration::from_millis(u64::from(args.interval_ms)) {
-            writer.write_all(output::render(&snapshot, args.output)?.as_bytes())?;
+        if !args.once
+            && (args.output != Output::Prometheus || metrics.is_some())
+            && published.elapsed() >= Duration::from_millis(u64::from(args.interval_ms))
+        {
+            if let Some(file) = &metrics {
+                file.publish(&snapshot)?;
+            } else {
+                writer.write_all(output::render(&snapshot, args.output)?.as_bytes())?;
+            }
             published = Instant::now();
         }
         thread::sleep(Duration::from_millis(10));

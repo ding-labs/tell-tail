@@ -2,6 +2,9 @@ use crate::{cli::Output, parse::Level, stats::Snapshot};
 use std::io;
 
 pub fn render(snapshot: &Snapshot, output: Output) -> io::Result<String> {
+    if output == Output::Prometheus {
+        return Ok(crate::prometheus::render(snapshot));
+    }
     if output == Output::Json {
         return serde_json::to_string(snapshot)
             .map(|s| s + "\n")

@@ -39,3 +39,28 @@ fn empty_input_and_oversize_have_defined_denominators() {
     assert_eq!(large["totals"]["oversized_records"], 1);
     assert_eq!(large["totals"]["levels"]["info"], 1);
 }
+
+#[test]
+fn prometheus_stdout_is_one_final_document() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("out.prom");
+    let mut child = Command::new(env!("CARGO_BIN_EXE_tell-tail"))
+        .args(["--output", "prometheus", "--interval-ms", "100"])
+        .stdin(Stdio::piped())
+        .stdout(std::fs::File::create(&path).unwrap())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(b"WARN one\n")
+        .unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(250));
+    assert_eq!(std::fs::metadata(&path).unwrap().len(), 0);
+    drop(child.stdin.take());
+    assert!(child.wait().unwrap().success());
+    let output = std::fs::read_to_string(path).unwrap();
+    assert_eq!(output.matches("# TYPE tell_tail_records_total").count(), 1);
+    assert!(output.contains("tell_tail_records_total{level=\"warn\"} 1\n"));
+}

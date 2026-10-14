@@ -8,6 +8,7 @@ description = "Bounded-memory log throughput and severity monitor"
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
 memchr = "2.7"
+tempfile = "3"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["raw_value"] }
 
@@ -19,6 +20,3 @@ strip = true
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "1", features = ["event", "fs"] }
 signal-hook = "0.3"
-
-[dev-dependencies]
-tempfile = "3"
