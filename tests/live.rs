@@ -61,6 +61,8 @@ fn live_append_rotation_and_idle_window() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("app.log");
     std::fs::write(&path, b"INFO old\n").unwrap();
+    let report_path = dir.path().join("reports.ndjson");
+    let report_file = File::create(&report_path).unwrap();
     let mut child = Command::new(env!("CARGO_BIN_EXE_tell-tail"))
         .arg(&path)
         .args([
@@ -73,7 +75,7 @@ fn live_append_rotation_and_idle_window() {
             "--window",
             "1",
         ])
-        .stdout(Stdio::piped())
+        .stdout(report_file)
         .spawn()
         .unwrap();
     thread::sleep(Duration::from_millis(200));
@@ -88,13 +90,7 @@ fn live_append_rotation_and_idle_window() {
     std::fs::write(&path, b"ERROR rotated\n").unwrap();
     thread::sleep(Duration::from_millis(1300));
     stop(&mut child);
-    let mut output = String::new();
-    child
-        .stdout
-        .take()
-        .unwrap()
-        .read_to_string(&mut output)
-        .unwrap();
+    let output = std::fs::read_to_string(&report_path).unwrap();
     let report: serde_json::Value = serde_json::from_str(output.lines().last().unwrap()).unwrap();
     assert_eq!(report["totals"]["records"], 3);
     assert_eq!(report["totals"]["levels"]["error"], 1);
