@@ -144,3 +144,6 @@ file identity, readiness, signals, and terminal I/O are isolated for future
 Windows support. See [the implementation plan](docs/PLAN.md) for scope and
 subsequent increments, and [validation results](docs/VALIDATION.md) for measured
 performance and test coverage.
+
+The [0.2 implementation plan](docs/PLAN-0.2.md) defines the next reliability
+milestone, focused commits, and release criteria.

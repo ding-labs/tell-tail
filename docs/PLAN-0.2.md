@@ -1,0 +1,279 @@
+# Tell-Tail 0.2 implementation plan
+
+Version 0.2 makes the existing single-input monitor dependable enough for a
+release candidate. The work concentrates on I/O isolation, predictable rolling
+statistics, adversarial correctness tests, and reproducible operating limits.
+It preserves bounded state and discards raw logs after processing.
+
+Status: planned, October 14, 2026. The implementation remains at 0.1.0. This plan
+defines the next increments; its release gates have not yet been satisfied.
+
+## Scope and starting point
+
+The [MVP plan](PLAN.md) remains the product foundation. Existing commands, one
+file or stdin, macOS/Linux support, and all four output modes remain in scope.
+The [MVP validation](VALIDATION.md) records 22 passing Rust tests, platform and
+terminal checks, synthetic benchmarks, and one-minute sustained runs. Those
+measurements are the baseline, not evidence that the longer gates below pass.
+
+Include in 0.2:
+
+- Correctness fixes for inherited descriptors, cancellation, file following,
+  output failure, and terminal cleanup.
+- A defined short-window contract with deterministic tests and a versioned JSON
+  change.
+- A representative fixture corpus for the formats already supported, generated
+  tests, and fuzz targets.
+- Longer soak tests, controlled performance comparisons, and CI separation
+  between quick checks and expensive validation.
+- Compatibility fixtures, dependency checks, package verification, and a release
+  checklist with explicit platform evidence.
+
+Defer multiple inputs, Windows, nested/numeric severity configuration, ANSI/logfmt
+parsing, multiline reconstruction, HTTP serving, persistent history, and a web UI.
+Unsupported formats belong in the fixture corpus with their expected unknown
+classification. Fix violations of the existing grammar within 0.2; add new grammar
+in a separate release. No async runtime or record queue is required by this plan.
+
+## Behavior decisions
+
+### Output isolation and shutdown
+
+The current `StdoutWriter` duplicates stdout and sets `O_NONBLOCK`. A local
+reproduction confirmed that a parent retaining the pipe's write descriptor sees
+that flag change during Tell-Tail's lifetime. Restoration on orderly exit does
+not prevent interference while the process runs.
+
+The replacement must preserve inherited file status flags throughout execution,
+including failure paths. Do not construct a stdout writer for metrics-file-only
+output. Keep ingestion independent of output I/O and keep output storage bounded.
+Intermediate reports may be skipped; bytes from an already-started report must
+not be interleaved with another report.
+
+Resolve the implementation in a small platform experiment before integration.
+Evaluate an isolated writer helper process with bounded IPC and explicit
+completion acknowledgments as the portable fallback. A blocked helper can be
+terminated and reaped without modifying inherited flags. A worker thread alone
+does not establish a bounded shutdown, and `poll` followed by a blocking write
+does not eliminate races with other writers. Choose a simpler platform mechanism
+only if regression tests demonstrate the same guarantees on macOS and Linux.
+Record the chosen mechanism and its measured overhead in a short design note.
+
+Use one absolute two-second deadline for a complete report or terminal frame,
+including partial writes, rather than restarting the deadline after each write.
+Cancellation should exit within one second under the supported pipe/socket/PTY
+test conditions. A broken downstream pipe remains a quiet exit. A report that
+cannot finish may be incomplete and must produce the documented output failure.
+SIGINT/SIGTERM retain 130/143 when cleanup and final output succeed; an output
+failure takes precedence with status 1. Test and document that precedence.
+
+Inspect stdin type once at setup. Support ordinary files, pipes, stream sockets,
+and `/dev/null`; preserve the existing interactive-stdin help behavior. Other
+character devices need a proven cancellable adapter or a clear rejection instead
+of the current blanket assumption that every character device is readable.
+Never promise bounded exit from an uninterruptible kernel/filesystem operation.
+
+### Rolling statistics
+
+Use fixed 100 ms buckets for the configured 1–3600 second window. Keep the
+completed-second chart separate. Let `t` be elapsed monotonic processing time,
+`W` the requested window, and `D = 100 ms`:
+
+```text
+start = floor(max(t - W, 0) / D) * D
+covered duration = t - start
+```
+
+Include buckets from `start` through the current bucket. After startup the
+covered duration is at least `W` and less than `W + D`. Counts are exact for the
+included buckets; the left edge can include less than 100 ms of older data.
+Do not interpolate counts or retain individual event timestamps. Use integer
+duration arithmetic to choose buckets and floating point only for rates.
+
+This removes the premature empty window at each whole-second boundary. For
+example, a record processed at 0.95 s remains in a one-second window at 1.00 s.
+Its bucket expires at 2.00 s. Session counts never expire.
+At elapsed time zero, rates are zero and empty ratios remain undefined.
+
+Maintain rolling totals as buckets expire. Ordinary snapshots should cost a
+constant amount of work plus the 60-point chart; a large clock jump may clear at
+most the fixed ring capacity. Advance time once per ingestion batch or snapshot,
+not through a wall-clock lookup for every record. The largest ring needs 36,001
+buckets, whose allocation must be included in the memory measurements.
+
+This intentionally changes the window contract. Emit JSON `schema_version: 2`
+and add `window.resolution_seconds: 0.1`; keep existing field names, cumulative
+counter meanings, severity categories, and CLI flags. Document the migration.
+Keep Prometheus series names, types, and labels, and explain the changed window
+coverage alongside the existing observed-duration gauge. Do not claim schema 1
+compatibility for changed window behavior.
+
+### Counting and file following
+
+Retain physical-line counting, finite-EOF behavior, oversized-record draining,
+unknown denominators, and processing-time attribution. Raw input chunking must
+not change final counts. Live window membership may change with processing time,
+so chunk-invariance tests must compare totals or hold time constant explicitly.
+
+Preserve the follower's drain-to-observed-end policy. Tests must cover partial
+lines at generation boundaries and repeated replacement while draining. Use a
+reference ledger and synchronization barriers for scenarios where exact counts
+are promised. Test unobserved truncate/regrow and late writes separately as
+documented loss limits; do not turn them into an exactly-once guarantee or claim
+that skipped-byte counters can detect every loss.
+
+## Implementation sequence
+
+Work through these increments in order. Each change includes its directly related
+tests, passes the relevant checks, and is committed before the next independent
+change. Split an increment into smaller passing commits when necessary; do not
+commit a large completed milestone as one change or leave failing regressions on
+the main branch.
+
+| Step | Deliverable and main files | Verification before committing |
+| --- | --- | --- |
+| 1 | Skip unused stdout setup in `main.rs`; establish descriptor-isolation regression harness. | Metrics-file mode leaves stdout flags untouched and does not require writable stdout. |
+| 2 | Choose and implement the isolated output mechanism in `platform.rs` or a dedicated output module; document its design. | Parent and sibling descriptors retain their flags; pipe, socket, file, and PTY output work; no leaked descriptors or child processes. |
+| 3 | Apply full-report deadlines and deterministic shutdown/error precedence across `main.rs`, output, and `tui.rs`. | Slow progress, permanently stalled sinks, broken pipes, SIGINT/SIGTERM, and terminal recovery; existing PTY tests still pass. |
+| 4 | Validate supported stdin descriptor types and readiness in `platform.rs` and `input.rs`. | Idle pipe/socket cancellation, redirected file, `/dev/null`, interactive help, and rejected unsupported devices. |
+| 5 | Implement 100 ms window accounting and schema 2 together in `stats.rs`, output docs, and contract tests. | Reference-model tests for startup, exact boundaries, idle expiry, long jumps, ring reuse, and 1/60/3600-second windows; outputs agree. |
+| 6 | Expand follower integration tests and fix each discovered defect in its own commit. | Append, observed truncation, rename, missing/reappearing path, replacement during drain, initial partial suffix, and generation-boundary diagnostics. |
+| 7 | Add a compact fixture corpus with explicit expected classifications and totals. | Supported text/JSON, ambiguous prefixes, malformed/duplicate fields, escaped values, invalid bytes, CRLF, empty and oversized lines. |
+| 8 | Add generated framing/counting/statistics properties and saved regression seeds. | Independent oracle agrees across chunk splits and limits; all severity counts sum to totals; idle time never changes lifetime totals. |
+| 9 | Add isolated fuzz targets and a reproducible corpus workflow. | Framing plus EOF, classification, and timed engine operations execute with memory/time limits; minimized failures become regression tests. |
+| 10 | Extend soak tooling with mixed traffic, rotation scenarios, resource budgets, and progress artifacts. | Short deterministic self-checks catch deliberately incorrect expected counts; bounded artifacts; timeouts clean up producers, consumers, and helpers. |
+| 11 | Extend the benchmark harness with paired modes, CPU/latency measurements, and machine-readable results. | Identical workloads and exact counts; warmup and randomized order; generator saturation and scheduler noise are reported. |
+| 12 | Add CI tiers, output compatibility fixtures, dependency audit, and package/install smoke checks. | Fast matrix passes on macOS/Linux; expensive jobs have explicit budgets; built package installs and processes a fixture from a clean directory. |
+| 13 | Run candidate validation, fix remaining failures in small commits, then record evidence and prepare 0.2.0 release notes. | Every required gate below has evidence for the candidate commit; version and lockfile agree; no unresolved correctness/shutdown blocker. |
+
+Steps 6, 8, and 12 should remain multiple commits if they reveal unrelated fixes
+or introduce independent checks. Update this plan's completion status as each
+increment lands. A changed gate or design decision needs an explicit rationale.
+
+## Tests and validation tooling
+
+### Generated tests and fuzzing
+
+Use [Proptest](https://proptest-rs.github.io/proptest/intro.html) as a development
+dependency for generation and shrinking. Pin a version compatible with the
+project toolchain at implementation time. Use a simple, allocation-heavy reference
+line splitter over size-capped test inputs, not the production framer as its own
+oracle. Independently specify expected parser results; differential tests against
+a general JSON parser must account for Tell-Tail's duplicate-level policy.
+
+Cover arbitrary byte strings and chunk sizes, all supported record limits at
+selected boundaries, missing terminators, CRLF splits, nested JSON, invalid UTF-8,
+and long idle jumps. Bound generated inputs and case counts so pull requests stay
+quick. Save minimal failing cases without adding application logs or secrets.
+
+Keep [cargo-fuzz](https://rust-fuzz.github.io/book/cargo-fuzz/setup.html) in a
+separate fuzz workspace with a pinned nightly and C++/LLVM prerequisites. Its
+sanitizer toolchain must not change the application's pinned stable toolchain.
+Replay saved failures in normal tests; run longer coverage-guided exploration in
+a dedicated Linux x86_64 job. A clean fuzz run is supporting evidence, not proof
+that arbitrary inputs are correct.
+
+### Soak harness
+
+Extend `scripts/soak.py` with a seed, duration, input/output mode, traffic profile,
+resource limits, and explicit binary path. Emit a result containing commit,
+toolchain, platform, scenario, seed, expected/actual counts, elapsed time,
+latencies, CPU, sampled RSS, and open descriptor counts. Count helper processes
+in resource totals if the output design introduces them.
+
+Provide sustained, burst/idle, mixed text/JSON, malformed/oversized, and controlled
+rotation profiles. Verify all seven severity counts, bytes, parse failures,
+oversized records, and scenario-specific skipped/partial diagnostics. Continuous
+Prometheus readers must see complete documents and advancing freshness. A
+failed replacement must leave the preceding complete metrics file available.
+
+Keep generated files and report artifacts under a configurable disk cap, default
+256 MiB, and rate-limit prolonged file tests with a default 10 GiB/day write
+budget. Rotate harness reports and retain summarized samples. Throughput runs
+are separate, short exercises so a day-long reliability run does not require
+continuous disk saturation. Every process has a timeout and cleanup path.
+
+### Performance harness
+
+Extend `scripts/benchmark.py` to distinguish cached scans, pipes, followed files,
+and idle behavior. Include the existing 200-byte text and 500-byte JSON fixtures,
+varied record sizes/severities, malformed lines, and a sanitized representative
+corpus. Store fixture hashes and record/byte totals alongside each result.
+
+Measure throughput, CPU time, memory, idle CPU, snapshot age, and shutdown latency.
+Pair dashboard and headless runs on the same input profile and host, with at least
+five measured pairs after warmup and alternating or randomized order. Report
+spread and generator limits; if noise obscures the overhead target, rerun under
+controlled conditions. A rendering benchmark alone does not measure ingestion
+overhead. Optimize only a measured regression and keep its evidence with the fix.
+
+## CI and release gates
+
+Pull requests run formatting, clippy, unit/integration/property tests, saved fuzz
+regressions, PTY/backpressure checks, Prometheus validation, and short seeded soak
+smokes on macOS/Linux. Record architecture explicitly. Shared runners enforce
+correctness and resource bounds, not hardware-specific throughput thresholds.
+
+Dedicated scheduled or manually dispatched jobs run 30 minutes per fuzz target
+and longer soak profiles. Configure these as repository CI workflows; a 24-hour
+release soak needs a suitably provisioned runner or an explicitly supervised
+local run. Do not assume an ordinary hosted job can run for a full day.
+
+Release evidence belongs in `docs/VALIDATION-0.2.md`, with compact reproducible
+summaries and links to retained artifacts. The historical MVP report stays intact.
+
+| Required gate | Evidence for the candidate commit |
+| --- | --- |
+| Correctness | Full test matrix passes; no unexplained oracle mismatches, counter regressions, crashes, or terminal restoration failures. |
+| Fuzzing | At least 30 minutes per target with no unresolved finding; every discovered defect has a deterministic regression. |
+| Long-running Linux | One 24-hour stdin/NDJSON run and one 24-hour followed-file/metrics-file run; exact counts for the supported scripted scenarios and complete metric snapshots. Run separately when they would compete for resources. |
+| Dashboard | At least one hour through a PTY on both macOS and Linux, covering resize, freeze/resume, help, and clean shutdown. |
+| Default memory | Combined Tell-Tail/helper sampled RSS below 64 MiB in default configurations; report sample interval and the plateau check below. Investigate sustained growth even below the ceiling. |
+| Maximum configuration | Window 3600 and record limit 16 MiB stay below a proposed 128 MiB combined sampled RSS ceiling on fixed terminal geometry; state allocation remains independent of processed volume. |
+| Responsiveness | All controlled idle/loaded cancellation trials finish within one second; p95 dashboard freshness within 500 ms with an actively draining terminal. Headless freshness respects the configured output interval plus 500 ms. |
+| Performance | On a named reference host, median at least 1M text or 250K JSON records/s for the existing fixtures; paired dashboard throughput loss below 10%. Publish absolute values and variation. |
+| Compatibility | Schema 2 fixtures and migration note, existing metric names/types/labels, deterministic empty-value and exit-status behavior, CLI help and invalid-option coverage. |
+| Distribution readiness | Clean package/install smoke test and source/release dependency review; native runtime evidence for every platform actually advertised. |
+
+If a gate fails, keep the build a release candidate and record the failure. Do
+not quietly reduce a threshold or label a compile-only target runtime-tested.
+Short successful runs cannot substitute for the specified duration.
+
+For the long-run memory check, allow ten minutes of warmup and compare subsequent
+ten-minute median RSS values with the first post-warmup median. Growth above the
+larger of 4 MiB or 20 percent requires investigation and a rerun after resolution.
+Keep the full sampled maximum as a separate ceiling check; neither metric proves
+an instantaneous maximum or replaces the structural bound on retained state.
+
+## Release preparation and remaining decisions
+
+Add an Unreleased changelog entry, a Linux service example, output/schema
+documentation, and troubleshooting for high unknown counts, stale metrics,
+backlog, blocked consumers, and rotation limits. Verify unknown counts and parse
+failures remain visible at normal and compact dashboard sizes.
+
+Run a pinned [RustSec audit](https://rustsec.org/) against the shipped dependency
+lockfile. Investigate advisories and document any scoped, justified exception;
+do not suppress findings wholesale. Review direct dependency licenses and the
+contents of the source package. Use
+[`cargo package --locked`](https://doc.rust-lang.org/cargo/commands/cargo-package.html)
+with its build verification, then install from the extracted package in a clean
+directory and run a known fixture. Exclude generated logs and fuzz artifacts.
+
+Keep Rust 1.88 unless a required change justifies an explicit toolchain increment.
+Build checksummed candidate archives for macOS arm64 and Linux x86_64 first.
+Add macOS x86_64 and Linux arm64 artifacts only with runtime smoke evidence and
+documented minimum OS/libc versions. Pin CI actions and release tooling to reviewed
+versions or commits. Package checks establish local readiness; registry publishing
+and public release distribution are separate actions.
+
+Before public distribution, the project owner must choose the project license
+and canonical repository/release destination. Neither is configured today. These
+choices do not block the reliability work or local package checks. Signing,
+notarization, package-manager distribution, and broader platform coverage can be
+planned against the chosen public distribution path.
+
+Version 0.2 is a candidate for real-workload evaluation, not an automatic GA
+declaration. Follow it with representative developer and Linux service use,
+resolve resulting correctness issues, and reassess remaining format and
+installation needs before committing to a 1.0 compatibility promise.

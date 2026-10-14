@@ -170,6 +170,9 @@ See [validation results](VALIDATION.md) for platform coverage, synthetic through
 sustained-load measurements, and the remaining controlled-overhead and multi-hour
 soak checks. Usage and operational limits are in the [README](../README.md).
 
+The next milestone is the [0.2 implementation plan](PLAN-0.2.md), covering I/O
+reliability, window semantics, adversarial testing, and release validation.
+
 ## Later increments
 
 Multiple sources, Windows support, logfmt/numeric severity profiles, an HTTP scrape
