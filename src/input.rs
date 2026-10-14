@@ -270,4 +270,75 @@ mod tests {
         std::fs::write(&path, b"INFO fresh\n").unwrap();
         assert_eq!(read(&mut missing), b"INFO fresh\n");
     }
+    #[test]
+    fn drains_observed_generations_even_when_replaced_again_during_drain() {
+        use crate::{cli::Args, engine::Engine};
+        use clap::Parser;
+        fn pump(f: &mut Follower, engine: &mut Engine) {
+            let mut buffer = [0; 3];
+            for _ in 0..100 {
+                f.check_at = Instant::now();
+                match f.next(&mut buffer).unwrap() {
+                    Event::Data { len, skip } => {
+                        assert_eq!(skip, 0);
+                        engine.feed(&buffer[..len], Duration::ZERO);
+                    }
+                    Event::Boundary => engine.discard_partial(),
+                    Event::Idle(_) => return,
+                    Event::End => panic!("a follower never completes"),
+                }
+            }
+            panic!("follower failed to reach idle");
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("app.log");
+        let old = dir.path().join("old.log");
+        std::fs::write(&path, b"INFO A\npart").unwrap();
+        let mut f = Follower::open(path.clone(), From::Start).unwrap();
+        let mut engine = Engine::new(&Args::parse_from(["tell-tail"]));
+        let mut prefix = [0; 3];
+        assert!(matches!(
+            f.next(&mut prefix).unwrap(),
+            Event::Data { len: 3, skip: 0 }
+        ));
+        engine.feed(&prefix, Duration::ZERO);
+        std::fs::rename(&path, &old).unwrap();
+        std::fs::write(&path, b"WARN B\n").unwrap();
+        assert!(!f.check().unwrap());
+        assert!(f.replacement.is_some());
+        std::fs::rename(&path, dir.path().join("old-b.log")).unwrap();
+        std::fs::write(&path, b"ERROR C\n").unwrap();
+        pump(&mut f, &mut engine);
+        let report = engine.snapshot(Duration::ZERO, State::Following, Some(0));
+        assert_eq!(report.totals.records, 3);
+        for level in [
+            crate::parse::Level::Info,
+            crate::parse::Level::Warn,
+            crate::parse::Level::Error,
+        ] {
+            assert_eq!(report.totals.levels.get(level), 1);
+        }
+        assert_eq!(report.bytes_read, 26);
+        assert_eq!(report.discarded_partial_records, 1);
+        assert_eq!(report.skipped_bytes, 4);
+        // Writes after the old descriptor's handoff are a documented loss limit.
+        File::options()
+            .append(true)
+            .open(&old)
+            .unwrap()
+            .write_all(b"FATAL late\n")
+            .unwrap();
+        pump(&mut f, &mut engine);
+        assert_eq!(engine.stats.totals.records, 3);
+    }
+    #[test]
+    fn unobserved_truncate_and_regrow_cannot_recover_overwritten_bytes() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("app.log");
+        std::fs::write(&path, b"INFO A\n").unwrap();
+        let mut f = Follower::open(path.clone(), From::End).unwrap();
+        // No observation occurs between shrinking and regrowing the same inode.
+        std::fs::write(&path, b"ERROR B\n").unwrap();
+        assert_eq!(read(&mut f), b"\n");
+    }
 }

@@ -23,6 +23,9 @@ Completed increments:
   direct tests.
 - Step 5: 100 ms rolling buckets, constant-time snapshots, separate second history,
   and JSON schema 2 are implemented with deterministic ledger/boundary tests.
+- Step 6: live tests synchronize on reports and cover observed truncation, missing
+  paths, partial-line boundaries, SIGINT/SIGTERM, and repeated replacement while
+  draining. Tests also characterize the documented unobservable rotation losses.
 
 ## Scope and starting point
 
