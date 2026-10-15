@@ -316,8 +316,55 @@ and public release distribution are separate actions.
 
 The project uses the [MIT License](../LICENSE), with the canonical public
 repository at [zuchka/tell-tail](https://github.com/zuchka/tell-tail). Signing,
-notarization, package-manager distribution, and broader platform coverage remain
-future distribution decisions.
+notarization and broader platform coverage remain future distribution decisions.
+
+### Release automation
+
+The [Release candidate workflow](../.github/workflows/release.yml) is manually
+triggered. Its default is build-only: no tag, draft, or public release is created.
+It tests and builds macOS 14+ Apple Silicon and Linux x86_64 (Ubuntu 24.04,
+glibc 2.39), packages license texts and build identity, exercises the extracted
+binary, and installs it through a temporary local Homebrew tap. It assembles
+SHA-256 checksums, a release manifest, and a generated formula as Actions
+artifacts retained for 14 days. It does not publish to crates.io.
+
+```sh
+gh workflow run release.yml --repo zuchka/tell-tail -f publish=false
+```
+
+The optional `source_commit` input must be a full commit SHA on `main`; omission
+uses the workflow commit. A build-only run may package the current 0.1.0 version
+as a preview. That does not make it a released version.
+
+Before the final validation campaign, prepare a candidate commit with matching
+Cargo.toml/Cargo.lock versions and versioned changelog notes. Run all gates on
+that exact commit. Then record the candidate SHA, version, passing gates, and
+retained evidence in [packaging/validation.json](../packaging/validation.json) on
+`main`. All gates start pending. The gate checker verifies completeness and
+candidate identity; maintainers must review the actual duration, correctness,
+resource, and performance evidence before marking a gate passed.
+
+Only after that record is complete, a maintainer can dispatch with
+`publish=true` and `source_commit` set to the validated candidate SHA. The
+workflow checks evidence before building and again before publishing. The
+`release` environment restricts publication to `main` and requires approval by
+`zuchka`. Archives must describe the same clean version/commit. The publisher
+uploads a complete draft, then publishes it and creates the version tag. It
+refuses to replace existing tags/releases; inspect any interrupted draft before
+retrying. No publication run is authorized by the current setup work.
+
+After a stable GitHub release is public, import it into the existing shared tap:
+
+```sh
+gh workflow run tell-tail.yml --repo ding-labs/homebrew-tap -f tag=v0.2.0
+```
+
+That workflow rejects drafts/prereleases, checks archive hashes and tag/source
+identity, generates `tell-tail.rb`, and installs/tests it on native macOS and
+Linux runners before committing only that formula. It uses the tap's own
+GitHub token; no cross-repository write secret is required. `ding.rb` and its
+bottle workflow remain independent. The first installable Tell-Tail formula is
+held until this process completes; setup does not create a `--HEAD` shortcut.
 
 Version 0.2 is a candidate for real-workload evaluation, not an automatic GA
 declaration. Follow it with representative developer and Linux service use,

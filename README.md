@@ -24,6 +24,12 @@ To install the binary locally:
 cargo install --path . --locked
 ```
 
+Release automation and Homebrew packaging are prepared, but no release has been
+published yet. Tell-Tail will join `ding` in the existing
+[Ding Labs tap](https://github.com/ding-labs/homebrew-tap) after the remaining 0.2
+validation passes. The planned command is `brew install ding-labs/tap/tell-tail`;
+it is not available yet. See the [release workflow instructions](docs/PLAN-0.2.md#release-automation).
+
 ## Inputs and output
 
 ```sh

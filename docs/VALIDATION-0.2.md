@@ -140,5 +140,14 @@ and long-duration release gates have not been rerun for this addition.
    [MIT License](../LICENSE), and canonical repository metadata points to
    [zuchka/tell-tail](https://github.com/zuchka/tell-tail).
 
+Release preparation now has fail-closed validation records, native archive and
+Homebrew tooling, and a build-only workflow. Local macOS archive extraction and
+binary smoke checks pass; a local Homebrew install is blocked by this machine's
+outdated Xcode/Command Line Tools. Native CI exercises Homebrew installation
+from a temporary local server without publishing. The shared
+[Ding Labs tap](https://github.com/ding-labs/homebrew-tap) has a separate import
+workflow for a future published stable release. These changes prepare the
+distribution gate; they do not complete the remaining 0.2 validation gates.
+
 The workflows and supervised commands are ready for these runs. No long-duration
 job, tag, registry publication, or public release was started by this report.
