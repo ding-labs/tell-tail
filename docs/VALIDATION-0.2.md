@@ -9,6 +9,8 @@ hashes, fixture hashes, configurations, package results, and measurements. Full
 local logs/results are in the ignored `work/` directory. Measurements span the
 implementation commits and are not a single final-candidate campaign. Reproduce
 checks using [TESTING-0.2.md](TESTING-0.2.md).
+The original campaign below predates webhook alerting; its follow-up checks are
+recorded separately near the end of this report.
 
 ## Platforms and correctness
 
@@ -27,9 +29,10 @@ causes status 1 while preserving the last complete metrics file, including when
 the test runner itself is root.
 
 Promtool 3.3.0 accepts the compatibility fixture and actual executable exposition.
-Actionlint 1.7.12 accepts both workflow definitions. Remote CI has not run: this
-checkout has no configured Git remote, and no dedicated release runner has been
-provisioned.
+Actionlint 1.7.12 accepts both workflow definitions. This initial campaign predates
+the GitHub repository; subsequent remote runs are available in
+[GitHub Actions](https://github.com/zuchka/tell-tail/actions). No dedicated release
+runner has been provisioned.
 
 ## Responsiveness and short resource runs
 
@@ -99,6 +102,28 @@ option; installation still used a fresh temporary directory. The check caught
 and fixed toolchain selection outside the source directory and Python 3.11's
 missing tar extraction-filter API. Package contents exclude logs, fuzz corpora,
 build products, and Python caches.
+
+## Webhook follow-up
+
+The webhook implementation through `3de572e` passes all 52 Rust tests on macOS
+arm64 and the Linux ARM64 container described above, using Rust 1.88.0. New tests
+cover inclusive thresholds, fatal/unknown counts, minimum samples, rearming,
+cooldown, custom-message escaping, finite EOF, failure suppression, redirect
+rejection, bounded queues, parent death, stalled requests, and both signals.
+A stalled endpoint does not prevent exact counting of another 200,000 records.
+
+The terminal check with `--alerts` confirms delivery while the display is frozen,
+then verifies keys, resize, final counts, and terminal restoration. All four exit
+paths complete within one second on both platforms. JSON, text, Prometheus stdout,
+and metrics-file delivery are also covered. HTTP receivers in these checks are
+local test fixtures; no external notification service is contacted.
+
+Formatting, clippy with warnings denied, actionlint, and locked fuzz-workspace
+metadata checks pass. RustSec reports zero advisories and warnings across the
+updated 154-dependency lockfile. Source-package build verification passes on
+macOS, as do the existing inherited-output, backpressure, stalled-terminal, and
+metrics-publication-failure scripts. The earlier throughput/resource measurements
+and long-duration release gates have not been rerun for this addition.
 
 ## Gates still open
 

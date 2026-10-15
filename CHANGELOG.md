@@ -2,6 +2,14 @@
 
 ## Unreleased 0.2
 
+### Added
+
+- Optional `--alert-error-percent` and `--alert-webhook` send a fixed JSON payload
+  with a custom message when the rolling error percentage meets a threshold.
+  Minimum samples, breach suppression, and cooldown limit noise. HTTP(S) delivery
+  uses bounded state, request deadlines, and prompt cancellation; failures are
+  best effort and do not stop ingestion. See the README for payload and options.
+
 ### Changed
 
 - JSON reports now use `schema_version: 2`. Consumers that validate the schema

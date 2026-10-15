@@ -71,6 +71,71 @@ mode 0644; existing permissions are preserved. The snapshot timestamp detects a
 stale file, and `tell_tail_running` is zero on orderly termination. Counters reset
 on process restart. An HTTP scrape endpoint is a later increment.
 
+## Webhook alerts
+
+Send a JSON message when errors reach 25% of records in the rolling window:
+
+```sh
+tell-tail app.log --window 60 \
+  --alert-error-percent 25 \
+  --alert-webhook https://example.com/hooks/tell-tail \
+  --alert-message "Check the service: errors reached 25%"
+```
+
+The rule uses `(error + fatal) / all records`, including unknown records in the
+denominator. It evaluates each ingestion snapshot (roughly every 100 ms) and at
+finite EOF, independently of the display/publication interval. It works with
+stdin, files, every output mode, and a frozen dashboard display.
+
+- `--alert-error-percent`: inclusive threshold from 0 to 100. Requires an endpoint.
+- `--alert-webhook`: one HTTP(S) endpoint, up to 2048 bytes. Requires a threshold.
+- `--alert-message`: optional text, up to 4096 bytes, included as a JSON string.
+- `--alert-min-records`: minimum records in the window; default **100**. A partial
+  startup window can qualify. Set this to 1 for very small test streams.
+- `--alert-cooldown`: minimum seconds between new breaches; default **300**.
+  Accepts 0 through 86400.
+
+A sustained breach fires once. An eligible window below the threshold rearms the
+rule; a subsequent breach can fire once the cooldown expires. Empty or undersized
+windows do not count as recovery. State resets when Tell-Tail restarts. There are
+no repeated reminders or recovery notifications in this version.
+
+The fixed payload includes your message and aggregate statistics:
+
+```json
+{
+  "schema_version": 1,
+  "event": "error_threshold_met",
+  "message": "Check the service: errors reached 25%",
+  "session_id": "1234-1792010000000000000",
+  "source": "app.log",
+  "observed_at_unix_seconds": 1792010060.0,
+  "window_seconds": 60,
+  "observed_seconds": 60.0,
+  "records": 100,
+  "error_records": 25,
+  "error_percent": 25.0,
+  "threshold_percent": 25.0
+}
+```
+
+Webhook schema 1 is separate from the existing snapshot schema. Percentages are
+on a 0–100 scale. No raw log records or endpoint URL are included in the payload.
+
+Delivery uses `POST` with `Content-Type: application/json`; any HTTP 2xx response
+counts as success. HTTPS verifies certificates. Redirects are not followed, and
+URL userinfo/fragment syntax is rejected. Custom headers and arbitrary JSON
+templates are outside this first version.
+
+Delivery is best effort: one active request and one queued event, with a
+five-second request deadline. A full queue leaves the current breach eligible
+for evaluation on the next snapshot. There are no automatic retries or durable
+storage, so transient breaches or failed deliveries can be lost. Failures write a
+sanitized diagnostic to stderr and do not change log counts or the exit status.
+Shutdown allows 250 ms for delivery, then cancels pending work; even a finite scan
+can exit before a slow receiver acknowledges its final alert. Network I/O never
+runs on the ingestion thread. Alerting is disabled unless configured.
+
 ## What is counted
 
 - Each physical line is one record. Blank and unrecognized lines count as unknown.
@@ -140,6 +205,7 @@ cargo clippy --all-targets --locked -- -D warnings
 cargo test --locked
 cargo build --locked
 python3 scripts/check_terminal.py
+python3 scripts/check_terminal.py --alerts
 python3 scripts/check_backpressure.py
 cargo build --release --locked
 python3 scripts/benchmark.py

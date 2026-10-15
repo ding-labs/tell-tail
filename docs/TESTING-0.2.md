@@ -6,6 +6,21 @@ workspace toolchain, platform, fixture hash, seed, expected counts, and actual
 final counts. An externally supplied binary's compiler is not inferred from the
 workspace toolchain.
 
+## Webhook regression checks
+
+```sh
+cargo test --locked
+cargo build --locked
+python3 scripts/check_terminal.py --alerts
+```
+
+The Rust suite covers rule transitions, exact-threshold JSON delivery, bounded
+HTTP failures, stalled consumers, signal exits, and output modes using local
+receivers. The terminal check confirms an alert fires while the display is
+frozen and checks restoration after `q`, SIGINT, SIGTERM, and EOF. Both CI
+platforms run it. These short fixtures do not replace release-duration or
+performance checks with webhook delivery enabled.
+
 ## Soak scenarios
 
 ```sh

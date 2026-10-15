@@ -49,6 +49,12 @@ Completed increments:
   execution. See [implementation validation](VALIDATION-0.2.md) for evidence and
   the remaining step 13 gates.
 
+An additional requested increment adds one optional rolling error-percentage
+webhook rule with a fixed JSON envelope and custom message. Minimum samples,
+breach suppression, cooldown, bounded delivery, and cancellation are implemented.
+See [webhook usage](../README.md#webhook-alerts). This addition does not satisfy
+the outstanding release-duration or performance gates.
+
 ## Scope and starting point
 
 The [MVP plan](PLAN.md) remains the product foundation. Existing commands, one

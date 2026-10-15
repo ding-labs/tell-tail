@@ -10,7 +10,8 @@ cargo audit --json
 ```
 
 The October 14, 2026 review of the application lockfile found zero advisories and
-zero informational warnings across 124 lockfile dependencies. RustSec database
+zero informational warnings across 154 lockfile dependencies, including the
+webhook HTTP/TLS dependencies. RustSec database
 commit: `edb58f5974b83eb8302332821cb6d389777aa351` (1,329 advisories). There are no
 ignored advisories. Rerun at candidate validation: this is dated evidence, not a
 promise about future advisories. Audit source: [RustSec](https://rustsec.org/).
@@ -28,12 +29,21 @@ Declared direct dependency licenses from `cargo metadata --locked`:
 | serde_json | 1.0.154 | MIT OR Apache-2.0 |
 | signal-hook | 0.3.18 | Apache-2.0/MIT |
 | tempfile | 3.27.0 | MIT OR Apache-2.0 |
+| ureq | 3.4.2 | MIT OR Apache-2.0 |
 | proptest (tests) | 1.12.0 | MIT OR Apache-2.0 |
 
 The screen-observation script uses pyte 0.8.2 (LGPLv3 package classifier) and wcwidth
 0.2.13 (MIT) in a development virtual environment. Neither is linked into the
 Rust binary or included in the source package. Their only role is interpreting
 terminal output during validation.
+
+Webhook delivery uses [ureq 3.4.2](https://docs.rs/ureq/3.4.2/ureq/) with default
+features disabled and only the `rustls` feature enabled. Its Rust 1.85 minimum
+fits the existing 1.88 toolchain. Requests run in a supervised helper process;
+the parent enforces a deadline even if name resolution stalls. HTTP responses
+have a 16 KiB header limit and their bodies are not consumed. Each queued payload
+is at most 64 KiB, and each helper request is at most 128 KiB. The fuzz workspace
+lockfile includes the same new dependencies.
 
 Tell-Tail is licensed under the [MIT License](../LICENSE), with source hosted at
 [zuchka/tell-tail](https://github.com/zuchka/tell-tail). Before public binary
