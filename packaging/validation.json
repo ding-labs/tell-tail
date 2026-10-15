@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "version": "0.2.0",
+  "source_commit": null,
+  "gates": {
+    "correctness": {"passed": false, "evidence": []},
+    "fuzzing": {"passed": false, "evidence": []},
+    "linux_day": {"passed": false, "evidence": []},
+    "dashboard_hour": {"passed": false, "evidence": []},
+    "default_memory": {"passed": false, "evidence": []},
+    "maximum_memory": {"passed": false, "evidence": []},
+    "responsiveness": {"passed": false, "evidence": []},
+    "performance": {"passed": false, "evidence": []},
+    "compatibility": {"passed": false, "evidence": []},
+    "distribution": {"passed": false, "evidence": []}
+  }
+}
