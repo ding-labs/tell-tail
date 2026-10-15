@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import pathlib
+import shutil
 import subprocess
 import tarfile
 import tempfile
@@ -30,7 +31,17 @@ with tempfile.TemporaryDirectory(prefix='tell-tail-package-') as directory:
                    for name in names), 'unexpected archive paths'
         assert all(member.isfile() or member.isdir() for member in tar.getmembers()), 'unexpected archive links'
         assert not any('/work/' in name or '/fuzz/' in name or '__pycache__' in name for name in names)
-        tar.extractall(directory, filter='data')
+        # Copy only the validated regular files/directories. This also supports
+        # Python 3.11 builds without tarfile's newer extraction-filter API.
+        for member in tar.getmembers():
+            destination = directory / member.name
+            if member.isdir():
+                destination.mkdir(parents=True, exist_ok=True)
+            else:
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                with tar.extractfile(member) as source_file, destination.open('wb') as output_file:
+                    shutil.copyfileobj(source_file, output_file)
+                destination.chmod(member.mode & 0o777)
     source = directory / package_name
     install = directory / 'installed'
     subprocess.run(['cargo', 'install', '--path', str(source), '--root', str(install), '--locked'],
