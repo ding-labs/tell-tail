@@ -41,6 +41,10 @@ Completed increments:
 - Step 11: cached scan fixtures and fixed-workload paired pipelines report exact
   counts, hashes, CPU, resources, shutdown, snapshot age, idle behavior, generator
   load, and variation. Short self-checks pass; controlled measurements are pending.
+- Step 12: schema/metric/CLI fixtures, compact diagnostics, terminal freshness
+  observation, clean-package installation, pinned dependency auditing, and CI
+  tiers are implemented. RustSec reports no advisories or warnings. Source-package
+  installation passes locally; remote CI and extended gates still need execution.
 
 ## Scope and starting point
 

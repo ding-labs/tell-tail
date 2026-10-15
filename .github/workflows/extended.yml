@@ -1,0 +1,100 @@
+name: Extended validation
+on:
+  schedule:
+    - cron: '23 4 * * 0'
+  workflow_dispatch:
+    inputs:
+      release_soaks:
+        description: Run two sequential 24-hour Linux soaks on a dedicated runner
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: extended-validation
+  cancel-in-progress: false
+jobs:
+  fuzz:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [framing, classification, timed_engine]
+    env:
+      ASAN_OPTIONS: quarantine_size_mb=32
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install nightly-2026-10-14 --profile minimal
+      - run: cargo +nightly-2026-10-14 install cargo-fuzz --version 0.13.2 --locked
+      - run: |
+          mkdir -p work
+          git rev-parse HEAD > work/commit.txt
+          rustc +nightly-2026-10-14 --version > work/toolchain.txt
+          cargo +nightly-2026-10-14 metadata --locked --manifest-path fuzz/Cargo.toml --format-version 1 > /dev/null
+          cargo +nightly-2026-10-14 fuzz run ${{ matrix.target }} -- -max_total_time=1800 -timeout=5 -rss_limit_mb=512 -max_len=65536 > work/fuzz.log 2>&1
+          git diff --exit-code -- Cargo.lock fuzz/Cargo.lock
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: extended-fuzz-${{ matrix.target }}
+          path: |
+            work/*.txt
+            work/*.log
+            fuzz/artifacts/
+          retention-days: 30
+  dashboard:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install 1.88.0 --profile minimal
+      - run: cargo build --release --locked
+      - run: mkdir -p work
+      - run: python3 scripts/soak.py --seconds 3600 --profile burst --tui --exercise-terminal --report work/dashboard-hour.json 2> work/dashboard-progress.ndjson
+      - run: python3 scripts/soak.py --seconds 60 --profile mixed --window 3600 --max-record-bytes 16777216 --rate 100 --rss-limit-mib 128 --report work/maximum.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: extended-dashboard-${{ matrix.os }}
+          path: |
+            work/*.json
+            work/*progress.ndjson
+          retention-days: 30
+  linux-release-soak:
+    if: github.event_name == 'workflow_dispatch' && inputs.release_soaks
+    # Explicitly provision this runner; hosted jobs cannot supply a 24-hour run.
+    runs-on: [self-hosted, linux, tell-tail-validation]
+    timeout-minutes: 1500
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        input: [stdin, file]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install 1.88.0 --profile minimal
+      - run: cargo build --release --locked
+      - run: mkdir -p work
+      - if: matrix.input == 'stdin'
+        run: python3 scripts/soak.py --seconds 86400 --profile mixed --report work/linux-stdin-day.json 2> work/progress.ndjson
+      - if: matrix.input == 'file'
+        run: python3 scripts/soak.py --seconds 86400 --input file --profile rotation --output prometheus --report work/linux-file-day.json 2> work/progress.ndjson
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: extended-linux-${{ matrix.input }}
+          path: |
+            work/linux-*-day.json
+            work/progress.ndjson
+          retention-days: 30

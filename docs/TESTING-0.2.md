@@ -142,3 +142,22 @@ temporary directory, installs with the extracted toolchain pin, and checks a
 known mixed fixture using the installed binary. `--allow-dirty` is for developing
 the check; its result explicitly records that qualification. Build artifacts and
 fuzz corpora are excluded by the package's explicit include list.
+
+## CI tiers
+
+`Checks` runs macOS/Linux correctness, terminal observation, output/backpressure,
+Prometheus validation, short soaks, source-package installation, RustSec auditing,
+and 30-second fuzz smokes. It records host architecture and enforces resource and
+correctness checks; shared-runner throughput is not a release threshold.
+
+`Extended validation` runs weekly or manually: 30 minutes per fuzz target and
+one-hour dashboard soaks on both operating systems. Its optional `release_soaks`
+input requires a provisioned Linux runner with labels `self-hosted`, `linux`, and
+`tell-tail-validation`; the two 24-hour jobs run sequentially with 25-hour job
+timeouts. Provision disk space for Rust builds in addition to the 256 MiB fixture
+budget. No dedicated runner is provisioned by this repository. Workflow files
+alone are not evidence that these jobs have passed.
+
+Actions are pinned to upstream checkout v4.3.1 and upload-artifact v4.6.2 commits.
+Promtool 3.3.0 downloads are checked against pinned upstream SHA-256 digests.
+The package uses Rust 1.88; only fuzz tooling requires the pinned nightly.
