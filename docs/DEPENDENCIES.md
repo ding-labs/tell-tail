@@ -30,7 +30,7 @@ Declared direct dependency licenses from `cargo metadata --locked`:
 | tempfile | 3.27.0 | MIT OR Apache-2.0 |
 | proptest (tests) | 1.12.0 | MIT OR Apache-2.0 |
 
-The screen-observation script uses pyte 0.8.2 (LGPL-3.0-or-later) and wcwidth
+The screen-observation script uses pyte 0.8.2 (LGPLv3 package classifier) and wcwidth
 0.2.13 (MIT) in a development virtual environment. Neither is linked into the
 Rust binary or included in the source package. Their only role is interpreting
 terminal output during validation.
