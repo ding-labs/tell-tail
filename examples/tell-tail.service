@@ -1,0 +1,28 @@
+[Unit]
+Description=Tell-Tail log throughput and severity metrics
+After=local-fs.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+# Create this account and grant it read access to the application's log directory.
+User=tell-tail
+Group=tell-tail
+StateDirectory=tell-tail
+StateDirectoryMode=0755
+ExecStart=/usr/local/bin/tell-tail /var/log/my-app/app.log --output prometheus --metrics-file /var/lib/tell-tail/tell-tail.prom
+Restart=on-failure
+RestartSec=5
+RestartPreventExitStatus=2
+SuccessExitStatus=130 143
+TimeoutStopSec=3
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+StandardOutput=null
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

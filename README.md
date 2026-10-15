@@ -84,7 +84,7 @@ on process restart. An HTTP scrape endpoint is a later increment.
   Bracketed timestamps work too. Words elsewhere in a message do not set severity.
 - Auto parsing treats lines starting with `{` after whitespace as JSON. Invalid
   JSON never falls back to text. Other formats, ANSI-colored prefixes, and multiline
-  event reconstruction are not supported in v0.1.
+  event reconstruction remain unsupported in 0.2.
 - Warning ratio is warn / all records. Error ratio is (error + fatal) / all records.
   Unknown records remain in both denominators. These are log ratios, not request
   failure rates.
@@ -127,7 +127,8 @@ Exit status: 0 on EOF or `q`, 2 for argument errors, 1 for runtime failures,
 130 for SIGINT, and 143 for SIGTERM. A closed downstream pipe exits quietly. An output failure takes precedence over
 a signal exit code and returns 1; an undrained sink may prevent its diagnostic
 from being displayed.
-A service manager can supervise long-running headless processes.
+A service manager can supervise long-running headless processes. See the
+[Linux service example and troubleshooting guide](docs/OPERATIONS.md).
 
 ## Development
 
