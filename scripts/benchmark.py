@@ -15,8 +15,32 @@ import sys
 import tempfile
 import time
 from types import SimpleNamespace
-from soak import ROOT, optional_command, provenance, run as soak
+from soak import ROOT, consumer_setup, optional_command, provenance, run as soak
 from soak_support import Counts, make_batch
+
+def configure_affinity(pin):
+    available = sorted(os.sched_getaffinity(0)) if hasattr(os, 'sched_getaffinity') else None
+    result = {'available_cpus': available, 'producer_cpu': None, 'consumer_cpu': None}
+    if pin:
+        if sys.platform != 'linux' or not available or len(available) < 2:
+            raise ValueError('--pin-cpus requires Linux and at least two available logical CPUs')
+        result.update(producer_cpu=available[0], consumer_cpu=available[-1])
+        os.sched_setaffinity(0, {result['producer_cpu']})
+    return result
+
+
+def cpu_model():
+    if sys.platform == 'darwin':
+        return optional_command(['sysctl', '-n', 'machdep.cpu.brand_string'])
+    try:
+        for line in pathlib.Path('/proc/cpuinfo').read_text().splitlines():
+            key, _, value = line.partition(':')
+            if key.strip() in ('model name', 'Model'):
+                return value.strip()
+    except OSError:
+        pass
+    return None
+
 
 def summary(values):
     median = statistics.median(values)
@@ -62,7 +86,8 @@ def cached(args):
                 cpu_before = resource.getrusage(resource.RUSAGE_CHILDREN)
                 start = time.perf_counter()
                 output = subprocess.check_output([str(args.binary), str(path), '--once', '--output', 'json',
-                                                  '--max-record-bytes', str(limit)], timeout=120)
+                                                  '--max-record-bytes', str(limit)], timeout=120,
+                                                 preexec_fn=consumer_setup(args.consumer_cpu))
                 elapsed = time.perf_counter() - start
                 cpu_after = resource.getrusage(resource.RUSAGE_CHILDREN)
                 report = json.loads(output.splitlines()[-1])
@@ -82,6 +107,7 @@ def cached(args):
 def stream_args(args, output, **overrides):
     values = dict(binary=args.binary, seconds=args.seconds, records=0, batch_copies=64, input='stdin', output=output,
                   source_directory=args.source_directory,
+                  consumer_cpu=args.consumer_cpu,
                   profile=args.profile, seed=args.seed, rate=0, max_record_bytes=1024, window=60,
                   rss_limit_mib=64, disk_limit_mib=256, file_gib_per_day=10, rotate_bytes=8*1024**2)
     values.update(overrides)
@@ -139,15 +165,21 @@ def main():
     parser.add_argument('--binary', type=pathlib.Path, default=ROOT / 'target/release/tell-tail')
     parser.add_argument('--source-directory', type=pathlib.Path, default=ROOT,
                         help='checkout used to build the binary; recorded separately from the harness')
+    parser.add_argument('--pin-cpus', action='store_true',
+                        help='Linux: pin producer and consumer to separate available logical CPUs')
     parser.add_argument('--report', type=pathlib.Path)
     args = parser.parse_args()
     if args.records < 100 or args.repeats < 1 or args.pairs < 1 or not 0 < args.seconds <= 600 or args.disk_limit_mib < 1:
         parser.error('invalid workload or measurement budget')
     args.binary = args.binary.resolve()
     args.source_directory = args.source_directory.resolve()
+    try:
+        affinity = configure_affinity(args.pin_cpus)
+    except ValueError as error:
+        parser.error(str(error))
+    args.consumer_cpu = affinity['consumer_cpu']
     result = {'platform': platform.platform(), 'architecture': platform.machine(), 'host': platform.node(),
-              'logical_cpus': os.cpu_count(), 'cpu_model': optional_command(['sysctl', '-n', 'machdep.cpu.brand_string'])
-                  if sys.platform == 'darwin' else optional_command(['uname', '-m']),
+              'logical_cpus': os.cpu_count(), 'cpu_model': cpu_model(), 'cpu_affinity': affinity,
               **provenance(args.binary, args.source_directory),
               'workspace_toolchain': optional_command(['rustc', '--version']),
               'configuration': {key: str(value) if isinstance(value, pathlib.Path) else value

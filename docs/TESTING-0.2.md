@@ -174,6 +174,13 @@ binary's build checkout commit/dirty state and hash separately from the harness
 commit/dirty state. Keep the build command and checkout with the evidence; a
 declared source directory alone cannot prove where an arbitrary binary came from.
 
+On Linux, `benchmark.py --pin-cpus` restricts the Python producer to the first
+available logical CPU and Tell-Tail plus its helpers to the last. Reports retain
+the original CPU mask, selected CPUs and CPU model. This controls process
+migration without changing the workload, gate thresholds or application. It
+does not reserve the CPUs or eliminate shared-host interference; noisy results
+remain inconclusive. Other platforms reject the option explicitly.
+
 ## Source package
 
 Run `python3 scripts/check_package.py` from a clean checkout. It runs Cargo's

@@ -1,10 +1,32 @@
 #!/usr/bin/env python3
 import copy
+import json
+import os
+import subprocess
+import sys
 import unittest
 from soak_support import Counts, ObservationClock, cpu_seconds, make_batch, select_tree
 
 
 class SupportTests(unittest.TestCase):
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux process affinity')
+    def test_producer_and_consumer_are_pinned_to_separate_cpus(self):
+        from benchmark import configure_affinity
+        from soak import consumer_setup
+        before = os.sched_getaffinity(0)
+        if len(before) < 2:
+            self.skipTest('needs at least two available CPUs')
+        try:
+            placement = configure_affinity(True)
+            self.assertEqual(os.sched_getaffinity(0), {placement['producer_cpu']})
+            child = json.loads(subprocess.check_output([sys.executable, '-c',
+                'import json,os; print(json.dumps(sorted(os.sched_getaffinity(0))))'],
+                preexec_fn=consumer_setup(placement['consumer_cpu'])))
+            self.assertEqual(child, [placement['consumer_cpu']])
+            self.assertNotEqual(placement['producer_cpu'], placement['consumer_cpu'])
+        finally:
+            os.sched_setaffinity(0, before)
+
     def test_continuity_rejects_suspend_even_when_monotonic_clock_pauses(self):
         clock = ObservationClock(0, 100)
         clock.observe(1, 101)

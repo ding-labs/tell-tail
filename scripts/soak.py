@@ -41,6 +41,18 @@ def provenance(binary, source_directory=ROOT):
             'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest()}
 
 
+def consumer_setup(cpu=None, slave=None):
+    if cpu is None and slave is None:
+        return None
+    def setup():
+        if cpu is not None:
+            os.sched_setaffinity(0, {cpu})
+        if slave is not None:
+            os.setsid()
+            fcntl.ioctl(slave, termios.TIOCSCTTY, 0)
+    return setup
+
+
 def metrics_report(text):
     assert text.endswith('\n'), 'incomplete metrics exposition'
     pairs = re.findall(r'^tell_tail_records_total\{level="(\w+)"\} (\d+)$', text, re.M)
@@ -116,12 +128,10 @@ def run(args):
         if args.output == 'tui':
             master, slave = pty.openpty()
             fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', 26, 100, 0, 0))
-        def setup():
-            os.setsid()
-            fcntl.ioctl(slave, termios.TIOCSCTTY, 0)
+        consumer_cpu = getattr(args, 'consumer_cpu', None)
         child = subprocess.Popen(command, stdin=subprocess.PIPE if args.input == 'stdin' else subprocess.DEVNULL,
                                  stdout=slave if master is not None else subprocess.PIPE,
-                                 stderr=subprocess.PIPE, preexec_fn=setup if master is not None else None,
+                                 stderr=subprocess.PIPE, preexec_fn=consumer_setup(consumer_cpu, slave),
                                  env={**os.environ, 'TERM': 'xterm-256color'})
         if slave is not None:
             os.close(slave)
@@ -337,6 +347,7 @@ def run(args):
                            'platform': platform.platform(), 'architecture': platform.machine(),
                            'workspace_toolchain': optional_command(['rustc', '--version']),
                            'binary': str(args.binary), 'input': args.input, 'mode': args.output,
+                           'consumer_cpu': consumer_cpu,
                            'exercise_terminal': getattr(args, 'exercise_terminal', False),
                            'batch_copies': copies,
                            'profile': args.profile, 'seed': args.seed, 'fixture_sha256': digest,
