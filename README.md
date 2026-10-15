@@ -9,6 +9,8 @@ reads stdin, and supports plain text, NDJSON, and Prometheus output.
 The repository pins Rust 1.88.0. With rustup installed:
 
 ```sh
+git clone https://github.com/zuchka/tell-tail.git
+cd tell-tail
 cargo build --release --locked
 python3 scripts/demo.py | ./target/release/tell-tail
 ```

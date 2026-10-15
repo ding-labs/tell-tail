@@ -308,12 +308,10 @@ documented minimum OS/libc versions. Pin CI actions and release tooling to revie
 versions or commits. Package checks establish local readiness; registry publishing
 and public release distribution are separate actions.
 
-The project uses the [MIT License](../LICENSE). Before public distribution, the
-project owner must choose the canonical repository/release destination; no
-repository URL is configured yet. This does not block the reliability work or
-local package checks. Signing,
-notarization, package-manager distribution, and broader platform coverage can be
-planned against the chosen public distribution path.
+The project uses the [MIT License](../LICENSE), with the canonical public
+repository at [zuchka/tell-tail](https://github.com/zuchka/tell-tail). Signing,
+notarization, package-manager distribution, and broader platform coverage remain
+future distribution decisions.
 
 Version 0.2 is a candidate for real-workload evaluation, not an automatic GA
 declaration. Follow it with representative developer and Linux service use,

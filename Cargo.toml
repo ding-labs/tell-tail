@@ -5,6 +5,7 @@ edition = "2024"
 rust-version = "1.88"
 description = "Bounded-memory log throughput and severity monitor"
 license = "MIT"
+repository = "https://github.com/zuchka/tell-tail"
 readme = "README.md"
 include = ["src/**", "tests/**", "Cargo.toml", "Cargo.lock", "/LICENSE", "README.md", "CHANGELOG.md", "docs/**", "examples/*.service", "scripts/*.py", "scripts/*.txt", "rust-toolchain.toml"]
 
