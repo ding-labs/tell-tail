@@ -134,7 +134,15 @@ pub fn draw(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool) {
     let accent = Color::Rgb(93, 216, 203);
     frame.render_widget(Block::default().style(Style::default().fg(fg)), area);
     if area.width < 60 || area.height < 22 {
-        frame.render_widget(Paragraph::new(format!("Tell-Tail · {:?}\n{} records · {} bytes\nwarn {} · error {}\nResize to 60 × 22 for dashboard\nq quit · space freeze", s.state, s.totals.records, s.bytes_read, percent(s.window.warning_ratio), percent(s.window.error_ratio))), area);
+        frame.render_widget(
+            Paragraph::new(format!(
+                "Tell-Tail · {:?}\n{} records · {} bytes\nwarn {} · error {}\nUnknown: {}\nParse failures: {}\nResize to 60 × 22 for dashboard\nq quit · space freeze",
+                s.state, s.totals.records, s.bytes_read,
+                percent(s.window.warning_ratio), percent(s.window.error_ratio),
+                s.totals.levels.get(Level::Unknown), s.totals.parse_failures,
+            )),
+            area,
+        );
         return;
     }
     let regions = Layout::vertical([
@@ -263,6 +271,38 @@ mod tests {
         stats::{State, Stats},
     };
     use ratatui::backend::TestBackend;
+    #[test]
+    fn unknown_and_parse_failures_remain_visible_in_compact_view() {
+        let mut stats = Stats::new(60, "stdin".into());
+        stats.record(
+            Classification {
+                level: Level::Unknown,
+                parse_failure: true,
+            },
+            false,
+            Duration::ZERO,
+        );
+        let snapshot = stats.snapshot(Duration::from_secs(1), State::Following, 0, None);
+        for (width, height) in [(20, 8), (40, 10), (60, 22), (100, 26)] {
+            let mut terminal = Terminal::new(TestBackend::new(width, height)).unwrap();
+            terminal
+                .draw(|frame| draw(frame, &snapshot, false, false))
+                .unwrap();
+            let text = terminal
+                .backend()
+                .buffer()
+                .content
+                .iter()
+                .map(|cell| cell.symbol())
+                .collect::<String>();
+            assert!(
+                text.contains("Parse failures: 1"),
+                "{width}x{height}: {text}"
+            );
+            assert!(text.contains(if width < 60 { "Unknown: 1" } else { "UNKNOWN" }));
+        }
+    }
+
     #[test]
     fn dashboard_contains_counts_and_handles_small_terminals() {
         let mut stats = Stats::new(60, "app.log".into());
