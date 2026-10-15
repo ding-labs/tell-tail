@@ -278,6 +278,7 @@ def run(args):
                     next_sample = now + 1
                 if now >= next_block and recent:
                     blocks.append(statistics.median(recent))
+                    recent.clear()  # wall-clock blocks must not overlap when sampling drifts
                     next_block = now + 600
                     if len(blocks) > 2:
                         baseline = blocks[1]  # first complete post-warmup block
