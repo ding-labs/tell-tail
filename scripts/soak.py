@@ -130,7 +130,18 @@ def run(args):
                         finished.wait(.02)
                 else:
                     query_tail = b''
+                    next_action = started + 5
+                    action = 0
                     while not finished.is_set():
+                        if getattr(args, 'exercise_terminal', False) and time.monotonic() >= next_action and child.poll() is None:
+                            if action < 4:
+                                os.write(master, (b' ', b'?', b'?', b' ')[action])
+                            else:
+                                height, width = (10, 40) if action == 4 else (26, 100)
+                                fcntl.ioctl(master, termios.TIOCSWINSZ, struct.pack('HHHH', height, width, 0, 0))
+                            result['terminal_actions'] += 1
+                            action = (action + 1) % 6
+                            next_action = time.monotonic() + (55 if action == 0 else 1)
                         if select.select([master], [], [], .02)[0]:
                             try:
                                 chunk = os.read(master, 65536)
@@ -219,7 +230,7 @@ def run(args):
             finally:
                 result['producer_cpu_seconds'] = time.thread_time() - cpu_started
                 result['producer_write_wall_seconds'] = write_seconds
-        result = {'rotations': 0}
+        result = {'rotations': 0, 'terminal_actions': 0}
         observer = threading.Thread(target=observe, daemon=True)
         diagnostic = threading.Thread(target=diagnostics, daemon=True)
         producer = threading.Thread(target=produce, daemon=True)
@@ -305,6 +316,7 @@ def run(args):
                            'workspace_dirty': None if git_status is None else bool(git_status),
                            'binary_sha256': hashlib.sha256(args.binary.read_bytes()).hexdigest(),
                            'binary': str(args.binary), 'input': args.input, 'mode': args.output,
+                           'exercise_terminal': getattr(args, 'exercise_terminal', False),
                            'profile': args.profile, 'seed': args.seed, 'fixture_sha256': digest,
                            'configuration': {key: getattr(args, key) for key in
                                ('seconds', 'records', 'rate', 'window', 'max_record_bytes', 'rss_limit_mib',
@@ -349,6 +361,7 @@ def main():
     parser.add_argument('--input', choices=['stdin', 'file'], default='stdin')
     parser.add_argument('--output', choices=['json', 'prometheus', 'tui'], default='json')
     parser.add_argument('--tui', action='store_true', help='alias for --output tui')
+    parser.add_argument('--exercise-terminal', action='store_true', help='periodically freeze, show help, resume, and resize the TUI')
     parser.add_argument('--profile', choices=['sustained', 'mixed', 'burst', 'rotation', 'idle'], default='sustained')
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--rate', type=float, default=1000, help='records/sec; 0 is unlimited')
@@ -369,6 +382,8 @@ def main():
         parser.error('invalid duration, rate, window, or resource budget')
     if args.input == 'file' and args.output == 'tui':
         parser.error('the TUI soak uses stdin; file rotation needs machine-report acknowledgments')
+    if args.exercise_terminal and args.output != 'tui':
+        parser.error('terminal interactions require TUI output')
     if args.profile == 'rotation' and args.input != 'file':
         parser.error('the rotation profile requires --input file')
     if args.profile == 'idle' and args.records:

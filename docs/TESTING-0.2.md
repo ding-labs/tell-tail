@@ -75,11 +75,13 @@ logs alongside final results and run competing performance workloads separately.
 ```sh
 python3 scripts/soak.py --seconds 86400 --profile mixed --report work/linux-stdin-24h.json 2> work/linux-stdin-progress.ndjson
 python3 scripts/soak.py --seconds 86400 --input file --profile rotation --output prometheus --report work/linux-file-24h.json 2> work/linux-file-progress.ndjson
-python3 scripts/soak.py --seconds 3600 --profile burst --tui --report work/tui-1h.json
+python3 scripts/soak.py --seconds 3600 --profile burst --tui --exercise-terminal --report work/tui-1h.json
 ```
 
-Run the one-hour dashboard scenario on both macOS and Linux. Interactive key,
-resize, stalled-terminal, and cleanup behavior are tested separately with
+Run the one-hour dashboard scenario on both macOS and Linux. The interaction
+option cycles through freeze, help, resume, compact size, and full size once per
+minute. It records how many actions were sent and still verifies exact final
+counts. Screen behavior, stalled-terminal handling, and cleanup are asserted with
 `scripts/check_terminal.py` and `scripts/check_terminal_stall.py`; duration alone
 does not exercise those interactions. Fuzz commands and independent release
 budgets are in [the fuzz workspace](../fuzz/README.md). All release gates and their
