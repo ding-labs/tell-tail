@@ -4,7 +4,7 @@
   "source_commit": "ffda8eaebec5e3f08115e622423bd8a30e7d673c",
   "gates": {
     "correctness": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671783912", "docs/VALIDATION-0.2.md: reviewed candidate results"]},
-    "fuzzing": {"passed": false, "evidence": []},
+    "fuzzing": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671823099", "docs/VALIDATION-0.2.md: 1,801 seconds per target, no finding"]},
     "linux_day": {"passed": false, "evidence": []},
     "dashboard_hour": {"passed": false, "evidence": []},
     "default_memory": {"passed": false, "evidence": []},

@@ -236,7 +236,20 @@ Its SHA-256 is
 This remains a controlled low-load observation, not a loaded-throughput claim.
 
 Correctness, compatibility and distribution readiness are recorded as passed
-in the release gate file. Fuzz duration, Linux day runs, dashboard duration,
+in the release gate file. Linux day runs, dashboard duration,
 long-run/default and maximum memory, complete responsiveness and performance
 remain open. The candidate workflow's publication job was skipped; the release
 is still blocked.
+
+All three extended Linux x86_64 sanitizer-backed fuzz targets completed 1,801
+seconds on the frozen candidate without a finding. The downloaded artifacts
+record the matching commit and pinned nightly toolchain. Framing completed
+43,626,714 cases, classification 34,880,931 and timed engine 4,010,984.
+The fuzzing duration gate now passes.
+
+The five one-minute performance pairs remain inconclusive on both hosted
+platforms. Linux JSON/TUI throughput ranges were 15.76%/7.67%; macOS ranges were
+31.88%/30.13%. Neither producer exceeded the CPU utilization limit. Apparent
+median negative TUI losses are not evidence of an overhead pass under these
+conditions. Linux cached medians were 23.91M text and 3.40M JSON records/s, with
+ranges below 1%; further controlled pipeline measurements are required.
