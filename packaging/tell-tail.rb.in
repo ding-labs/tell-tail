@@ -1,0 +1,36 @@
+class TellTail < Formula
+  desc "Bounded-memory log throughput and severity monitor"
+  homepage "https://github.com/zuchka/tell-tail"
+  version "@VERSION@"
+  license "MIT"
+
+  on_macos do
+    depends_on arch: :arm64
+    on_arm do
+      url "@MAC_URL@"
+      sha256 "@MAC_SHA@"
+    end
+  end
+
+  on_linux do
+    depends_on arch: :x86_64
+    on_intel do
+      url "@LINUX_URL@"
+      sha256 "@LINUX_SHA@"
+    end
+  end
+
+  def install
+    bin.install "tell-tail"
+    pkgshare.install "THIRD_PARTY_NOTICES.md", "THIRD_PARTY_LICENSES", "BUILD.json"
+  end
+
+  test do
+    assert_match version.to_s, shell_output("#{bin}/tell-tail --version")
+    output = pipe_output("#{bin}/tell-tail --output json", "INFO one\nWARN two\nFATAL three\nunknown\n", 0)
+    snapshot = JSON.parse(output)
+    assert_equal 4, snapshot.dig("totals", "records")
+    assert_equal 1, snapshot.dig("totals", "levels", "warn")
+    assert_equal 0.25, snapshot["error_ratio"]
+  end
+end
