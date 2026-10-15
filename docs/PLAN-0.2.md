@@ -33,6 +33,11 @@ Completed increments:
 - Step 9: three sanitizer-backed fuzz targets and named seeds are implemented in
   an isolated nightly workspace. All passed 30-second macOS smoke runs; extended
   release campaigns remain pending. See [fuzzing instructions](../fuzz/README.md).
+- Step 10: seeded soak profiles verify exact counts across stdin, TUI, JSON,
+  metrics files, and controlled rotation. Process-tree resource samples, plateau
+  checks, disk/write budgets, progress, and failure artifacts are implemented.
+  Short runs pass; release-duration runs remain pending. See
+  [validation commands](TESTING-0.2.md).
 
 ## Scope and starting point
 

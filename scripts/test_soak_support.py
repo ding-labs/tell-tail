@@ -5,6 +5,20 @@ from soak_support import Counts, cpu_seconds, make_batch, select_tree
 
 
 class SupportTests(unittest.TestCase):
+    def test_metrics_reader_rejects_partial_or_duplicate_reports(self):
+        from soak import metrics_report
+        lines = [f'tell_tail_records_total{{level="{level}"}} 0' for level in
+                 ('trace', 'debug', 'info', 'warn', 'error', 'fatal', 'unknown')]
+        lines += [f'tell_tail_{name} 0' for name in ('parse_failures_total',
+                  'oversized_records_total', 'bytes_total', 'pending_bytes',
+                  'skipped_bytes_total', 'discarded_partial_records_total',
+                  'source_up', 'running', 'snapshot_timestamp_seconds')]
+        document = '\n'.join(lines) + '\n'
+        Counts().verify(metrics_report(document))
+        for bad in [document[:-1], document + lines[0] + '\n', '\n'.join(lines[1:]) + '\n']:
+            with self.assertRaises(AssertionError):
+                metrics_report(bad)
+
     def test_sustained_fixture_has_exact_distribution_and_size(self):
         payload, counts, digest = make_batch(7, 'sustained', 1024)
         self.assertEqual(len(payload), 20000)
