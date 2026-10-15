@@ -1,7 +1,8 @@
 # Tell-Tail 0.2 implementation validation
 
 October 14, 2026. Implementation steps 1–12 are complete. Release validation
-(step 13) is incomplete; the package remains 0.1.0 with Unreleased 0.2 notes.
+(step 13) is incomplete. The package is now 0.2.0 for a candidate validation
+campaign; no version tag or release has been published.
 This report does not certify a GA or release-candidate build.
 
 The committed [machine-readable summary](validation/0.2-smoke.json) records binary

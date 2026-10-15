@@ -5,8 +5,9 @@ release candidate. The work concentrates on I/O isolation, predictable rolling
 statistics, adversarial correctness tests, and reproducible operating limits.
 It preserves bounded state and discards raw logs after processing.
 
-Status: in progress, October 14, 2026. The package remains at 0.1.0 until candidate
-validation. Release gates have not yet been satisfied.
+Status: candidate validation in progress, October 14, 2026. The package is now
+0.2.0 for the validation campaign. No version tag or release has been published;
+release gates have not yet been satisfied.
 
 Completed increments:
 
