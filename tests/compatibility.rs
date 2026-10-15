@@ -59,10 +59,16 @@ fn help_and_argument_errors_have_stable_exit_contracts() {
         "--metrics-file",
         "--max-record-bytes",
         "--interval-ms",
+        "--alert-webhook",
+        "--alert-error-percent",
+        "--alert-message",
+        "--alert-min-records",
+        "--alert-cooldown",
     ] {
         assert!(help.contains(flag), "{flag}");
     }
     assert!(!help.contains("--__tell-tail-output-worker"));
+    assert!(!help.contains("--__tell-tail-webhook-worker"));
     for args in [
         vec!["--window", "0"],
         vec!["--window", "3601"],
@@ -75,6 +81,11 @@ fn help_and_argument_errors_have_stable_exit_contracts() {
         vec!["--level-field", ""],
         vec!["--output", "invalid"],
         vec!["--metrics-file", "unused.prom"],
+        vec!["--alert-error-percent", "25"],
+        vec!["--alert-webhook", "http://localhost"],
+        vec!["--alert-message", "missing endpoint"],
+        vec!["--alert-min-records", "1"],
+        vec!["--alert-cooldown", "0"],
     ] {
         let output = Command::new(binary)
             .args(&args)

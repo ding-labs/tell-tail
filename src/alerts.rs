@@ -1,6 +1,71 @@
 //! A single rolling-window error-percentage rule with bounded session state.
-use crate::{parse::Level, stats::Counts};
-use std::time::Duration;
+use crate::{
+    cli::Args,
+    parse::Level,
+    stats::{Counts, Snapshot, State},
+    webhook_delivery::DeliveryQueue,
+};
+use std::{io, time::Duration};
+
+pub struct Alerts {
+    rule: Rule,
+    threshold_percent: f64,
+    message: String,
+    delivery: DeliveryQueue,
+}
+
+impl Alerts {
+    pub fn start(args: &Args) -> io::Result<Option<Self>> {
+        let (Some(url), Some(threshold_percent)) = (&args.alert_webhook, args.alert_error_percent)
+        else {
+            return Ok(None);
+        };
+        Ok(Some(Self {
+            rule: Rule::new(
+                threshold_percent,
+                args.alert_min_records,
+                Duration::from_secs(u64::from(args.alert_cooldown)),
+            ),
+            threshold_percent,
+            message: args
+                .alert_message
+                .clone()
+                .unwrap_or_else(|| "Tell-Tail error percentage reached its threshold.".into()),
+            delivery: DeliveryQueue::start(url.clone(), std::env::current_exe()?)?,
+        }))
+    }
+
+    pub fn observe(&mut self, snapshot: &Snapshot) {
+        if matches!(snapshot.state, State::Stopped | State::Failed) {
+            return;
+        }
+        let at = Duration::from_secs_f64(snapshot.elapsed_seconds);
+        if self.rule.should_fire(&snapshot.window.counts, at)
+            && self.delivery.try_send(self.payload(snapshot))
+        {
+            self.rule.mark_sent(at);
+        }
+    }
+
+    fn payload(&self, snapshot: &Snapshot) -> String {
+        let counts = &snapshot.window.counts;
+        serde_json::json!({
+            "schema_version": 1,
+            "event": "error_threshold_met",
+            "message": self.message,
+            "session_id": snapshot.session_id,
+            "source": snapshot.source,
+            "observed_at_unix_seconds": snapshot.observed_at_unix_seconds,
+            "window_seconds": snapshot.window.configured_seconds,
+            "observed_seconds": snapshot.window.observed_seconds,
+            "records": counts.records,
+            "error_records": counts.levels.get(Level::Error) + counts.levels.get(Level::Fatal),
+            "error_percent": error_percent(counts),
+            "threshold_percent": self.threshold_percent,
+        })
+        .to_string()
+    }
+}
 
 pub struct Rule {
     threshold_percent: f64,

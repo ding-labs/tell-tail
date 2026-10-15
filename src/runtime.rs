@@ -1,4 +1,5 @@
 use crate::{
+    alerts::Alerts,
     cli::Args,
     engine::Engine,
     input::{Event, Input},
@@ -59,9 +60,10 @@ impl Running {
         )));
         let slot = latest.clone();
         let cancel = stop.clone();
+        let alerts = Alerts::start(args)?;
         let worker = thread::Builder::new()
             .name("tell-tail-reader".into())
-            .spawn(move || drive(input, engine, slot, cancel))?;
+            .spawn(move || drive(input, engine, slot, cancel, alerts))?;
         Ok(Self {
             latest,
             stop,
@@ -97,7 +99,10 @@ impl Drop for Running {
         let _ = self.join();
     }
 }
-fn publish(slot: &Mutex<Snapshot>, snapshot: Snapshot) {
+fn publish(slot: &Mutex<Snapshot>, snapshot: Snapshot, alerts: &mut Option<Alerts>) {
+    if let Some(alerts) = alerts {
+        alerts.observe(&snapshot);
+    }
     // The reader only contends with a small snapshot clone, never output I/O.
     *slot.lock().unwrap_or_else(|p| p.into_inner()) = snapshot;
 }
@@ -106,6 +111,7 @@ fn drive(
     mut engine: Engine,
     slot: Arc<Mutex<Snapshot>>,
     stop: Arc<AtomicUsize>,
+    mut alerts: Option<Alerts>,
 ) -> io::Result<()> {
     let started = Instant::now();
     let mut published = Instant::now();
@@ -149,6 +155,7 @@ fn drive(
                 publish(
                     &slot,
                     engine.snapshot(started.elapsed(), state, input.backlog()),
+                    &mut alerts,
                 );
                 published = Instant::now();
             }
@@ -161,6 +168,7 @@ fn drive(
     publish(
         &slot,
         engine.snapshot(started.elapsed(), state, input.backlog()),
+        &mut alerts,
     );
     result
 }

@@ -52,6 +52,21 @@ pub struct Args {
     /// Text, JSON, and metrics-file publication interval in milliseconds.
     #[arg(long, default_value_t = 1000, value_parser = clap::value_parser!(u32).range(100..=60_000))]
     pub interval_ms: u32,
+    /// POST alert JSON to this HTTP(S) endpoint.
+    #[arg(long, requires = "alert_error_percent")]
+    pub alert_webhook: Option<String>,
+    /// Alert when rolling (error + fatal) / all records is at least this percent.
+    #[arg(long, requires = "alert_webhook")]
+    pub alert_error_percent: Option<f64>,
+    /// Message included in the alert JSON (at most 4096 bytes).
+    #[arg(long, requires = "alert_webhook")]
+    pub alert_message: Option<String>,
+    /// Minimum records in the rolling window before evaluating an alert.
+    #[arg(long, default_value_t = 100, requires = "alert_webhook", value_parser = clap::value_parser!(u64).range(1..))]
+    pub alert_min_records: u64,
+    /// Minimum seconds between new breaches; sustained breaches only fire once.
+    #[arg(long, default_value_t = 300, requires = "alert_webhook", value_parser = clap::value_parser!(u32).range(0..=86_400))]
+    pub alert_cooldown: u32,
 }
 impl Args {
     pub fn path(&self) -> Option<&std::path::Path> {
@@ -60,6 +75,18 @@ impl Args {
             .filter(|p| *p != std::path::Path::new("-"))
     }
     pub fn validate(&self) -> Result<(), &'static str> {
+        if self
+            .alert_error_percent
+            .is_some_and(|p| !p.is_finite() || !(0.0..=100.0).contains(&p))
+        {
+            return Err("--alert-error-percent must be a finite number from 0 to 100");
+        }
+        if let Some(url) = &self.alert_webhook {
+            crate::webhook::validate_url(url)?;
+        }
+        if self.alert_message.as_ref().is_some_and(|m| m.len() > 4096) {
+            return Err("--alert-message must be at most 4096 bytes");
+        }
         if self.path().is_none() && (self.once || self.from.is_some()) {
             return Err("--once and --from require a file input");
         }
@@ -106,6 +133,57 @@ mod tests {
             vec!["tell-tail", "a.log", "--once", "--output", "prometheus"],
         ] {
             assert!(Args::try_parse_from(argv).unwrap().validate().is_ok());
+        }
+    }
+
+    #[test]
+    fn rejects_invalid_alert_configuration_without_echoing_endpoints() {
+        for percent in ["NaN", "inf", "101", "-0.1"] {
+            let args = Args::try_parse_from([
+                "tell-tail",
+                "--alert-webhook",
+                "http://localhost/hook",
+                &format!("--alert-error-percent={percent}"),
+            ])
+            .unwrap();
+            assert!(args.validate().is_err());
+        }
+        let args = Args::try_parse_from([
+            "tell-tail",
+            "--alert-webhook",
+            "file:///secret-token",
+            "--alert-error-percent",
+            "25",
+        ])
+        .unwrap();
+        let error = args.validate().unwrap_err();
+        assert!(!error.contains("secret-token"));
+        let args = Args::try_parse_from([
+            "tell-tail",
+            "--alert-webhook",
+            "http://localhost",
+            "--alert-error-percent",
+            "25",
+            "--alert-message",
+            &"x".repeat(4097),
+        ])
+        .unwrap();
+        assert!(args.validate().is_err());
+        for extra in [["--alert-min-records", "0"], ["--alert-cooldown", "86401"]] {
+            assert!(
+                Args::try_parse_from(
+                    [
+                        "tell-tail",
+                        "--alert-webhook",
+                        "http://localhost",
+                        "--alert-error-percent",
+                        "25"
+                    ]
+                    .into_iter()
+                    .chain(extra)
+                )
+                .is_err()
+            );
         }
     }
 }

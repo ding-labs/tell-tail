@@ -6,7 +6,8 @@ use std::{
 };
 
 pub const HELPER_ARG: &str = "--__tell-tail-webhook-worker";
-pub const MAX_REQUEST: usize = 64 * 1024;
+// Covers a maximally escaped message and source path within a fixed IPC bound.
+pub const MAX_REQUEST: usize = 128 * 1024;
 pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Serialize, Deserialize)]
