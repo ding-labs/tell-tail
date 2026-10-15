@@ -67,6 +67,11 @@ runner checks exact severity/diagnostic/byte totals and cleans up its processes
 on failure. Unit tests deliberately perturb expected counts and metric documents
 to verify the harness rejects incorrect results.
 
+`python3 scripts/check_metrics_failure.py` removes publication-directory write
+permission after a successful snapshot. It checks that the process exits with
+status 1 and the preceding complete file remains unchanged. Root container runs
+use an unprivileged child so this I/O failure is exercised rather than skipped.
+
 ## Release-duration runs
 
 Use a supervised Linux host or a suitable long-running CI runner. Keep progress

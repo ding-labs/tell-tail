@@ -27,6 +27,7 @@ jobs:
       - run: python3 scripts/check_terminal.py
       - run: python3 scripts/check_terminal_stall.py
       - run: python3 scripts/check_backpressure.py
+      - run: python3 scripts/check_metrics_failure.py
       - run: |
           python3 -m venv work/validation-venv
           work/validation-venv/bin/pip install -r scripts/requirements-validation.txt
