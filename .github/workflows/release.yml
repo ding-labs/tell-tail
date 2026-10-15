@@ -62,6 +62,14 @@ jobs:
         run: |
           python3 scripts/package_release.py --target "$TARGET" --binary target/release/tell-tail
           python3 scripts/check_release_archive.py dist/*.tar.gz
+      - name: Install the candidate through a temporary Homebrew tap
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+            eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+          fi
+          python3 scripts/check_homebrew.py --target "$TARGET" --assets dist
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: native-${{ matrix.target }}
