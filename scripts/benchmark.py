@@ -102,7 +102,13 @@ def streaming(args):
         rng.shuffle(order)
         pair = {'order': order, 'runs': {}}
         for mode in order:
-            pair['runs'][mode] = soak(stream_args(args, mode, records=records, seconds=args.seconds * 4 + 10))
+            try:
+                pair['runs'][mode] = soak(stream_args(args, mode, records=records, seconds=args.seconds * 4 + 10))
+            except Exception as error:
+                error.benchmark_details = {'fixed_records_per_run': records, 'warmups': warmups,
+                                           'completed_pairs': pairs, 'incomplete_pair': pair,
+                                           'failed_run': getattr(error, 'soak_details', {})}
+                raise
         headless, tui = (pair['runs'][mode] for mode in ('json', 'tui'))
         assert headless['fixture_sha256'] == tui['fixture_sha256']
         assert headless['expected'] == tui['expected']
@@ -146,10 +152,19 @@ def main():
               'binary_sha256': hashlib.sha256(args.binary.read_bytes()).hexdigest(),
               'configuration': {key: str(value) if isinstance(value, pathlib.Path) else value
                                 for key, value in vars(args).items()}}
-    if args.suite in ('cached', 'all'):
-        result['cached'] = cached(args)
-    if args.suite in ('stream', 'all'):
-        result['streaming'] = streaming(args)
+    try:
+        if args.suite in ('cached', 'all'):
+            result['cached'] = cached(args)
+        if args.suite in ('stream', 'all'):
+            result['streaming'] = streaming(args)
+        result['status'] = 'passed'
+    except Exception as error:
+        result.update(status='failed', error=repr(error),
+                      partial_results=getattr(error, 'benchmark_details', {}))
+        if args.report:
+            args.report.parent.mkdir(parents=True, exist_ok=True)
+            args.report.write_text(json.dumps(result, sort_keys=True) + '\n')
+        raise
     encoded = json.dumps(result, sort_keys=True)
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
