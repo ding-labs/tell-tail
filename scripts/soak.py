@@ -158,12 +158,17 @@ def run(args):
                 time.sleep(.01)
             raise AssertionError('expected snapshot acknowledgment was not received')
         def produce():
+            cpu_started = time.thread_time()
+            write_seconds = 0.0
             try:
                 stream = child.stdin if args.input == 'stdin' else log.open('ab', buffering=0)
                 file_bytes = 0
                 rotations = 0
                 try:
                     while time.monotonic() < deadline and not finished.is_set():
+                        if args.profile == 'idle':
+                            finished.wait(.1)
+                            continue
                         elapsed = time.monotonic() - started
                         pacing = expected.records / args.rate if args.rate else 0
                         if args.input == 'file':
@@ -173,8 +178,10 @@ def run(args):
                         if pacing > elapsed:
                             finished.wait(min(pacing - elapsed, .1))
                             continue
+                        write_started = time.monotonic()
                         stream.write(payload)
                         stream.flush()
+                        write_seconds += time.monotonic() - write_started
                         expected.add(batch)
                         file_bytes += len(payload)
                         if args.input == 'file' and file_bytes >= args.rotate_bytes:
@@ -199,12 +206,17 @@ def run(args):
                             rotations += 1
                     if args.input == 'file':
                         wait_for(lambda s: s['totals']['records'] == expected.records and s['pending_bytes'] == 0)
+                        result['shutdown_requested_at'] = time.monotonic()
                         child.send_signal(signal.SIGTERM)
                 finally:
+                    result.setdefault('shutdown_requested_at', time.monotonic())
                     stream.close()
                 result['rotations'] = rotations
             except Exception as error:
                 errors.append(repr(error))
+            finally:
+                result['producer_cpu_seconds'] = time.thread_time() - cpu_started
+                result['producer_write_wall_seconds'] = write_seconds
         result = {'rotations': 0}
         observer = threading.Thread(target=observe, daemon=True)
         diagnostic = threading.Thread(target=diagnostics, daemon=True)
@@ -252,8 +264,14 @@ def run(args):
                                       'peak_sampled_rss_mib': peak}), file=__import__('sys').stderr, flush=True)
                     next_progress = now + 60
                 time.sleep(.02)
+            exited_at = time.monotonic()
             producer.join(timeout=2)
             assert not producer.is_alive() and not errors, errors
+            shutdown_at = result.pop('shutdown_requested_at')
+            result['shutdown_observed_seconds'] = max(0, exited_at - shutdown_at)
+            result['production_seconds'] = shutdown_at - started
+            result['producer_cpu_fraction'] = result['producer_cpu_seconds'] / result['production_seconds']
+            result['producer_saturation_warning'] = result['producer_cpu_fraction'] > .75
             assert child.returncode == (143 if args.input == 'file' else 0), (child.returncode, bytes(error_tail))
             if args.output == 'prometheus':
                 report = metrics_report(metrics.read_text())
@@ -326,7 +344,7 @@ def main():
     parser.add_argument('--input', choices=['stdin', 'file'], default='stdin')
     parser.add_argument('--output', choices=['json', 'prometheus', 'tui'], default='json')
     parser.add_argument('--tui', action='store_true', help='alias for --output tui')
-    parser.add_argument('--profile', choices=['sustained', 'mixed', 'burst', 'rotation'], default='sustained')
+    parser.add_argument('--profile', choices=['sustained', 'mixed', 'burst', 'rotation', 'idle'], default='sustained')
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--rate', type=float, default=1000, help='records/sec; 0 is unlimited')
     parser.add_argument('--max-record-bytes', type=int, default=1024**2)

@@ -20,6 +20,7 @@ The sustained profile produces 200-byte text records with an exact 90/9/1
 info/warning/error mix. Other profiles include all severities, supported JSON,
 unknown text, malformed Unicode/UTF-8, and one oversized record per batch. A seed
 controls order and message lengths. Burst traffic includes idle periods.
+The `idle` profile sends no records, allowing idle CPU and cancellation checks.
 
 The file rotation profile waits for machine reports before changing generations,
 adds a partial record, observes the missing-file state, and checks that the
@@ -49,6 +50,13 @@ first post-warmup median fails the plateau check. Default combined RSS must rema
 below 64 MiB. Snapshot-age measurements describe the age of published machine
 reports at observation, not end-to-end dashboard freshness. Missing observations
 are reported as null rather than zero.
+
+Producer CPU uses per-thread CPU time, and write-wall time includes pipe
+backpressure. More than 75 percent producer CPU utilization flags a possible
+generator limit; a lower value does not prove the producer is unconstrained.
+Shutdown timing starts at EOF or the signal request and ends when the monitor
+observes exit (20 ms polling resolution). Production and total elapsed times are
+reported separately so cleanup overhead remains visible.
 
 Progress goes to stderr each minute. `--report` saves a compact final JSON result;
 a failed run saves the failure, latest snapshot, expected counts, and bounded
