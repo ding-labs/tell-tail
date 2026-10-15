@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.88"
 description = "Bounded-memory log throughput and severity monitor"
+readme = "README.md"
+include = ["src/**", "tests/**", "Cargo.toml", "Cargo.lock", "README.md", "CHANGELOG.md", "docs/**", "rust-toolchain.toml"]
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }

@@ -126,3 +126,12 @@ shorter than five-second calibration runs are harness smoke tests only. A
 qualifying measurement is still not an automatic performance pass: compare
 its median dashboard loss with the plan's 10 percent gate and cached rates with
 the named reference-host targets. Run without competing builds or fuzz jobs.
+
+## Source package
+
+Run `python3 scripts/check_package.py` from a clean checkout. It runs Cargo's
+package build verification, checks the archive contents, extracts into a new
+temporary directory, installs with the extracted toolchain pin, and checks a
+known mixed fixture using the installed binary. `--allow-dirty` is for developing
+the check; its result explicitly records that qualification. Build artifacts and
+fuzz corpora are excluded by the package's explicit include list.
