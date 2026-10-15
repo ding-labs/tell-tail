@@ -1,22 +1,89 @@
-name: Rust
+name: Checks
 on: [push, pull_request]
+permissions:
+  contents: read
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test:
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-24.04, macos-14]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          components: rustfmt, clippy
+          persist-credentials: false
+      - run: rustup toolchain install 1.88.0 --profile minimal --component rustfmt --component clippy
+      - run: uname -a && rustc --version && python3 --version
       - run: cargo fmt --check
       - run: cargo clippy --all-targets --locked -- -D warnings
       - run: cargo test --locked
       - run: cargo build --locked
+      - run: python3 scripts/check_output.py
       - run: python3 scripts/check_terminal.py
+      - run: python3 scripts/check_terminal_stall.py
       - run: python3 scripts/check_backpressure.py
+      - run: |
+          python3 -m venv work/validation-venv
+          work/validation-venv/bin/pip install -r scripts/requirements-validation.txt
+          work/validation-venv/bin/python scripts/check_freshness.py > work/freshness.json
+      - run: |
+          python3 scripts/install_promtool.py
+          work/tools/promtool check metrics < tests/fixtures/output/empty.prom
+          target/debug/tell-tail --output prometheus < /dev/null | work/tools/promtool check metrics
       - run: cargo build --release --locked
-      - run: python3 scripts/soak.py --seconds 3
-      - run: python3 scripts/soak.py --seconds 3 --tui
+      - run: python3 scripts/test_soak_support.py
+      - run: python3 scripts/soak.py --seconds 3 --profile mixed --report work/stdin.json
+      - run: python3 scripts/soak.py --seconds 3 --profile mixed --tui --report work/tui.json
+      - run: python3 scripts/soak.py --seconds 4 --input file --output prometheus --profile rotation --max-record-bytes 1024 --rotate-bytes 20000 --file-gib-per-day 1000 --report work/rotation.json
+      - run: python3 scripts/check_package.py > work/package.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: checks-${{ matrix.os }}
+          path: work/*.json
+          retention-days: 14
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install 1.88.0 --profile minimal
+      - run: cargo install cargo-audit --version 0.22.2 --locked
+      - run: mkdir -p work && cargo audit --json > work/audit.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: dependency-audit
+          path: work/audit.json
+          retention-days: 14
+  fuzz-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [framing, classification, timed_engine]
+    env:
+      ASAN_OPTIONS: quarantine_size_mb=32
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install nightly-2026-10-14 --profile minimal
+      - run: cargo +nightly-2026-10-14 install cargo-fuzz --version 0.13.2 --locked
+      - run: cargo +nightly-2026-10-14 metadata --locked --manifest-path fuzz/Cargo.toml --format-version 1 > /dev/null
+      - run: cargo +nightly-2026-10-14 fuzz run ${{ matrix.target }} -- -max_total_time=30 -timeout=5 -rss_limit_mb=512 -max_len=65536
+      - run: git diff --exit-code -- Cargo.lock fuzz/Cargo.lock
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: fuzz-${{ matrix.target }}
+          path: fuzz/artifacts/
+          retention-days: 14
