@@ -85,7 +85,7 @@ jobs:
       - run: cargo build --release --locked
       - run: mkdir -p work
       - name: Measure cached rates and five matched mixed-input pairs
-        run: python3 scripts/benchmark.py --records 2000000 --repeats 5 --pairs 5 --seconds 10 --profile mixed --report work/performance.json 2> work/performance-progress.log
+        run: python3 scripts/benchmark.py --records 2000000 --repeats 5 --pairs 5 --seconds 60 --profile mixed --report work/performance.json 2> work/performance-progress.log
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
