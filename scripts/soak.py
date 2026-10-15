@@ -19,7 +19,7 @@ import termios
 import threading
 import time
 import fcntl
-from soak_support import Counts, LEVELS, make_batch, resources
+from soak_support import Counts, LEVELS, ObservationClock, make_batch, resources
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -116,6 +116,7 @@ def run(args):
         if slave is not None:
             os.close(slave)
         started = time.monotonic()
+        continuity = ObservationClock(started, time.time())
         deadline = started + args.seconds
         def update(report):
             latest[0] = report
@@ -259,6 +260,7 @@ def run(args):
         try:
             while child.poll() is None:
                 now = time.monotonic()
+                continuity.observe(now, time.time())
                 assert not errors, errors
                 assert now < deadline + 12, 'soak run timed out'
                 if now >= next_sample:
@@ -289,6 +291,7 @@ def run(args):
                     next_progress = now + 60
                 time.sleep(.02)
             exited_at = time.monotonic()
+            continuity.observe(exited_at, time.time())
             producer.join(timeout=2)
             assert not producer.is_alive() and not errors, errors
             shutdown_at = result.pop('shutdown_requested_at')
@@ -337,6 +340,7 @@ def run(args):
                            'expected': expected.__dict__, 'actual': report,
                            'seconds': elapsed, 'records_per_second': round(expected.records / elapsed),
                            'resource_samples': samples, 'sample_interval_seconds': 1,
+                           'max_observation_gap_seconds': continuity.maximum_gap,
                            'peak_sampled_rss_mib': peak if samples else None,
                            'rss_10minute_medians_mib': blocks,
                            'peak_sampled_cpu_seconds': peak_cpu if samples else None,
@@ -348,6 +352,7 @@ def run(args):
             error.soak_details = {'expected': expected.__dict__, 'latest_snapshot': latest[0],
                                   'peak_sampled_rss_mib': peak if samples else None,
                                   'stderr_tail': error_tail.decode(errors='replace'),
+                                  'max_observation_gap_seconds': continuity.maximum_gap,
                                   'elapsed_seconds': time.monotonic() - started}
             raise
         finally:

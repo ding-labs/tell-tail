@@ -10,6 +10,21 @@ import subprocess
 LEVELS = ('trace', 'debug', 'info', 'warn', 'error', 'fatal', 'unknown')
 
 
+class ObservationClock:
+    """A suspended host must not turn an interrupted run into duration evidence."""
+    def __init__(self, monotonic, wall, budget=5.0):
+        self.previous = (monotonic, wall)
+        self.budget = budget
+        self.maximum_gap = 0.0
+
+    def observe(self, monotonic, wall):
+        gap = max(monotonic - self.previous[0], wall - self.previous[1])
+        self.maximum_gap = max(self.maximum_gap, gap)
+        self.previous = (monotonic, wall)
+        if gap > self.budget:
+            raise AssertionError(f'observation gap exceeded {self.budget:g}s: {gap:.3f}s')
+
+
 @dataclass
 class Counts:
     levels: dict = field(default_factory=lambda: dict.fromkeys(LEVELS, 0))

@@ -1,10 +1,22 @@
 #!/usr/bin/env python3
 import copy
 import unittest
-from soak_support import Counts, cpu_seconds, make_batch, select_tree
+from soak_support import Counts, ObservationClock, cpu_seconds, make_batch, select_tree
 
 
 class SupportTests(unittest.TestCase):
+    def test_continuity_rejects_suspend_even_when_monotonic_clock_pauses(self):
+        clock = ObservationClock(0, 100)
+        clock.observe(1, 101)
+        clock.observe(2, 102)
+        self.assertEqual(clock.maximum_gap, 1)
+        with self.assertRaisesRegex(AssertionError, 'observation gap'):
+            clock.observe(2.1, 110)
+        self.assertEqual(clock.maximum_gap, 8)
+        clock = ObservationClock(0, 100)
+        with self.assertRaisesRegex(AssertionError, 'observation gap'):
+            clock.observe(6, 106)
+
     def test_metrics_reader_rejects_partial_or_duplicate_reports(self):
         from soak import metrics_report
         lines = [f'tell_tail_records_total{{level="{level}"}} 0' for level in

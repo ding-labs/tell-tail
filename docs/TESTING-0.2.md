@@ -61,6 +61,11 @@ cumulative process times, not exact exit-time accounting; short-lived cleanup
 helpers may fall between samples. Descriptor counts are sampled during startup
 and then about once per minute, with a 64-descriptor process-tree ceiling.
 
+The observer rejects gaps over five seconds using both monotonic and wall
+clocks, and records the maximum observed gap. A sleeping/suspended host or stalled
+harness cannot count as uninterrupted release-duration evidence. Interrupted
+runs must be investigated and repeated.
+
 Runs retain at most 600 recent RSS samples and compact ten-minute medians. After
 ten minutes of warmup, a later median more than max(4 MiB, 20 percent) above the
 first post-warmup median fails the plateau check. Default combined RSS must remain
