@@ -1,0 +1,45 @@
+# HELP tell_tail_records_total Observed physical log records by severity.
+# TYPE tell_tail_records_total counter
+tell_tail_records_total{level="trace"} 0
+tell_tail_records_total{level="debug"} 0
+tell_tail_records_total{level="info"} 0
+tell_tail_records_total{level="warn"} 0
+tell_tail_records_total{level="error"} 0
+tell_tail_records_total{level="fatal"} 0
+tell_tail_records_total{level="unknown"} 0
+# HELP tell_tail_bytes_total Bytes consumed including delimiters and skipped data.
+# TYPE tell_tail_bytes_total counter
+tell_tail_bytes_total 0
+# HELP tell_tail_parse_failures_total Malformed JSON records.
+# TYPE tell_tail_parse_failures_total counter
+tell_tail_parse_failures_total 0
+# HELP tell_tail_oversized_records_total Records exceeding the configured limit.
+# TYPE tell_tail_oversized_records_total counter
+tell_tail_oversized_records_total 0
+# HELP tell_tail_skipped_bytes_total Consumed bytes excluded from record classification.
+# TYPE tell_tail_skipped_bytes_total counter
+tell_tail_skipped_bytes_total 0
+# HELP tell_tail_discarded_partial_records_total Partial records discarded at file generation boundaries.
+# TYPE tell_tail_discarded_partial_records_total counter
+tell_tail_discarded_partial_records_total 0
+# HELP tell_tail_pending_bytes Bytes in an incomplete record.
+# TYPE tell_tail_pending_bytes gauge
+tell_tail_pending_bytes 0
+# HELP tell_tail_running One while processing or waiting for input; zero after termination.
+# TYPE tell_tail_running gauge
+tell_tail_running 0
+# HELP tell_tail_source_up One while the input is available; zero while missing or terminated.
+# TYPE tell_tail_source_up gauge
+tell_tail_source_up 0
+# HELP tell_tail_snapshot_timestamp_seconds Unix time at which this snapshot was produced.
+# TYPE tell_tail_snapshot_timestamp_seconds gauge
+tell_tail_snapshot_timestamp_seconds 0
+# HELP tell_tail_window_duration_seconds Actual time covered by the rolling window.
+# TYPE tell_tail_window_duration_seconds gauge
+tell_tail_window_duration_seconds 0
+# HELP tell_tail_window_warning_ratio Warning fraction in the rolling window; NaN when empty.
+# TYPE tell_tail_window_warning_ratio gauge
+tell_tail_window_warning_ratio NaN
+# HELP tell_tail_window_error_ratio Error and fatal fraction in the rolling window; NaN when empty.
+# TYPE tell_tail_window_error_ratio gauge
+tell_tail_window_error_ratio NaN

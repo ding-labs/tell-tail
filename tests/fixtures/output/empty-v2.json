@@ -1,0 +1,55 @@
+{
+  "schema_version": 2,
+  "kind": "final",
+  "session_id": "fixture",
+  "source": "stdin",
+  "state": "complete",
+  "observed_at_unix_seconds": 0.0,
+  "elapsed_seconds": 0.0,
+  "totals": {
+    "records": 0,
+    "levels": {
+      "trace": 0,
+      "debug": 0,
+      "info": 0,
+      "warn": 0,
+      "error": 0,
+      "fatal": 0,
+      "unknown": 0
+    },
+    "parse_failures": 0,
+    "oversized_records": 0
+  },
+  "bytes_read": 0,
+  "pending_bytes": 0,
+  "skipped_bytes": 0,
+  "discarded_partial_records": 0,
+  "backlog_bytes": null,
+  "warning_ratio": null,
+  "error_ratio": null,
+  "window": {
+    "configured_seconds": 60,
+    "resolution_seconds": 0.1,
+    "observed_seconds": 0.0,
+    "counts": {
+      "records": 0,
+      "levels": {
+        "trace": 0,
+        "debug": 0,
+        "info": 0,
+        "warn": 0,
+        "error": 0,
+        "fatal": 0,
+        "unknown": 0
+      },
+      "parse_failures": 0,
+      "oversized_records": 0
+    },
+    "bytes_read": 0,
+    "records_per_second": 0.0,
+    "bytes_per_second": 0.0,
+    "warning_ratio": null,
+    "error_ratio": null
+  },
+  "history": []
+}
