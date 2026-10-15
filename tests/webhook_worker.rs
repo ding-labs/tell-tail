@@ -5,6 +5,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tell_tail::webhook::{HELPER_ARG, Request};
+use tell_tail::webhook_delivery::DeliveryQueue;
 
 fn spawn(url: &str) -> Child {
     let mut child = Command::new(env!("CARGO_BIN_EXE_tell-tail"))
@@ -111,4 +112,31 @@ fn parent_pipe_closure_cancels_a_stalled_request() {
     let _stream = accept(&listener);
     drop(child.stdin.take());
     assert_eq!(finish(&mut child, Duration::from_secs(1)), 11);
+}
+
+#[test]
+fn stalled_delivery_has_a_bounded_queue_and_shutdown() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let queue = DeliveryQueue::start(
+        format!("http://{}/", listener.local_addr().unwrap()),
+        env!("CARGO_BIN_EXE_tell-tail").into(),
+    )
+    .unwrap();
+    assert!(queue.try_send("{}".into()));
+    let _stream = accept(&listener);
+    // Once the server has accepted the in-flight request, only one pending
+    // payload can be retained, regardless of how many breaches are attempted.
+    assert!(queue.try_send("{}".into()));
+    let started = Instant::now();
+    for _ in 0..1000 {
+        assert!(!queue.try_send("{}".into()));
+    }
+    assert!(started.elapsed() < Duration::from_secs(1));
+    let started = Instant::now();
+    drop(queue);
+    assert!(started.elapsed() < Duration::from_secs(1));
+    assert!(
+        listener.accept().is_err(),
+        "pending delivery should be cancelled"
+    );
 }
