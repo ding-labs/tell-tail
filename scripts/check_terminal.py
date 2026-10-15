@@ -14,7 +14,7 @@ import time
 
 root = pathlib.Path(__file__).resolve().parents[1]
 binary = root / 'target/debug/tell-tail'
-for action, expected in [('q', 0), ('signal', 143), ('eof', 0)]:
+for action, expected in [('q', 0), ('signal', 143), ('interrupt', 130), ('eof', 0)]:
     master, slave = pty.openpty()
     fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', 26, 100, 0, 0))
     def setup():
@@ -28,6 +28,7 @@ with open('/dev/tty', 'rb', buffering=0) as tty:
     before = termios.tcgetattr(tty)
     child = subprocess.Popen([sys.argv[1], '--output', 'tui'])
     signal.signal(signal.SIGTERM, lambda sig, frame: child.send_signal(sig))
+    signal.signal(signal.SIGINT, lambda sig, frame: child.send_signal(sig))
     code = child.wait()
     after = termios.tcgetattr(tty)
     # Darwin may set PENDIN while switching canonical mode; it is transient state.
@@ -77,17 +78,20 @@ with open('/dev/tty', 'rb', buffering=0) as tty:
             os.write(master, b'q')
         elif action == 'signal':
             child.send_signal(signal.SIGTERM)
+        elif action == 'interrupt':
+            child.send_signal(signal.SIGINT)
         else:
             child.stdin.close()
         while child.poll() is None and time.monotonic() - began < 3:
             drain(0.05)
+        shutdown = time.monotonic() - began
         drain(0.1)
         assert child.poll() == expected, (child.poll(), output.decode(errors='replace'))
-        assert time.monotonic() - began < 1.5
+        assert shutdown < 1, shutdown
         assert b'final source=stdin' in output and b'records=2 ' in output
         assert b'TERMINAL_RESTORED' in output, output.decode(errors='replace')
         assert b'\x1b[?1049l' in output, 'alternate screen not restored'
-        print(f'{action}: counts, keys, resize, shutdown, and terminal restoration passed')
+        print(f'{action}: counts, keys, resize, terminal restoration; shutdown {shutdown:.3f}s')
     finally:
         if child.poll() is None:
             os.killpg(child.pid, signal.SIGKILL)
