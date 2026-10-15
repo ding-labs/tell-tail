@@ -4,20 +4,19 @@ use tell_tail::{
     cli::Format,
     parse::{Classifier, Level},
 };
+use tell_tail_fuzz::Json;
 
 fuzz_target!(|data: &[u8]| {
     let result = Classifier::new(Format::Json, "level".into()).classify(data);
     if result.parse_failure {
         assert_eq!(result.level, Level::Unknown);
     }
-    // serde Value is an independent decoded-string oracle. Its numeric range
-    // and recursion limits are stricter than syntax-only ignored values.
-    match serde_json::from_slice::<serde_json::Value>(data.trim_ascii_start()) {
-        Ok(value) if !value.is_object() => assert!(result.parse_failure),
-        Ok(value) if !result.parse_failure => {
-            let expected = value
-                .get("level")
-                .and_then(|v| v.as_str())
+    // Fully decode ignored fields too. The reference's numeric range and
+    // recursion limits are stricter than syntax-only ignored values.
+    match serde_json::from_slice::<Json>(data.trim_ascii_start()) {
+        Ok(Json::Object { level }) if !result.parse_failure => {
+            let expected = level
+                .as_deref()
                 .map(|s| Level::from_bytes(s.as_bytes()))
                 .unwrap_or(Level::Unknown);
             assert_eq!(result.level, expected);
@@ -30,7 +29,8 @@ fuzz_target!(|data: &[u8]| {
                 assert!(result.parse_failure, "accepted invalid JSON: {message}");
             }
         }
-        _ => (), // Valid JSON can still contain duplicate selected fields.
+        Ok(Json::Object { .. }) => (), // Duplicate selected fields are rejected.
+        Ok(_) => assert!(result.parse_failure),
     }
     let text = Classifier::new(Format::Text, "level".into()).classify(data);
     assert!(!text.parse_failure);

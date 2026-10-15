@@ -30,11 +30,22 @@ record the application commit, toolchain, target, elapsed time, and executions.
 Run the targets sequentially for reproducible resource accounting.
 
 Framing compares emitted lines with an independent split-based oracle.
-Classification compares decoded JSON fields and syntax with serde_json Value,
+Classification compares decoded JSON fields and syntax with a fully decoding
+serde visitor (including ignored values),
 accounting for Tell-Tail's stricter duplicate-level policy and the reference
 parser's stricter numeric range/depth limits. Timed engine operations check
 monotonic counts, severity totals, byte accounting, and unknown diagnostics through
 feeds, idle periods, EOF, and generation-boundary discards.
+
+The reference treats all object keys literally. `serde_json::Value` with the
+`raw_value` feature interprets `$serde_json::private::RawValue` keys specially;
+the extended campaign found that this could falsely reject valid log objects.
+The regression checks cover literal/escaped keys, nesting, and string values
+that look like serialized objects. Run them with:
+
+```sh
+cargo +nightly-2026-10-14 test --locked --manifest-path fuzz/Cargo.toml --lib
+```
 
 Named `seed-*` inputs are synthetic and committed. Generated coverage corpus and
 crash artifacts are ignored. Reproduce a finding by passing its artifact path as

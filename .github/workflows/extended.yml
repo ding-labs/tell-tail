@@ -34,6 +34,7 @@ jobs:
           git rev-parse HEAD > work/commit.txt
           rustc +nightly-2026-10-14 --version > work/toolchain.txt
           cargo +nightly-2026-10-14 metadata --locked --manifest-path fuzz/Cargo.toml --format-version 1 > /dev/null
+          cargo +nightly-2026-10-14 test --locked --manifest-path fuzz/Cargo.toml --lib
           cargo +nightly-2026-10-14 fuzz run ${{ matrix.target }} -- -max_total_time=1800 -timeout=5 -rss_limit_mb=512 -max_len=65536 > work/fuzz.log 2>&1
           git diff --exit-code -- Cargo.lock fuzz/Cargo.lock
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
