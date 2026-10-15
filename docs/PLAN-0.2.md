@@ -38,6 +38,9 @@ Completed increments:
   checks, disk/write budgets, progress, and failure artifacts are implemented.
   Short runs pass; release-duration runs remain pending. See
   [validation commands](TESTING-0.2.md).
+- Step 11: cached scan fixtures and fixed-workload paired pipelines report exact
+  counts, hashes, CPU, resources, shutdown, snapshot age, idle behavior, generator
+  load, and variation. Short self-checks pass; controlled measurements are pending.
 
 ## Scope and starting point
 

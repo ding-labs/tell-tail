@@ -36,6 +36,8 @@ files rotate at 8 MiB by default, and live fixture files are capped at 256 MiB.
 The runner drains reports continuously and keeps only the latest snapshot and a
 32 KiB terminal/diagnostic tail. A partial line or a replacement transaction may
 extend a run slightly beyond its requested duration before shutdown.
+`--records N` stops at a fixed workload (a multiple of 100); failing to finish
+that workload before the duration limit is an error.
 
 Resource samples include the application and its current descendants. Combined
 RSS is conservative because shared pages may be counted more than once. Sampling
@@ -82,3 +84,31 @@ resize, stalled-terminal, and cleanup behavior are tested separately with
 does not exercise those interactions. Fuzz commands and independent release
 budgets are in [the fuzz workspace](../fuzz/README.md). All release gates and their
 required evidence remain in the [0.2 plan](PLAN-0.2.md).
+
+## Performance comparisons
+
+```sh
+python3 scripts/benchmark.py --report work/benchmark.json
+python3 scripts/benchmark.py --suite stream --profile mixed --report work/benchmark-mixed.json
+```
+
+Cached scans cover 200-byte text, 500-byte JSON, 16 KiB records, and the seeded
+mixed corpus. The first pass warms the file cache; five measured trials follow.
+Each fixture has a 512 MiB default disk cap; results record its actual size and
+hash. CPU uses waited-child resource accounting. Cached trials include process
+startup and final output, and have no live Python producer.
+
+Streaming measurements warm up both modes, calibrate a fixed record count for
+approximately five seconds, then run five identical-workload pairs in seeded
+random order. The same correctness checks as soaks apply. Reports retain every
+trial, throughput range, paired median loss, producer CPU, process-tree samples,
+snapshot age, and shutdown latency. Idle JSON/TUI and paced followed-file runs
+are separate scenarios. Dashboard freshness still needs a terminal observation
+test; a JSON snapshot's age does not establish it.
+
+A producer CPU fraction above 75 percent or a throughput range wider than
+10 percent flags inconclusive measurement conditions. Fewer than five pairs or
+shorter than five-second calibration runs are harness smoke tests only. A
+qualifying measurement is still not an automatic performance pass: compare
+its median dashboard loss with the plan's 10 percent gate and cached rates with
+the named reference-host targets. Run without competing builds or fuzz jobs.

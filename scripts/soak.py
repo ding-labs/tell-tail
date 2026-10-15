@@ -166,6 +166,8 @@ def run(args):
                 rotations = 0
                 try:
                     while time.monotonic() < deadline and not finished.is_set():
+                        if args.records and expected.records >= args.records:
+                            break
                         if args.profile == 'idle':
                             finished.wait(.1)
                             continue
@@ -285,6 +287,8 @@ def run(args):
                 report = latest[0]
                 assert report['kind'] == 'final'
             expected.verify(report)
+            if args.records:
+                assert expected.records == args.records, 'fixed workload did not finish before the duration limit'
             elapsed = time.monotonic() - started
             threshold = observed[0] * .95
             cumulative = 0
@@ -303,7 +307,7 @@ def run(args):
                            'binary': str(args.binary), 'input': args.input, 'mode': args.output,
                            'profile': args.profile, 'seed': args.seed, 'fixture_sha256': digest,
                            'configuration': {key: getattr(args, key) for key in
-                               ('seconds', 'rate', 'window', 'max_record_bytes', 'rss_limit_mib',
+                               ('seconds', 'records', 'rate', 'window', 'max_record_bytes', 'rss_limit_mib',
                                 'disk_limit_mib', 'file_gib_per_day', 'rotate_bytes')},
                            'records': expected.records, 'bytes': expected.bytes_read,
                            'expected': expected.__dict__, 'actual': report,
@@ -340,6 +344,7 @@ def run(args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--seconds', type=float, default=60)
+    parser.add_argument('--records', type=int, default=0, help='stop after this many records (multiple of 100); 0 uses duration')
     parser.add_argument('--binary', type=pathlib.Path, default=ROOT / 'target/release/tell-tail')
     parser.add_argument('--input', choices=['stdin', 'file'], default='stdin')
     parser.add_argument('--output', choices=['json', 'prometheus', 'tui'], default='json')
@@ -357,7 +362,8 @@ def main():
     args = parser.parse_args()
     if args.tui:
         args.output = 'tui'
-    if not (0 < args.seconds <= 86400 and args.rate >= 0 and args.file_gib_per_day > 0
+    if not (0 < args.seconds <= 86400 and args.records >= 0 and args.records % 100 == 0
+            and args.rate >= 0 and args.file_gib_per_day > 0
             and 1 <= args.window <= 3600 and 1 <= args.max_record_bytes <= 16 * 1024**2
             and args.rss_limit_mib > 0 and args.disk_limit_mib > 0 and args.rotate_bytes > 0):
         parser.error('invalid duration, rate, window, or resource budget')
@@ -365,6 +371,8 @@ def main():
         parser.error('the TUI soak uses stdin; file rotation needs machine-report acknowledgments')
     if args.profile == 'rotation' and args.input != 'file':
         parser.error('the rotation profile requires --input file')
+    if args.profile == 'idle' and args.records:
+        parser.error('idle runs cannot have a fixed record count')
     args.binary = args.binary.resolve()
     try:
         result = run(args)
