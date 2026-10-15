@@ -40,11 +40,14 @@ Completed increments:
   [validation commands](TESTING-0.2.md).
 - Step 11: cached scan fixtures and fixed-workload paired pipelines report exact
   counts, hashes, CPU, resources, shutdown, snapshot age, idle behavior, generator
-  load, and variation. Short self-checks pass; controlled measurements are pending.
+  load, and variation. Cached measurements are recorded; paired overhead remains
+  inconclusive after generator saturation, timing variation, and a timed-out rerun.
 - Step 12: schema/metric/CLI fixtures, compact diagnostics, terminal freshness
   observation, clean-package installation, pinned dependency auditing, and CI
   tiers are implemented. RustSec reports no advisories or warnings. Source-package
-  installation passes locally; remote CI and extended gates still need execution.
+  installation passes on macOS and Linux; remote CI and extended gates still need
+  execution. See [implementation validation](VALIDATION-0.2.md) for evidence and
+  the remaining step 13 gates.
 
 ## Scope and starting point
 

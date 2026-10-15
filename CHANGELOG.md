@@ -28,3 +28,14 @@
   cleanup, and runtime diagnostic writes have bounded waits. Output errors return
   status 1 even when shutdown was requested by a signal.
 - Fullscreen initialization no longer waits for a cursor-position reply.
+
+- Compact dashboards now expose unknown counts and parse failures.
+
+### Validation and operations
+
+- Added classification fixtures, generated properties, isolated sanitizer fuzz
+  targets, exact-count/resource soak tooling, and paired throughput benchmarks.
+- Added output compatibility checks, terminal freshness observation, dependency
+  auditing, clean-package installation, and separate fast/extended CI tiers.
+- Added Linux service and troubleshooting examples. Release-duration and paired
+  performance gates remain open; see `docs/VALIDATION-0.2.md`.

@@ -1,0 +1,466 @@
+{
+  "application_lockfile_sha256": "1e97b9f6ec2c480cafe2d56d534606752cf424839f620200f760b228a27935cf",
+  "application_version": "0.1.0",
+  "cached_scan_benchmark": {
+    "architecture": "arm64",
+    "binary_sha256": "655ceab9b0e3dbc95e4cb33aea6cf85d326d6b3130e187e769c8070906581302",
+    "cached": [
+      {
+        "bytes": 400000000,
+        "fixture": "text200",
+        "fixture_sha256": "2ee3dea2bb15e839638ac8295f6c96a08d00e36833164b288853aaf50ae9bc75",
+        "records": 2000000,
+        "records_per_second": {
+          "max": 25617365.36345922,
+          "median": 20617591.483275183,
+          "min": 16394254.414015798,
+          "relative_range": 0.4473418224880986
+        },
+        "trials": [
+          {
+            "records_per_second": 23642618.18161981,
+            "seconds": 0.08459300000686198,
+            "waited_child_cpu_seconds": 0.07561899999999998
+          },
+          {
+            "records_per_second": 25617365.36345922,
+            "seconds": 0.07807204104028642,
+            "waited_child_cpu_seconds": 0.07444100000000001
+          },
+          {
+            "records_per_second": 20617591.483275183,
+            "seconds": 0.09700454107951373,
+            "waited_child_cpu_seconds": 0.08109499999999997
+          },
+          {
+            "records_per_second": 18469345.43175979,
+            "seconds": 0.10828754096291959,
+            "waited_child_cpu_seconds": 0.09659600000000002
+          },
+          {
+            "records_per_second": 16394254.414015798,
+            "seconds": 0.12199395895004272,
+            "waited_child_cpu_seconds": 0.11455400000000007
+          }
+        ]
+      },
+      {
+        "bytes": 1000000000,
+        "fixture": "json500",
+        "fixture_sha256": "4a87efa380399aa0419c56eec591b0e07e67ef88dcb303c9d71cd92621254b8c",
+        "records": 2000000,
+        "records_per_second": {
+          "max": 1807094.4052340167,
+          "median": 1349087.1482798907,
+          "min": 1155627.0134552212,
+          "relative_range": 0.4828949653915447
+        },
+        "trials": [
+          {
+            "records_per_second": 1349087.1482798907,
+            "seconds": 1.4824839170323685,
+            "waited_child_cpu_seconds": 0.9992439999999998
+          },
+          {
+            "records_per_second": 1155627.0134552212,
+            "seconds": 1.7306622090982273,
+            "waited_child_cpu_seconds": 1.0798409999999998
+          },
+          {
+            "records_per_second": 1229744.286262901,
+            "seconds": 1.626354374922812,
+            "waited_child_cpu_seconds": 1.1527840000000005
+          },
+          {
+            "records_per_second": 1583535.0360928266,
+            "seconds": 1.2629970000125468,
+            "waited_child_cpu_seconds": 1.0440850000000002
+          },
+          {
+            "records_per_second": 1807094.4052340167,
+            "seconds": 1.106749041005969,
+            "waited_child_cpu_seconds": 0.9995190000000003
+          }
+        ]
+      },
+      {
+        "bytes": 1073741824,
+        "fixture": "text16k",
+        "fixture_sha256": "5533ae7bf9c318b2740ce334ae2c35ea1e98f79a89981fffa141d25f990d4606",
+        "records": 65536,
+        "records_per_second": {
+          "max": 334879.91837256966,
+          "median": 315003.72409263183,
+          "min": 288814.58271112514,
+          "relative_range": 0.14623743193556113
+        },
+        "trials": [
+          {
+            "records_per_second": 319938.6836943722,
+            "seconds": 0.20483924995642155,
+            "waited_child_cpu_seconds": 0.17322499999999974
+          },
+          {
+            "records_per_second": 311392.239603882,
+            "seconds": 0.21046125004068017,
+            "waited_child_cpu_seconds": 0.17380900000000055
+          },
+          {
+            "records_per_second": 334879.91837256966,
+            "seconds": 0.1956999999238178,
+            "waited_child_cpu_seconds": 0.16495700000000024
+          },
+          {
+            "records_per_second": 315003.72409263183,
+            "seconds": 0.20804833399597555,
+            "waited_child_cpu_seconds": 0.1790399999999992
+          },
+          {
+            "records_per_second": 288814.58271112514,
+            "seconds": 0.22691374993883073,
+            "waited_child_cpu_seconds": 0.18773699999999982
+          }
+        ]
+      },
+      {
+        "bytes": 467680000,
+        "fixture": "mixed",
+        "fixture_sha256": "1edea44f2a868fa4d4f7442db295b8bac13464e369605304f3c9bcd371d31b0e",
+        "records": 2000000,
+        "records_per_second": {
+          "max": 5582874.809926119,
+          "median": 5305388.676135419,
+          "min": 4642566.840683458,
+          "relative_range": 0.1772363961706204
+        },
+        "trials": [
+          {
+            "records_per_second": 4642566.840683458,
+            "seconds": 0.43079616699833423,
+            "waited_child_cpu_seconds": 0.3879210000000004
+          },
+          {
+            "records_per_second": 4853722.455665777,
+            "seconds": 0.4120548750506714,
+            "waited_child_cpu_seconds": 0.3897090000000003
+          },
+          {
+            "records_per_second": 5305388.676135419,
+            "seconds": 0.376975208055228,
+            "waited_child_cpu_seconds": 0.37084500000000054
+          },
+          {
+            "records_per_second": 5582874.809926119,
+            "seconds": 0.3582383750472218,
+            "waited_child_cpu_seconds": 0.3533470000000003
+          },
+          {
+            "records_per_second": 5433438.39320681,
+            "seconds": 0.36809104203712195,
+            "waited_child_cpu_seconds": 0.36314099999999927
+          }
+        ]
+      }
+    ],
+    "commit": "d333f1a05707dcdf2fb4d7fb51b07e2606f938c8",
+    "cpu_model": "Apple M3",
+    "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+    "workspace_toolchain": "rustc 1.88.0 (6b00bc388 2025-06-23)"
+  },
+  "date": "2026-10-14",
+  "freshness": {
+    "linux": {
+      "geometry": "100x26",
+      "input": "one record per visible acknowledgment",
+      "max_seconds": 0.25485995900817215,
+      "p95_seconds": 0.24917137500597164,
+      "samples": 25,
+      "shutdown_seconds": 0.23323412501486018
+    },
+    "macos": {
+      "geometry": "100x26",
+      "input": "one record per visible acknowledgment",
+      "max_seconds": 0.25062995811458677,
+      "p95_seconds": 0.24443637498188764,
+      "samples": 25,
+      "shutdown_seconds": 0.23819812503643334
+    }
+  },
+  "fuzz_smoke": {
+    "cargo_fuzz": "0.13.2",
+    "extended_campaigns": "pending",
+    "nightly": "nightly-2026-10-14",
+    "platform": "macOS arm64",
+    "seconds_per_target": 30
+  },
+  "larger_batch_rerun": {
+    "completed_pair_loss_fractions": [
+      0.0976,
+      0.0332,
+      0.5402
+    ],
+    "error": "fixed workload did not finish before the duration limit",
+    "note": "Recorded from the failed trial log; partial-result retention was added afterward.",
+    "status": "failed"
+  },
+  "macos_runtime_binary_sha256": "655ceab9b0e3dbc95e4cb33aea6cf85d326d6b3130e187e769c8070906581302",
+  "package": {
+    "linux": {
+      "allow_dirty": true,
+      "bytes": 82377,
+      "clean_install_smoke": "passed",
+      "files": 52,
+      "package": "tell-tail-0.1.0",
+      "sha256": "10e7acb0c2dcf00f607eb2316ce9ca02fafcea1ca5e4c874e4282aaa35c16944"
+    },
+    "macos": {
+      "allow_dirty": false,
+      "bytes": 81805,
+      "clean_install_smoke": "passed",
+      "files": 52,
+      "package": "tell-tail-0.1.0",
+      "sha256": "3d4486f4f44b45ddf3e9491b2ad360aa82b9a559c362b6194294715a5a8a9dd4"
+    }
+  },
+  "paired_benchmark": {
+    "measurement_qualifies_for_gate": false,
+    "median_tui_loss_fraction": -0.10468249114702566,
+    "possible_generator_limit": true,
+    "throughput": {
+      "json": {
+        "max": 18602200,
+        "median": 10484298,
+        "min": 4501043,
+        "relative_range": 1.34497865283875
+      },
+      "tui": {
+        "max": 13387846,
+        "median": 11623228,
+        "min": 7669282,
+        "relative_range": 0.4919944786422498
+      }
+    },
+    "timing_variation_warning": true
+  },
+  "release_status": "gates_pending",
+  "rustsec": {
+    "database": {
+      "advisory-count": 1329,
+      "last-commit": "edb58f5974b83eb8302332821cb6d389777aa351",
+      "last-updated": "2026-10-14T22:18:32+02:00"
+    },
+    "lockfile": {
+      "dependency-count": 124
+    },
+    "settings": {
+      "ignore": [],
+      "informational_warnings": [
+        "unmaintained",
+        "unsound",
+        "notice"
+      ],
+      "severity": null,
+      "target_arch": [],
+      "target_os": []
+    },
+    "vulnerabilities": {
+      "count": 0,
+      "found": false,
+      "list": []
+    },
+    "warnings": {}
+  },
+  "soaks": {
+    "linux_dashboard_smoke": {
+      "architecture": "aarch64",
+      "binary_sha256": "0dfabbea47a3b33b39c9d66980a69a4714348d6477386ed949e74037ade011a8",
+      "bytes": 128512320,
+      "commit": null,
+      "configuration": {
+        "disk_limit_mib": 256,
+        "file_gib_per_day": 10,
+        "max_record_bytes": 1048576,
+        "rate": 1000,
+        "records": 0,
+        "rotate_bytes": 8388608,
+        "rss_limit_mib": 64,
+        "seconds": 12.0,
+        "window": 60
+      },
+      "fixture_sha256": "9f452e5bf193a2db216c9728f44019000bab37f3be3a94f10cec24bb2b12f539",
+      "input": "stdin",
+      "mode": "tui",
+      "peak_sampled_descriptors": 13,
+      "peak_sampled_processes": 2,
+      "peak_sampled_rss_mib": 5.65625,
+      "platform": "Linux-6.10.14-linuxkit-aarch64-with-glibc2.36",
+      "profile": "burst",
+      "records": 12000,
+      "resource_samples": 12,
+      "sample_interval_seconds": 1,
+      "seconds": 12.130326046986738,
+      "seed": 1,
+      "shutdown_observed_seconds": 0.1274330840096809,
+      "status": "passed",
+      "terminal_actions": 6,
+      "workspace_toolchain": "rustc 1.88.0 (6b00bc388 2025-06-23)"
+    },
+    "linux_default_smoke": {
+      "architecture": "aarch64",
+      "binary_sha256": "0dfabbea47a3b33b39c9d66980a69a4714348d6477386ed949e74037ade011a8",
+      "bytes": 32128080,
+      "commit": null,
+      "configuration": {
+        "disk_limit_mib": 256,
+        "file_gib_per_day": 10,
+        "max_record_bytes": 1048576,
+        "rate": 1000,
+        "records": 0,
+        "rotate_bytes": 8388608,
+        "rss_limit_mib": 64,
+        "seconds": 3.0,
+        "window": 60
+      },
+      "fixture_sha256": "9f452e5bf193a2db216c9728f44019000bab37f3be3a94f10cec24bb2b12f539",
+      "input": "stdin",
+      "mode": "json",
+      "peak_sampled_descriptors": 10,
+      "peak_sampled_processes": 2,
+      "peak_sampled_rss_mib": 5.20703125,
+      "platform": "Linux-6.10.14-linuxkit-aarch64-with-glibc2.36",
+      "profile": "mixed",
+      "records": 3000,
+      "resource_samples": 3,
+      "sample_interval_seconds": 1,
+      "seconds": 3.0150780850090086,
+      "seed": 1,
+      "shutdown_observed_seconds": 0.013448042009258643,
+      "status": "passed",
+      "terminal_actions": 0,
+      "workspace_toolchain": "rustc 1.88.0 (6b00bc388 2025-06-23)"
+    },
+    "linux_maximum": {
+      "architecture": "aarch64",
+      "binary_sha256": "0dfabbea47a3b33b39c9d66980a69a4714348d6477386ed949e74037ade011a8",
+      "bytes": 251993640,
+      "commit": "f47dfa05973c8e71e87ab7d1555ef33cd6b65401",
+      "configuration": {
+        "disk_limit_mib": 256,
+        "file_gib_per_day": 10,
+        "max_record_bytes": 16777216,
+        "rate": 100.0,
+        "records": 0,
+        "rotate_bytes": 8388608,
+        "rss_limit_mib": 128.0,
+        "seconds": 15.0,
+        "window": 3600
+      },
+      "fixture_sha256": "9de289ae8a26544679a68c5042064f6fcccd3321d2eea1d7458277e1ca67dc7d",
+      "input": "stdin",
+      "mode": "json",
+      "peak_sampled_descriptors": 10,
+      "peak_sampled_processes": 2,
+      "peak_sampled_rss_mib": 22.859375,
+      "platform": "Linux-6.10.14-linuxkit-aarch64-with-glibc2.36",
+      "profile": "mixed",
+      "records": 1500,
+      "resource_samples": 15,
+      "sample_interval_seconds": 1,
+      "seconds": 15.033041715010768,
+      "seed": 1,
+      "shutdown_observed_seconds": 0.02236287502455525,
+      "status": "passed",
+      "terminal_actions": 0,
+      "workspace_toolchain": "rustc 1.88.0 (6b00bc388 2025-06-23)"
+    },
+    "linux_rotation_smoke": {
+      "architecture": "aarch64",
+      "binary_sha256": "0dfabbea47a3b33b39c9d66980a69a4714348d6477386ed949e74037ade011a8",
+      "bytes": 23399,
+      "commit": null,
+      "configuration": {
+        "disk_limit_mib": 256,
+        "file_gib_per_day": 1000.0,
+        "max_record_bytes": 1024,
+        "rate": 1000,
+        "records": 0,
+        "rotate_bytes": 20000,
+        "rss_limit_mib": 64,
+        "seconds": 4.0,
+        "window": 60
+      },
+      "fixture_sha256": "1847648792f765f204c3b650c10f35d54a9f5dbbad8d7c34bcab1d71b3c185b4",
+      "input": "file",
+      "mode": "prometheus",
+      "peak_sampled_descriptors": 4,
+      "peak_sampled_processes": 1,
+      "peak_sampled_rss_mib": 2.2890625,
+      "platform": "Linux-6.10.14-linuxkit-aarch64-with-glibc2.36",
+      "profile": "rotation",
+      "records": 100,
+      "resource_samples": 5,
+      "sample_interval_seconds": 1,
+      "seconds": 4.090638460009359,
+      "seed": 1,
+      "shutdown_observed_seconds": 0.044944458990357816,
+      "status": "passed",
+      "terminal_actions": 0,
+      "workspace_toolchain": "rustc 1.88.0 (6b00bc388 2025-06-23)"
+    },
+    "macos_default_smoke": {
+      "architecture": "arm64",
+      "binary_sha256": "04249d09d148018eceb6c44d34a806cd8a15b256a06d8755ca90f1bf0f916ca3",
+      "bytes": 32128080,
+      "commit": "4a313aa58612af738def1a64e7a084814b29b7c3",
+      "fixture_sha256": "9f452e5bf193a2db216c9728f44019000bab37f3be3a94f10cec24bb2b12f539",
+      "input": "stdin",
+      "mode": "json",
+      "peak_sampled_descriptors": 10,
+      "peak_sampled_processes": 2,
+      "peak_sampled_rss_mib": 6.359375,
+      "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+      "profile": "mixed",
+      "records": 3000,
+      "resource_samples": 3,
+      "sample_interval_seconds": 1,
+      "seconds": 3.0232122499728575,
+      "seed": 1,
+      "status": "passed",
+      "workspace_toolchain": "rustc 1.88.0 (6b00bc388 2025-06-23)"
+    },
+    "macos_maximum": {
+      "architecture": "arm64",
+      "binary_sha256": "655ceab9b0e3dbc95e4cb33aea6cf85d326d6b3130e187e769c8070906581302",
+      "bytes": 251993640,
+      "commit": "f47dfa05973c8e71e87ab7d1555ef33cd6b65401",
+      "configuration": {
+        "disk_limit_mib": 256,
+        "file_gib_per_day": 10,
+        "max_record_bytes": 16777216,
+        "rate": 100.0,
+        "records": 0,
+        "rotate_bytes": 8388608,
+        "rss_limit_mib": 128.0,
+        "seconds": 15.0,
+        "window": 3600
+      },
+      "fixture_sha256": "9de289ae8a26544679a68c5042064f6fcccd3321d2eea1d7458277e1ca67dc7d",
+      "input": "stdin",
+      "mode": "json",
+      "peak_sampled_descriptors": 10,
+      "peak_sampled_processes": 2,
+      "peak_sampled_rss_mib": 19.65625,
+      "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+      "profile": "mixed",
+      "records": 1500,
+      "resource_samples": 15,
+      "sample_interval_seconds": 1,
+      "seconds": 15.04037220904138,
+      "seed": 1,
+      "shutdown_observed_seconds": 0.03708012495189905,
+      "status": "passed",
+      "terminal_actions": 0,
+      "workspace_toolchain": "rustc 1.88.0 (6b00bc388 2025-06-23)"
+    }
+  }
+}
