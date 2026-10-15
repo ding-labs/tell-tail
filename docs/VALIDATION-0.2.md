@@ -235,11 +235,8 @@ Its SHA-256 is
 `14e64c93833fd2cbc4a2749f35ba430c90ab4bcea82ed70f0f708cd0c4f9d7c5`.
 This remains a controlled low-load observation, not a loaded-throughput claim.
 
-Correctness, compatibility and distribution readiness are recorded as passed
-in the release gate file. Linux day runs, dashboard duration,
-long-run/default and maximum memory, complete responsiveness and performance
-remain open. The candidate workflow's publication job was skipped; the release
-is still blocked.
+The candidate workflow's publication job was skipped; the release is still
+blocked. Completed gates and remaining work are recorded below.
 
 All three extended Linux x86_64 sanitizer-backed fuzz targets completed 1,801
 seconds on the frozen candidate without a finding. The downloaded artifacts
@@ -253,3 +250,57 @@ platforms. Linux JSON/TUI throughput ranges were 15.76%/7.67%; macOS ranges were
 median negative TUI losses are not evidence of an overhead pass under these
 conditions. Linux cached medians were 23.91M text and 3.40M JSON records/s, with
 ranges below 1%; further controlled pipeline measurements are required.
+
+### One-hour dashboards, memory and responsiveness
+
+The completed extended workflow verifies the frozen candidate in native macOS
+ARM64 and Linux x86_64 one-hour PTY runs. Each processed exactly 3,597,000 records
+through the burst profile and exercised 360 terminal actions, including resize,
+freeze/resume and help. Production lasted at least 3,600 seconds. Neither run
+had an observation gap approaching the five-second invalidation threshold.
+
+| Observation | macOS ARM64 | Linux x86_64 |
+| --- | ---: | ---: |
+| Peak combined sampled RSS, default configuration | 6.56 MiB | 8.27 MiB |
+| First complete post-warmup ten-minute median | 6.53 MiB | 8.16 MiB |
+| Largest subsequent median | 6.56 MiB | 8.27 MiB |
+| Resource observations | 3,389 | 3,552 |
+| EOF-to-exit after one-hour burst input | 168 ms | 188 ms |
+| Maximum configuration, 60-second headless run | 36.84 MiB | 26.76 MiB |
+
+Samples are nominally one second apart; processing and scheduling add drift.
+The first ten-minute block is warmup. Subsequent medians remain far below the
+allowed growth of 4 MiB or 20%, and default peaks remain below 64 MiB. These
+completed runs pass the dashboard and default-memory gates. The day campaign
+continues checking the same memory ceiling and plateau; a later failure reopens
+the affected gates.
+
+The maximum-configuration headless runs use window 3,600, record limit 16 MiB,
+100 records/second and the 128 MiB app/helper ceiling. Additional 60-second TUI
+checks at 100 × 26 verify the same configuration and exactly 6,000 records on
+local macOS ARM64 (27.72 MiB) and Linux ARM64 Docker (24.40 MiB). The frozen
+binary hashes are recorded above; these additional checks use clean validation
+harness `5ca6444c6decdf2db997e2ffcd6c224a9276102a` with the source checkout and
+harness identities reported separately. Reports are retained locally as
+`macos-maximum-tui.json` and `linux-maximum-tui.json` in the campaign results.
+This passes the maximum-memory gate; these short maximum-size checks do not
+substitute for the default-configuration duration evidence.
+
+The native correctness workflow's controlled signal, stalled-output, terminal
+and alert-worker cancellation checks pass their one-second deadlines. Native
+terminal-emulator freshness p95 is 325 ms on macOS and 218 ms on Linux, below
+500 ms, with draining terminals and one input record per visible acknowledgment.
+The local release-binary observation is recorded above. Across the completed
+minute-long pipeline, idle and followed-file measurements, the longest observed
+shutdown was 329 ms on macOS and 199 ms on Linux. The largest headless snapshot
+ages were 308 ms and 118 ms respectively. The controlled responsiveness gate
+passes; these observations do not establish terminal freshness under arbitrary
+production traffic.
+
+Eight gates now pass. The two still open are the two 24-hour Linux scenarios and
+qualified performance measurements. A separate
+[controlled Linux measurement](https://github.com/zuchka/tell-tail/actions/runs/38677628380)
+builds the same frozen candidate with the newer harness, pins producer and
+consumer to separate available logical CPUs and records placement and the CPU
+model. The original noisy measurements remain retained and inconclusive.
+CPU affinity does not reserve a shared runner or guarantee a qualifying result.
