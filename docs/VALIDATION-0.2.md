@@ -150,5 +150,58 @@ from a temporary local server without publishing. The shared
 workflow for a future published stable release. These changes prepare the
 distribution gate; they do not complete the remaining 0.2 validation gates.
 
-The workflows and supervised commands are ready for these runs. No long-duration
-job, tag, registry publication, or public release was started by this report.
+The workflows and supervised commands were prepared by the implementation
+campaign above. The later candidate campaign below starts long-duration checks;
+tags, registry publication, and the first public release remain on hold.
+
+## October 14 candidate campaign
+
+The frozen candidate is `ffda8eaebec5e3f08115e622423bd8a30e7d673c` (0.2.0).
+Documentation and validation-record commits after it do not replace that source
+identity. Release automation can select the candidate explicitly; all gates must
+cover it before publication is considered.
+
+Validation is in progress:
+
+| Evidence | Run / state at launch |
+| --- | --- |
+| Native correctness, compatibility, dependency audit, package/install and short resource checks | [Checks](https://github.com/zuchka/tell-tail/actions/runs/38671783912) |
+| Three 30-minute fuzz targets, one-hour dashboards on both native platforms, maximum configuration and five one-minute performance pairs | [Extended validation](https://github.com/zuchka/tell-tail/actions/runs/38671823099) |
+| Native macOS ARM64 and Linux x86_64 archives, checksums, notices and temporary Homebrew installation | [Build-only candidate](https://github.com/zuchka/tell-tail/actions/runs/38671826035); `publish=false` |
+| Two sequential 24-hour Linux ARM64 container scenarios | Started October 15 at 02:36 UTC; stdin/NDJSON first, then followed file/Prometheus metrics |
+
+The local campaign uses a clean detached clone mounted read-only, Rust 1.88.0,
+and a frozen binary with SHA-256
+`db11c81409ffbdc8f6ac15b75cca6a6e90a03aa17f91658d4e796a20c5f7ec4c`.
+Its Rust Bookworm image digest is
+`sha256:af306cfa71d987911a781c37b59d7d67d934f49684058f96cf72079c3626bfe0`.
+The runtime is Linux ARM64, separate from the advertised Linux x86_64 archive's
+native CI evidence. Each phase has network disabled, two CPUs and a 768 MiB
+container limit; Tell-Tail's own combined sampled RSS ceiling remains 64 MiB.
+Host sleep prevention follows the container lifetime. Observation gaps over
+five seconds invalidate a run rather than counting suspended time as evidence.
+
+The ignored `work/validation-campaigns/<candidate>/` directory retains the image,
+compiler and binary identities, configuration, phase journal, minute progress,
+preflight and final reports. The three-second preflight passed exact counts
+(3,000 records), with 5.86 MiB combined sampled RSS. This is a harness check,
+not duration evidence. Final counts, continuity, memory medians, responsiveness
+and all completed remote artifacts still require review.
+
+The earlier candidate's extended classification run found a reference-parser
+defect: with `raw_value` enabled, `serde_json::Value` interprets the ordinary key
+`$serde_json::private::RawValue` specially. Tell-Tail correctly accepted the
+valid object. Commit `cfb41b7` replaces the fuzz reference with a fully decoding
+visitor that treats keys literally, adds deterministic regressions and retains
+a synthetic seed. The saved input passes 10,000 replays; a fresh macOS smoke
+completed 1,348,248 executions in 31 seconds. A new 30-minute campaign is required.
+
+The earlier ten-second paired performance runs reported median TUI losses of
+2.03% on macOS and 4.89% on Linux, but their throughput ranges exceeded the 10%
+noise limit. Both measurements remain **inconclusive**. The one-minute rerun
+preserves the existing qualification and overhead limits. The earlier local
+day run and remaining extended jobs were explicitly stopped after the harness
+fix; their partial durations do not pass any gate. The superseded candidate's
+[normal CI](https://github.com/zuchka/tell-tail/actions/runs/38670931081) and
+[build-only packaging](https://github.com/zuchka/tell-tail/actions/runs/38671010413)
+passed, including native Homebrew installation, with publication skipped.

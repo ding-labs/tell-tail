@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "version": "0.2.0",
-  "source_commit": null,
+  "source_commit": "ffda8eaebec5e3f08115e622423bd8a30e7d673c",
   "gates": {
     "correctness": {"passed": false, "evidence": []},
     "fuzzing": {"passed": false, "evidence": []},
