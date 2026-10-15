@@ -154,6 +154,13 @@ qualifying measurement is still not an automatic performance pass: compare
 its median dashboard loss with the plan's 10 percent gate and cached rates with
 the named reference-host targets. Run without competing builds or fuzz jobs.
 
+The extended CI workflow runs cached scans and five ten-second mixed-input
+pipeline pairs on separate native macOS/Linux jobs. Each job finishes compilation
+before measuring and retains successful or partial results. A green workflow
+alone does not pass the performance gate: inspect generator utilization, timing
+spread, absolute rates, and dashboard loss in the report. Hosted-runner variation
+can still make a result inconclusive.
+
 ## Source package
 
 Run `python3 scripts/check_package.py` from a clean checkout. It runs Cargo's

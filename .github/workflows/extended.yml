@@ -69,6 +69,30 @@ jobs:
             work/*.json
             work/*progress.ndjson
           retention-days: 30
+  performance:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install 1.88.0 --profile minimal
+      - run: cargo build --release --locked
+      - run: mkdir -p work
+      - name: Measure cached rates and five matched mixed-input pairs
+        run: python3 scripts/benchmark.py --records 2000000 --repeats 5 --pairs 5 --seconds 10 --profile mixed --report work/performance.json 2> work/performance-progress.log
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: extended-performance-${{ matrix.os }}
+          path: |
+            work/performance.json
+            work/performance-progress.log
+          retention-days: 30
   linux-release-soak:
     if: github.event_name == 'workflow_dispatch' && inputs.release_soaks
     # Explicitly provision this runner; hosted jobs cannot supply a 24-hour run.
