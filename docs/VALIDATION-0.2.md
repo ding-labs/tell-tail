@@ -337,3 +337,39 @@ sequential 24-hour Linux scenarios remain open. Their Docker campaign is still
 running on the original frozen binary, with sleep prevention active and the
 Mac on AC power. Publication remains blocked until that duration evidence has
 completed and been reviewed, and the user's release hold remains in force.
+
+### Docker interruption and clean retry, October 15
+
+The first day-run attempt was interrupted before completion. Its last minute
+checkpoint covered 15,903 seconds (4 hours 25 minutes), with 15,903,000 producer
+records and 5.76 MiB peak sampled app/helper RSS. These are partial observations,
+not verified final counts or passing duration evidence. No final soak report
+was written. Docker restored the container as exited with code 255 and
+`OOMKilled=false`; the host's `docker wait` connection ended with `unexpected
+EOF`. Docker backend logs show its Linux VM starting again at 07:08:59 UTC.
+The Mac did not reboot. The reason for Docker's restart is not established.
+
+The original configuration, progress, journal and Docker state are preserved,
+along with a separate interruption record. The stale running journal was marked
+interrupted while retaining its original contents. None of that attempt's time
+contributes to the required two 24-hour runs.
+
+Attempt 2 started at **07:48:01 UTC on October 15**, using the same clean frozen
+source, binary hash, image, scenarios and resource bounds. Its container is
+`tell-tail-0-2-days-ffda8eaebec5-retry-02`; reports are separate under
+`work/validation-campaigns/<candidate>/attempts/02/results/`. A fresh three-second
+preflight passed before starting stdin/NDJSON, followed by a separate full day
+of file/Prometheus validation. If uninterrupted, both phases finish around
+07:48 UTC October 17 (00:48 Pacific).
+
+The host now wraps `scripts/watch_docker_soak.py` in `caffeinate` rather than
+wrapping `docker wait`. The watcher retries API disconnects, preserves original
+journals and marks an unexpected container exit interrupted. It does not restart
+containers, certify results or modify Docker settings. Its source at launch is
+`311f9bb`; regression tests cover interrupted exits, misleading zero exits,
+completed/failed journal preservation and disconnect recovery. An actual Docker
+exit-code-7 smoke also verifies reconciliation and preservation.
+
+The active-attempt pointer and hourly follow-up now use the new configuration
+and process identities. Nine gates remain passed; `linux_day` stays false and
+the release remains on hold.
