@@ -35,7 +35,7 @@ The screen-observation script uses pyte 0.8.2 (LGPLv3 package classifier) and wc
 Rust binary or included in the source package. Their only role is interpreting
 terminal output during validation.
 
-Tell-Tail's own license and canonical repository metadata still require the
-owner's choice. Do not infer them from dependency licenses. Before public binary
-redistribution, prepare the selected dependency notices and verify the archive's
-contents. No registry publication or public release has been performed.
+Tell-Tail is licensed under the [MIT License](../LICENSE). Canonical repository
+metadata remains unset until a public repository is created. Before public
+binary redistribution, prepare the selected dependency notices and verify the
+archive's contents. No registry publication or public release has been performed.

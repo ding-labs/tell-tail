@@ -308,9 +308,10 @@ documented minimum OS/libc versions. Pin CI actions and release tooling to revie
 versions or commits. Package checks establish local readiness; registry publishing
 and public release distribution are separate actions.
 
-Before public distribution, the project owner must choose the project license
-and canonical repository/release destination. Neither is configured today. These
-choices do not block the reliability work or local package checks. Signing,
+The project uses the [MIT License](../LICENSE). Before public distribution, the
+project owner must choose the canonical repository/release destination; no
+repository URL is configured yet. This does not block the reliability work or
+local package checks. Signing,
 notarization, package-manager distribution, and broader platform coverage can be
 planned against the chosen public distribution path.
 

@@ -157,3 +157,7 @@ milestone, focused commits, and release criteria.
 The [0.2 implementation validation](docs/VALIDATION-0.2.md) records completed
 checks and remaining release gates. See [validation commands](docs/TESTING-0.2.md)
 for the expanded test, fuzz, soak, benchmark, and package workflows.
+
+## License
+
+Tell-Tail is licensed under the [MIT License](LICENSE).

@@ -110,9 +110,9 @@ build products, and Python caches.
    candidate responsiveness/resource evidence.
 5. Execute remote CI and obtain native runtime evidence for each advertised
    architecture, including Linux x86_64 before shipping that archive.
-6. Choose the project license and canonical repository metadata, prepare
-   dependency notices and checksummed candidate archives, then validate and bump
-   the package/lockfile version together.
+6. Configure canonical repository metadata, prepare dependency notices and
+   checksummed candidate archives, then validate and bump the package/lockfile
+   version together. The project license is now [MIT](../LICENSE).
 
 The workflows and supervised commands are ready for these runs. No long-duration
 job, tag, registry publication, or public release was started by this report.
