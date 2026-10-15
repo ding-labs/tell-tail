@@ -83,7 +83,7 @@ def cached(args):
 
 
 def stream_args(args, output, **overrides):
-    values = dict(binary=args.binary, seconds=args.seconds, records=0, input='stdin', output=output,
+    values = dict(binary=args.binary, seconds=args.seconds, records=0, batch_copies=64, input='stdin', output=output,
                   profile=args.profile, seed=args.seed, rate=0, max_record_bytes=1024, window=60,
                   rss_limit_mib=64, disk_limit_mib=256, file_gib_per_day=10, rotate_bytes=8*1024**2)
     values.update(overrides)
@@ -94,7 +94,7 @@ def streaming(args):
     # Warm each output mode, then use the same fixed workload in every measured run.
     warmups = [soak(stream_args(args, mode)) for mode in ('json', 'tui')]
     rate = max(r['records'] / r['production_seconds'] for r in warmups)
-    records = max(100, math.ceil(rate * args.seconds / 100) * 100)
+    records = max(6400, math.ceil(rate * args.seconds / 6400) * 6400)
     rng = random.Random(args.seed)
     pairs = []
     for index in range(args.pairs):
@@ -119,7 +119,7 @@ def streaming(args):
             'measurement_qualifies_for_gate': args.pairs >= 5 and args.seconds >= 5
                 and not generator_warning and not noise_warning,
             'idle': [soak(stream_args(args, mode, profile='idle')) for mode in ('json', 'tui')],
-            'followed_file': soak(stream_args(args, 'prometheus', input='file', rate=1000))}
+            'followed_file': soak(stream_args(args, 'prometheus', input='file', rate=1000, batch_copies=1))}
 
 
 def main():

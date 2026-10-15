@@ -122,6 +122,11 @@ snapshot age, and shutdown latency. Idle JSON/TUI and paced followed-file runs
 are separate scenarios. Dashboard freshness still needs a terminal observation
 test; a JSON snapshot's age does not establish it.
 
+Throughput pipelines write 64 copies of the 100-record seeded batch at once,
+reducing Python bookkeeping and syscall pressure. Initial small-batch trials
+hit the producer CPU warning and were inconclusive. Soaks retain one copy by
+default; `--batch-copies` is explicit and capped at 64 MiB of producer payload.
+
 A producer CPU fraction above 75 percent or a throughput range wider than
 10 percent flags inconclusive measurement conditions. Fewer than five pairs or
 shorter than five-second calibration runs are harness smoke tests only. A

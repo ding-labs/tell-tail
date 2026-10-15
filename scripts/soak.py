@@ -70,6 +70,16 @@ def text_report(tail):
 
 def run(args):
     payload, batch, digest = make_batch(args.seed, args.profile, args.max_record_bytes)
+    copies = getattr(args, 'batch_copies', 1)
+    assert len(payload) * copies <= 64 * 1024**2, 'producer batch exceeds the 64 MiB harness limit'
+    if copies != 1:
+        original = batch
+        batch = Counts()
+        for _ in range(copies):
+            batch.add(original)
+        payload *= copies
+        digest = hashlib.sha256(payload).hexdigest()
+    assert not args.records or args.records % batch.records == 0, 'workload must contain whole producer batches'
     expected = Counts()
     finished = threading.Event()
     latest = [None]
@@ -317,6 +327,7 @@ def run(args):
                            'binary_sha256': hashlib.sha256(args.binary.read_bytes()).hexdigest(),
                            'binary': str(args.binary), 'input': args.input, 'mode': args.output,
                            'exercise_terminal': getattr(args, 'exercise_terminal', False),
+                           'batch_copies': copies,
                            'profile': args.profile, 'seed': args.seed, 'fixture_sha256': digest,
                            'configuration': {key: getattr(args, key) for key in
                                ('seconds', 'records', 'rate', 'window', 'max_record_bytes', 'rss_limit_mib',
@@ -357,6 +368,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--seconds', type=float, default=60)
     parser.add_argument('--records', type=int, default=0, help='stop after this many records (multiple of 100); 0 uses duration')
+    parser.add_argument('--batch-copies', type=int, default=1, help='repeat each 100-record producer batch; throughput measurements only')
     parser.add_argument('--binary', type=pathlib.Path, default=ROOT / 'target/release/tell-tail')
     parser.add_argument('--input', choices=['stdin', 'file'], default='stdin')
     parser.add_argument('--output', choices=['json', 'prometheus', 'tui'], default='json')
@@ -375,7 +387,8 @@ def main():
     args = parser.parse_args()
     if args.tui:
         args.output = 'tui'
-    if not (0 < args.seconds <= 86400 and args.records >= 0 and args.records % 100 == 0
+    if not (0 < args.seconds <= 86400 and 1 <= args.batch_copies <= 1024
+            and args.records >= 0 and args.records % (100 * args.batch_copies) == 0
             and args.rate >= 0 and args.file_gib_per_day > 0
             and 1 <= args.window <= 3600 and 1 <= args.max_record_bytes <= 16 * 1024**2
             and args.rss_limit_mib > 0 and args.disk_limit_mib > 0 and args.rotate_bytes > 0):
