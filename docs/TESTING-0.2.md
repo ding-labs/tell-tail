@@ -87,6 +87,20 @@ required evidence remain in the [0.2 plan](PLAN-0.2.md).
 
 ## Performance comparisons
 
+Observe end-to-end dashboard updates with the pinned development-only terminal
+emulator ([pyte](https://pyte.readthedocs.io/en/latest/)):
+
+```sh
+python3 -m venv work/validation-venv
+work/validation-venv/bin/pip install -r scripts/requirements-validation.txt
+work/validation-venv/bin/python scripts/check_freshness.py
+```
+
+The check writes one record per visible acknowledgment, interprets actual screen
+updates at 100 × 26, and enforces p95 ≤500 ms. It also checks freeze/resume, help,
+compact unknown/parse-failure counters, and quit within one second. This is a
+controlled low-load observation; loaded pipeline measurements remain separate.
+
 ```sh
 python3 scripts/benchmark.py --report work/benchmark.json
 python3 scripts/benchmark.py --suite stream --profile mixed --report work/benchmark-mixed.json
