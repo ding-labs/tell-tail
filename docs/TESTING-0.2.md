@@ -168,6 +168,12 @@ can still make a result inconclusive.
 The longer trials reduce the influence of brief scheduling delays; ten-second
 trials on the first candidate still exceeded the 10 percent variation limit.
 
+To test a frozen binary with a newer validation harness, supply both `--binary`
+and `--source-directory` to the benchmark or soak command. Reports record the
+binary's build checkout commit/dirty state and hash separately from the harness
+commit/dirty state. Keep the build command and checkout with the evidence; a
+declared source directory alone cannot prove where an arbitrary binary came from.
+
 ## Source package
 
 Run `python3 scripts/check_package.py` from a clean checkout. It runs Cargo's

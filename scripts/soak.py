@@ -24,11 +24,21 @@ from soak_support import Counts, LEVELS, ObservationClock, make_batch, resources
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
-def optional_command(command):
+def optional_command(command, cwd=ROOT):
     try:
-        return subprocess.check_output(command, cwd=ROOT, text=True, stderr=subprocess.DEVNULL).strip()
+        return subprocess.check_output(command, cwd=cwd, text=True, stderr=subprocess.DEVNULL).strip()
     except (OSError, subprocess.CalledProcessError):
         return None
+
+
+def provenance(binary, source_directory=ROOT):
+    status = optional_command(['git', 'status', '--porcelain'], cwd=source_directory)
+    return {'commit': optional_command(['git', 'rev-parse', 'HEAD'], cwd=source_directory),
+            'source_directory': str(source_directory),
+            'workspace_dirty': None if status is None else bool(status),
+            'harness_commit': optional_command(['git', 'rev-parse', 'HEAD']),
+            'harness_dirty': bool(optional_command(['git', 'status', '--porcelain'])),
+            'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest()}
 
 
 def metrics_report(text):
@@ -323,12 +333,9 @@ def run(args):
                 if cumulative >= threshold and observed[0]:
                     p95 = (index + 1) * 10 if index < 200 else None
                     break
-            git_status = optional_command(['git', 'status', '--porcelain'])
-            result.update({'commit': optional_command(['git', 'rev-parse', 'HEAD']),
+            result.update({**provenance(args.binary, getattr(args, 'source_directory', ROOT)),
                            'platform': platform.platform(), 'architecture': platform.machine(),
                            'workspace_toolchain': optional_command(['rustc', '--version']),
-                           'workspace_dirty': None if git_status is None else bool(git_status),
-                           'binary_sha256': hashlib.sha256(args.binary.read_bytes()).hexdigest(),
                            'binary': str(args.binary), 'input': args.input, 'mode': args.output,
                            'exercise_terminal': getattr(args, 'exercise_terminal', False),
                            'batch_copies': copies,
@@ -376,6 +383,8 @@ def main():
     parser.add_argument('--records', type=int, default=0, help='stop after this many records (multiple of 100); 0 uses duration')
     parser.add_argument('--batch-copies', type=int, default=1, help='repeat each 100-record producer batch; throughput measurements only')
     parser.add_argument('--binary', type=pathlib.Path, default=ROOT / 'target/release/tell-tail')
+    parser.add_argument('--source-directory', type=pathlib.Path, default=ROOT,
+                        help='checkout used to build the binary; recorded separately from the harness')
     parser.add_argument('--input', choices=['stdin', 'file'], default='stdin')
     parser.add_argument('--output', choices=['json', 'prometheus', 'tui'], default='json')
     parser.add_argument('--tui', action='store_true', help='alias for --output tui')
@@ -408,6 +417,7 @@ def main():
     if args.profile == 'idle' and args.records:
         parser.error('idle runs cannot have a fixed record count')
     args.binary = args.binary.resolve()
+    args.source_directory = args.source_directory.resolve()
     try:
         result = run(args)
     except Exception as error:

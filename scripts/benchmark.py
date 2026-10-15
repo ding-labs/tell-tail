@@ -15,11 +15,8 @@ import sys
 import tempfile
 import time
 from types import SimpleNamespace
-from soak import optional_command, run as soak
+from soak import ROOT, optional_command, provenance, run as soak
 from soak_support import Counts, make_batch
-
-ROOT = pathlib.Path(__file__).resolve().parents[1]
-
 
 def summary(values):
     median = statistics.median(values)
@@ -84,6 +81,7 @@ def cached(args):
 
 def stream_args(args, output, **overrides):
     values = dict(binary=args.binary, seconds=args.seconds, records=0, batch_copies=64, input='stdin', output=output,
+                  source_directory=args.source_directory,
                   profile=args.profile, seed=args.seed, rate=0, max_record_bytes=1024, window=60,
                   rss_limit_mib=64, disk_limit_mib=256, file_gib_per_day=10, rotate_bytes=8*1024**2)
     values.update(overrides)
@@ -139,17 +137,19 @@ def main():
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--profile', choices=['sustained', 'mixed'], default='sustained')
     parser.add_argument('--binary', type=pathlib.Path, default=ROOT / 'target/release/tell-tail')
+    parser.add_argument('--source-directory', type=pathlib.Path, default=ROOT,
+                        help='checkout used to build the binary; recorded separately from the harness')
     parser.add_argument('--report', type=pathlib.Path)
     args = parser.parse_args()
     if args.records < 100 or args.repeats < 1 or args.pairs < 1 or not 0 < args.seconds <= 600 or args.disk_limit_mib < 1:
         parser.error('invalid workload or measurement budget')
     args.binary = args.binary.resolve()
+    args.source_directory = args.source_directory.resolve()
     result = {'platform': platform.platform(), 'architecture': platform.machine(), 'host': platform.node(),
               'logical_cpus': os.cpu_count(), 'cpu_model': optional_command(['sysctl', '-n', 'machdep.cpu.brand_string'])
                   if sys.platform == 'darwin' else optional_command(['uname', '-m']),
-              'commit': optional_command(['git', 'rev-parse', 'HEAD']),
+              **provenance(args.binary, args.source_directory),
               'workspace_toolchain': optional_command(['rustc', '--version']),
-              'binary_sha256': hashlib.sha256(args.binary.read_bytes()).hexdigest(),
               'configuration': {key: str(value) if isinstance(value, pathlib.Path) else value
                                 for key, value in vars(args).items()}}
     try:
