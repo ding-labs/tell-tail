@@ -205,3 +205,38 @@ fix; their partial durations do not pass any gate. The superseded candidate's
 [normal CI](https://github.com/zuchka/tell-tail/actions/runs/38670931081) and
 [build-only packaging](https://github.com/zuchka/tell-tail/actions/runs/38671010413)
 passed, including native Homebrew installation, with publication skipped.
+
+### Reviewed candidate results
+
+The frozen candidate's full Checks matrix passed on macOS ARM64 and Linux
+x86_64, including the corrected fuzz-reference regressions and three 30-second
+fuzz smokes. Schema 2 fixtures, CLI/exit statuses, Prometheus validation,
+backpressure, terminal restoration and source-package checks all pass.
+Both clean source installations use the same 73-file package, SHA-256
+`a2441a602402d2679ead965b6368c6dbba7b2f20f6ed1fbbeff594865e22aad4`, without
+`--allow-dirty`. RustSec database `edb58f5974b83eb8302332821cb6d389777aa351`
+reports zero vulnerabilities and zero informational warnings for 154 locked
+dependencies, with no ignored advisory.
+
+The build-only candidate workflow passed extraction, executable smoke and
+temporary Homebrew installation on both advertised native targets. Its manifest
+records the frozen source commit and `dirty=false`; local re-verification of
+the downloaded archive sizes and checksums also passes. The archives include
+Tell-Tail's license, collected dependency notices and build provenance.
+
+| Candidate archive | SHA-256 |
+| --- | --- |
+| `aarch64-apple-darwin` | `6ef7bdc552d18405848e4d33ee598260b4164f027ec1dc608ecf3eafda7c94ea` |
+| `x86_64-unknown-linux-gnu` | `37f8fc0677b0202455451cd0a1205e23eb0c2a41e4e840ab78755f4b84f78c71` |
+
+A local release binary built from the frozen source passed 25 terminal-emulator
+freshness observations: p95 225 ms, maximum 241 ms, quit 215 ms, at 100 × 26.
+Its SHA-256 is
+`14e64c93833fd2cbc4a2749f35ba430c90ab4bcea82ed70f0f708cd0c4f9d7c5`.
+This remains a controlled low-load observation, not a loaded-throughput claim.
+
+Correctness, compatibility and distribution readiness are recorded as passed
+in the release gate file. Fuzz duration, Linux day runs, dashboard duration,
+long-run/default and maximum memory, complete responsiveness and performance
+remain open. The candidate workflow's publication job was skipped; the release
+is still blocked.

@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "source_commit": "ffda8eaebec5e3f08115e622423bd8a30e7d673c",
   "gates": {
-    "correctness": {"passed": false, "evidence": []},
+    "correctness": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671783912", "docs/VALIDATION-0.2.md: reviewed candidate results"]},
     "fuzzing": {"passed": false, "evidence": []},
     "linux_day": {"passed": false, "evidence": []},
     "dashboard_hour": {"passed": false, "evidence": []},
@@ -11,7 +11,7 @@
     "maximum_memory": {"passed": false, "evidence": []},
     "responsiveness": {"passed": false, "evidence": []},
     "performance": {"passed": false, "evidence": []},
-    "compatibility": {"passed": false, "evidence": []},
-    "distribution": {"passed": false, "evidence": []}
+    "compatibility": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671783912", "Schema 2, CLI/exit-status fixtures and promtool checks passed on both native platforms"]},
+    "distribution": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671826035", "https://github.com/zuchka/tell-tail/actions/runs/38671783912", "docs/VALIDATION-0.2.md: reviewed candidate results and archive checksums"]}
   }
 }
