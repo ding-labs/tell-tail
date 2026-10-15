@@ -115,6 +115,14 @@ fn parent_pipe_closure_cancels_a_stalled_request() {
 }
 
 #[test]
+fn stalled_http_response_has_a_request_deadline() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let mut child = spawn(&format!("http://{}/", listener.local_addr().unwrap()));
+    let _stream = accept(&listener);
+    assert_eq!(finish(&mut child, Duration::from_secs(7)), 11);
+}
+
+#[test]
 fn stalled_delivery_has_a_bounded_queue_and_shutdown() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let queue = DeliveryQueue::start(

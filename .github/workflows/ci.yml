@@ -25,6 +25,7 @@ jobs:
       - run: cargo build --locked
       - run: python3 scripts/check_output.py
       - run: python3 scripts/check_terminal.py
+      - run: python3 scripts/check_terminal.py --alerts
       - run: python3 scripts/check_terminal_stall.py
       - run: python3 scripts/check_backpressure.py
       - run: python3 scripts/check_metrics_failure.py
