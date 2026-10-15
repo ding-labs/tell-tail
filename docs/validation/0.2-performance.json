@@ -1,0 +1,203 @@
+{
+  "schema_version": 1,
+  "evidence_url": "https://github.com/zuchka/tell-tail/actions/runs/38677628380",
+  "full_report_sha256": "f5907b0ca500b4c08987b0e6baacbef5af63d5689cf1a98775ae17a2f2f53597",
+  "commit": "ffda8eaebec5e3f08115e622423bd8a30e7d673c",
+  "harness_commit": "5ca6444c6decdf2db997e2ffcd6c224a9276102a",
+  "workspace_dirty": false,
+  "harness_dirty": false,
+  "binary_sha256": "f06d6ff7dfce699c5aa457f7b83674b1a1edb8062e0edb6709078875bea765e6",
+  "host": "runnervmmprz5",
+  "cpu_model": "AMD EPYC 9V74 80-Core Processor",
+  "cpu_affinity": {
+    "available_cpus": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "consumer_cpu": 3,
+    "producer_cpu": 0
+  },
+  "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+  "workspace_toolchain": "rustc 1.88.0 (6b00bc388 2025-06-23)",
+  "absolute_gate_evidence": "Stable text200 cached scans meet the plan's >=1M text records/s alternative; json500 is supplementary and noisy.",
+  "cached": [
+    {
+      "fixture": "text200",
+      "fixture_sha256": "2ee3dea2bb15e839638ac8295f6c96a08d00e36833164b288853aaf50ae9bc75",
+      "records": 2000000,
+      "bytes": 400000000,
+      "records_per_second": {
+        "max": 23301907.293713737,
+        "median": 23277272.89243252,
+        "min": 23004176.350680005,
+        "relative_range": 0.012790628198139368
+      }
+    },
+    {
+      "fixture": "json500",
+      "fixture_sha256": "572623d4bfeb3796b1344484654ae4e987912c4870d0795ba84241ecd0bc8c85",
+      "records": 1073741,
+      "bytes": 536870500,
+      "records_per_second": {
+        "max": 4023172.951036335,
+        "median": 4023094.294746264,
+        "min": 3614902.9867539774,
+        "relative_range": 0.10148157969240618
+      }
+    },
+    {
+      "fixture": "text16k",
+      "fixture_sha256": "76569ed55fef7a2980dc0bc2a9a1a7ed780b618f3a6ceb42ace3b20484e4e302",
+      "records": 32768,
+      "bytes": 536870912,
+      "records_per_second": {
+        "max": 586801.1467041584,
+        "median": 586405.8286966977,
+        "min": 585941.8725910464,
+        "relative_range": 0.001465323281355801
+      }
+    },
+    {
+      "fixture": "mixed",
+      "fixture_sha256": "1edea44f2a868fa4d4f7442db295b8bac13464e369605304f3c9bcd371d31b0e",
+      "records": 2000000,
+      "bytes": 467680000,
+      "records_per_second": {
+        "max": 10706421.465347731,
+        "median": 10704702.730593113,
+        "min": 9658492.697174566,
+        "relative_range": 0.09789424279651185
+      }
+    }
+  ],
+  "streaming": {
+    "fixed_records_per_run": 587904000,
+    "measurement_qualifies_for_gate": true,
+    "median_tui_loss_fraction": 0.007415261032511444,
+    "possible_generator_limit": false,
+    "timing_variation_warning": false,
+    "throughput": {
+      "json": {
+        "max": 9837792,
+        "median": 9814338,
+        "min": 9719260,
+        "relative_range": 0.012077432018338883
+      },
+      "tui": {
+        "max": 9747162,
+        "median": 9744043,
+        "min": 9677132,
+        "relative_range": 0.007186955147878555
+      }
+    }
+  },
+  "pairs": [
+    {
+      "order": [
+        "tui",
+        "json"
+      ],
+      "tui_loss_fraction": -0.0025499185896005194,
+      "runs": {
+        "json": {
+          "seconds": 60.48855599299998,
+          "production_seconds": 60.468441255000016,
+          "records_per_second": 9719260,
+          "producer_cpu_fraction": 0.4081289648914069
+        },
+        "tui": {
+          "seconds": 60.33470740100006,
+          "production_seconds": 60.20970988900001,
+          "records_per_second": 9744043,
+          "producer_cpu_fraction": 0.36563013867007405
+        }
+      }
+    },
+    {
+      "order": [
+        "tui",
+        "json"
+      ],
+      "tui_loss_fraction": 0.012154729498258687,
+      "runs": {
+        "json": {
+          "seconds": 59.759753847999946,
+          "production_seconds": 59.745474362000095,
+          "records_per_second": 9837792,
+          "producer_cpu_fraction": 0.36611943124703855
+        },
+        "tui": {
+          "seconds": 60.49505487600004,
+          "production_seconds": 60.33882143100004,
+          "records_per_second": 9718216,
+          "producer_cpu_fraction": 0.3728834912151697
+        }
+      }
+    },
+    {
+      "order": [
+        "json",
+        "tui"
+      ],
+      "tui_loss_fraction": 0.012074847198460747,
+      "runs": {
+        "json": {
+          "seconds": 60.01831319400003,
+          "production_seconds": 59.99823995399993,
+          "records_per_second": 9795410,
+          "producer_cpu_fraction": 0.36912841981664685
+        },
+        "tui": {
+          "seconds": 60.75188289700009,
+          "production_seconds": 60.66199267999991,
+          "records_per_second": 9677132,
+          "producer_cpu_fraction": 0.37646357994648116
+        }
+      }
+    },
+    {
+      "order": [
+        "tui",
+        "json"
+      ],
+      "tui_loss_fraction": 0.007415261032511444,
+      "runs": {
+        "json": {
+          "seconds": 59.87609020900004,
+          "production_seconds": 59.866369650000024,
+          "records_per_second": 9818677,
+          "producer_cpu_fraction": 0.36472284918315556
+        },
+        "tui": {
+          "seconds": 60.323403996000025,
+          "production_seconds": 60.28143790900003,
+          "records_per_second": 9745869,
+          "producer_cpu_fraction": 0.3659734234326589
+        }
+      }
+    },
+    {
+      "order": [
+        "json",
+        "tui"
+      ],
+      "tui_loss_fraction": 0.006844635475412475,
+      "runs": {
+        "json": {
+          "seconds": 59.902562848000116,
+          "production_seconds": 59.87892108699998,
+          "records_per_second": 9814338,
+          "producer_cpu_fraction": 0.3672635425920263
+        },
+        "tui": {
+          "seconds": 60.31539977300008,
+          "production_seconds": 60.146502459999965,
+          "records_per_second": 9747162,
+          "producer_cpu_fraction": 0.3631882388760268
+        }
+      }
+    }
+  ]
+}

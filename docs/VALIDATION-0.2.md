@@ -297,10 +297,43 @@ ages were 308 ms and 118 ms respectively. The controlled responsiveness gate
 passes; these observations do not establish terminal freshness under arbitrary
 production traffic.
 
-Eight gates now pass. The two still open are the two 24-hour Linux scenarios and
-qualified performance measurements. A separate
+At this checkpoint eight gates passed, with the two 24-hour Linux scenarios and
+qualified performance measurements still open. A separate
 [controlled Linux measurement](https://github.com/zuchka/tell-tail/actions/runs/38677628380)
 builds the same frozen candidate with the newer harness, pins producer and
 consumer to separate available logical CPUs and records placement and the CPU
 model. The original noisy measurements remain retained and inconclusive.
 CPU affinity does not reserve a shared runner or guarantee a qualifying result.
+
+### Controlled Linux reference result
+
+The completed controlled performance run qualifies for the frozen candidate,
+using clean harness `5ca6444c6decdf2db997e2ffcd6c224a9276102a`. Its Linux x86_64
+binary SHA-256 matches the original candidate's native measurements:
+`f06d6ff7dfce699c5aa457f7b83674b1a1edb8062e0edb6709078875bea765e6`.
+The named reference host is `runnervmmprz5`, AMD EPYC 9V74, with four available
+logical CPUs. Producer CPU 0 and consumer/helper CPU 3 are recorded in the
+[retained summary](validation/0.2-performance.json), alongside the full report's
+hash, fixture hashes, each pair and both source identities. The GitHub artifact
+retains the complete report.
+
+Five seeded-order pairs each process exactly 587,904,000 mixed-profile records
+per mode after separate one-minute warmups. Median headless/TUI throughput is
+9.81M/9.74M records/s. Median paired dashboard loss is **0.74%**, with individual
+losses from -0.25% to 1.22%. Headless and TUI throughput ranges are 1.21% and
+0.72%, both below the unchanged 10% noise limit. The largest measured producer
+CPU fraction in these pairs is 40.81%, below 75%; no producer-limit warning is
+set. All exact-count checks pass.
+
+The cached 200-byte text median is 23.28M records/s, with 1.28% variation. This
+satisfies the plan's absolute target of at least 1M text records/s on the named
+reference host. The supplementary 500-byte JSON median is 4.02M records/s, but
+its 10.15% range is noisy and is **not** used as qualifying absolute-rate
+evidence. Earlier noisy pipeline measurements remain inconclusive; this result
+does not establish throughput on other machines or production log mixes.
+
+The performance gate now passes. Nine of ten gates are complete; only the two
+sequential 24-hour Linux scenarios remain open. Their Docker campaign is still
+running on the original frozen binary, with sleep prevention active and the
+Mac on AC power. Publication remains blocked until that duration evidence has
+completed and been reviewed, and the user's release hold remains in force.
