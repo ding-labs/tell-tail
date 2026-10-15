@@ -20,6 +20,7 @@ jobs:
       - run: rustup toolchain install 1.88.0 --profile minimal --component rustfmt --component clippy
       - run: uname -a && rustc --version && python3 --version
       - run: cargo fmt --check
+      - run: python3 scripts/test_release_gate.py && python3 scripts/test_release_artifacts.py && python3 scripts/test_render_formula.py
       - run: cargo clippy --all-targets --locked -- -D warnings
       - run: cargo test --locked
       - run: cargo build --locked

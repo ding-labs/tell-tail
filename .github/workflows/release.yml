@@ -1,0 +1,133 @@
+name: Release candidate
+on:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: Full candidate commit SHA on main (empty uses the workflow commit)
+        type: string
+        default: ''
+      publish:
+        description: Publish only after all candidate validation is recorded and approved
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: release-candidate
+  cancel-in-progress: false
+jobs:
+  candidate:
+    runs-on: ubuntu-24.04
+    outputs:
+      commit: ${{ steps.candidate.outputs.commit }}
+      version: ${{ steps.candidate.outputs.version }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Resolve candidate and fail closed on publication
+        id: candidate
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          test "$GITHUB_REF" = refs/heads/main
+          python3 scripts/release_candidate.py \
+            --commit "${SOURCE_COMMIT:-$GITHUB_SHA}" --publish "$PUBLISH" --output "$GITHUB_OUTPUT"
+  archive:
+    needs: candidate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: macos-14, target: aarch64-apple-darwin}
+          - {os: ubuntu-24.04, target: x86_64-unknown-linux-gnu}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '14.0'
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ needs.candidate.outputs.commit }}
+          persist-credentials: false
+      - run: rustup toolchain install 1.88.0 --profile minimal
+      - run: cargo test --locked
+      - run: cargo build --release --locked
+      - name: Build and exercise the native archive
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          python3 scripts/package_release.py --target "$TARGET" --binary target/release/tell-tail
+          python3 scripts/check_release_archive.py dist/*.tar.gz
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: native-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+  bundle:
+    needs: [candidate, archive]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: native-*
+          path: dist
+          merge-multiple: true
+      - run: python3 scripts/release_artifacts.py dist
+      - run: python3 scripts/render_formula.py --assets dist --output dist/tell-tail.rb
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-candidate
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+  publish:
+    if: inputs.publish
+    needs: [candidate, bundle]
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CANDIDATE: ${{ needs.candidate.outputs.commit }}
+      VERSION: ${{ needs.candidate.outputs.version }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-candidate
+          path: dist
+      - name: Recheck identity, evidence and archive checksums
+        run: |
+          python3 scripts/release_gate.py --validation packaging/validation.json --version "$VERSION" --commit "$CANDIDATE"
+          python3 scripts/release_artifacts.py dist --verify
+          python3 - <<'PY'
+          import json, os
+          record = json.load(open('dist/release.json'))
+          if (record['dirty'] or record['source_commit'] != os.environ['CANDIDATE']
+                  or record['version'] != os.environ['VERSION']):
+              raise SystemExit('Candidate artifact identity mismatch')
+          PY
+      - name: Create a complete draft, then publish
+        run: |
+          tag="v$VERSION"
+          if git ls-remote --tags origin "refs/tags/$tag" | grep -q .; then
+            echo 'Refusing to replace an existing tag or release' >&2
+            exit 1
+          fi
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$CANDIDATE" \
+            --draft --title "Tell-Tail $VERSION" --generate-notes \
+            dist/*.tar.gz dist/SHA256SUMS dist/release.json
+          gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false --latest
