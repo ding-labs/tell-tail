@@ -88,6 +88,9 @@ fn run(args: &Args) -> io::Result<i32> {
     Ok(if signal > 1 { 128 + signal as i32 } else { 0 })
 }
 fn main() {
+    if tell_tail::webhook::is_helper() {
+        std::process::exit(tell_tail::webhook::run_helper());
+    }
     if tell_tail::writer::is_helper() {
         std::process::exit(tell_tail::writer::run_helper());
     }

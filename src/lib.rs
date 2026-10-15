@@ -21,3 +21,5 @@ pub mod prometheus;
 pub mod tui;
 
 pub mod writer;
+
+pub mod webhook;
