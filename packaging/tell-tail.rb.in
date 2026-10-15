@@ -5,8 +5,8 @@ class TellTail < Formula
   license "MIT"
 
   on_macos do
-    depends_on macos: :sonoma
     depends_on arch: :arm64
+    depends_on macos: :sonoma
     on_arm do
       url "@MAC_URL@"
       sha256 "@MAC_SHA@"
