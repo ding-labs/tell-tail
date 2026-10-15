@@ -1,12 +1,33 @@
 #!/usr/bin/env python3
 import json
 import pathlib
+import subprocess
 import tempfile
 import unittest
-from watch_docker_soak import reconcile_exit
+from unittest.mock import patch
+from watch_docker_soak import main, reconcile_exit
 
 
 class WatcherTests(unittest.TestCase):
+    def test_docker_disconnect_is_retried_before_reconciling_exit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            (root / 'results').mkdir()
+            (root / 'config.json').write_text('{"container":"owned-test-container"}')
+            (root / 'results/campaign.json').write_text('{"status":"running"}')
+            replies = [subprocess.CalledProcessError(1, 'docker', stderr='unexpected EOF'),
+                       '{"Running":false,"ExitCode":255}']
+            with patch('sys.argv', ['watcher', '--campaign', str(root)]), \
+                    patch('watch_docker_soak.subprocess.check_output', side_effect=replies) as docker, \
+                    patch('watch_docker_soak.time.sleep') as sleep:
+                self.assertEqual(main(), 1)
+            self.assertEqual(docker.call_count, 2)
+            sleep.assert_called_once_with(15)
+            monitor = json.loads((root / 'results/host-monitor.json').read_text())
+            self.assertEqual(monitor['status'], 'interrupted')
+            before = json.loads((root / 'results/campaign.before-interruption.json').read_text())
+            self.assertEqual(before['status'], 'running')
+
     def test_abrupt_exit_preserves_partial_journal_and_marks_interruption(self):
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)
