@@ -114,6 +114,22 @@ required evidence remain in the [0.2 plan](PLAN-0.2.md).
 
 ## Performance comparisons
 
+For supervised local Docker day campaigns, keep the host awake around a host
+watcher instead of `docker wait`:
+
+```sh
+caffeinate -im python3 scripts/watch_docker_soak.py --campaign /absolute/campaign/path
+```
+
+The campaign directory must contain `config.json` with its owned container name
+and a `results/` directory with the phase journal. The watcher retries temporary
+Docker API disconnects, has a 49-hour deadline, and reconciles an unexpected
+container exit as an interrupted campaign while preserving the original
+journal. It never restarts containers or counts partial duration as a pass.
+Retain each attempt separately; a retry starts a fresh full-duration campaign.
+The watcher supervises infrastructure; the soak report and final evidence review
+still determine whether a release gate passes.
+
 Observe end-to-end dashboard updates with the pinned development-only terminal
 emulator ([pyte](https://pyte.readthedocs.io/en/latest/)):
 
