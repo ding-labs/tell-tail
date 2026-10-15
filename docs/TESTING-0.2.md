@@ -181,6 +181,12 @@ migration without changing the workload, gate thresholds or application. It
 does not reserve the CPUs or eliminate shared-host interference; noisy results
 remain inconclusive. Other platforms reject the option explicitly.
 
+The manual **Candidate performance** workflow takes a full candidate SHA on
+`main`, builds it in a separate clean checkout and runs the newer Linux harness
+with CPU placement enabled. It retains successful or partial reports with both
+source and harness identities. This allows measurement improvements without
+restarting valid long-duration tests of an unchanged application candidate.
+
 ## Source package
 
 Run `python3 scripts/check_package.py` from a clean checkout. It runs Cargo's

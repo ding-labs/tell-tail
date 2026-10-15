@@ -1,0 +1,49 @@
+name: Candidate performance
+on:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: Full candidate commit SHA on main to build and measure
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: candidate-performance
+  cancel-in-progress: false
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Resolve the frozen candidate
+        id: candidate
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+        run: python3 scripts/release_candidate.py --commit "$SOURCE_COMMIT" --publish false --output "$GITHUB_OUTPUT"
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ steps.candidate.outputs.commit }}
+          path: work/candidate
+          persist-credentials: false
+      - run: rustup toolchain install 1.88.0 --profile minimal
+      - run: cargo build --release --locked --manifest-path work/candidate/Cargo.toml
+      - run: python3 scripts/test_soak_support.py
+      - name: Measure with separate producer and consumer CPUs
+        run: |
+          python3 scripts/benchmark.py --binary work/candidate/target/release/tell-tail \
+            --source-directory work/candidate --pin-cpus --records 2000000 \
+            --repeats 5 --pairs 5 --seconds 60 --profile mixed \
+            --report work/performance.json 2> work/performance-progress.log
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: candidate-performance-linux
+          path: |
+            work/performance.json
+            work/performance-progress.log
+          retention-days: 30
