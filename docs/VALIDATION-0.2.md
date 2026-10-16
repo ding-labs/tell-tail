@@ -395,3 +395,18 @@ full-duration scenarios. Its launcher requires AC power and an open lid before
 starting. Monitoring waits for those conditions; it does not change host power
 settings or restart the failed container. Both 24-hour scenarios remain pending,
 `linux_day` stays false, and the first release remains on hold.
+
+### Fresh attempt 3, October 16
+
+After AC power returned and the lid was confirmed open, attempt 3 started at
+**18:06:37 UTC on October 16** (11:06 Pacific). It uses the same clean frozen
+candidate, ARM64 binary and Docker image in a new container,
+`tell-tail-0-2-days-ffda8eaebec5-retry-03`, with separate reports under
+`attempts/03/results/`. A fresh three-second preflight verified all 3,000 records
+and the exact binary hash; this is startup verification, not duration evidence.
+The host watcher and its owned sleep assertion were verified after launch.
+
+Both full 24-hour scenarios start afresh. If uninterrupted, stdin/NDJSON ends
+around 18:07 UTC October 17, followed by file/Prometheus around 18:07 UTC
+October 18. Neither earlier attempt contributes duration. Nine gates remain
+passed, `linux_day` remains false, and publication remains on hold.
