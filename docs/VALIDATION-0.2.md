@@ -430,3 +430,18 @@ Attempt 4 is prepared separately and waits for AC power and an open lid. The
 Mac must retain both conditions throughout the two sequential 24-hour phases.
 Monitoring retains the failed attempts and does not change power settings.
 Nine gates remain passed, `linux_day` is false, and the release stays on hold.
+
+### Fresh attempt 4, October 16
+
+Attempt 4 started at **23:17:59 UTC on October 16** (16:17 Pacific), after AC
+power and an open lid were confirmed. Its new container is
+`tell-tail-0-2-days-ffda8eaebec5-retry-04`, with isolated reports under
+`attempts/04/results/`. The clean frozen source, ARM64 binary hash and image are
+unchanged. A fresh three-second preflight verified all 3,000 records; the host
+watcher, owned sleep assertion and container identity were verified after launch.
+
+The stdin/NDJSON and file/Prometheus phases each require a fresh full 24 hours.
+If uninterrupted, they finish around 23:18 UTC October 17 and October 18,
+respectively. Previous failed attempts remain preserved with zero duration
+credit. Nine gates remain passed, `linux_day` is false, and release publication
+remains on hold.
