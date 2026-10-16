@@ -333,9 +333,8 @@ evidence. Earlier noisy pipeline measurements remain inconclusive; this result
 does not establish throughput on other machines or production log mixes.
 
 The performance gate now passes. Nine of ten gates are complete; only the two
-sequential 24-hour Linux scenarios remain open. Their Docker campaign is still
-running on the original frozen binary, with sleep prevention active and the
-Mac on AC power. Publication remains blocked until that duration evidence has
+sequential 24-hour Linux scenarios remain open. The subsequent campaign status
+is recorded below. Publication remains blocked until that duration evidence has
 completed and been reviewed, and the user's release hold remains in force.
 
 ### Docker interruption and clean retry, October 15
@@ -373,3 +372,26 @@ exit-code-7 smoke also verifies reconciliation and preservation.
 The active-attempt pointer and hourly follow-up now use the new configuration
 and process identities. Nine gates remain passed; `linux_day` stays false and
 the release remains on hold.
+
+### Host sleep invalidates attempt 2, October 16
+
+Attempt 2 failed its continuity check at **05:12:41 UTC on October 16**,
+after roughly 21 hours 24 minutes. The harness detected a **49.955-second**
+observation gap, exceeding the unchanged five-second limit. macOS power logs
+record **Clamshell Sleep at October 15, 22:10:38 Pacific**, followed by repeated
+maintenance sleeps, while the campaign's sleep-prevention assertion was active.
+The container exited with code 1 and `OOMKilled=false`; this attempt supplies
+**no duration credit**. The file/Prometheus phase never started.
+
+The failed report, phase journal, progress, Docker state and bounded host sleep
+log are preserved under `attempts/02/results/`, with the review in
+`interruption.json`. Source cleanliness and the frozen binary hash still match.
+Peak sampled app/helper RSS remained 5.80 MiB, but final counters were not
+verified and partial memory observations do not pass the duration gate. There
+is no application defect established by this host sleep event.
+
+A separate attempt 3 is prepared with the same frozen source, binary, image and
+full-duration scenarios. Its launcher requires AC power and an open lid before
+starting. Monitoring waits for those conditions; it does not change host power
+settings or restart the failed container. Both 24-hour scenarios remain pending,
+`linux_day` stays false, and the first release remains on hold.
