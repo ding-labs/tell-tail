@@ -410,3 +410,23 @@ Both full 24-hour scenarios start afresh. If uninterrupted, stdin/NDJSON ends
 around 18:07 UTC October 17, followed by file/Prometheus around 18:07 UTC
 October 18. Neither earlier attempt contributes duration. Nine gates remain
 passed, `linux_day` remains false, and publication remains on hold.
+
+### Clamshell sleep interrupts attempt 3, October 16
+
+Attempt 3 failed at **18:51:50 UTC on October 16**, after 45 minutes 12 seconds
+of wall time. The observation gap was **93.640 seconds**. macOS recorded
+Clamshell Sleep on battery at 11:50:01 Pacific and a wake at 11:51:37, while the
+campaign's sleep assertion was active. The container exited with code 1,
+`OOMKilled=false`, and the file/Prometheus phase did not start. This attempt has
+**zero duration credit**; the completion estimates above no longer apply.
+
+The failed report, progress, phase journal, Docker state, bounded power log and
+review are preserved in `attempts/03/results/`. Clean source and binary identity
+still match the frozen candidate. Sampled app/helper RSS peaked at 5.64 MiB;
+final counters and a complete duration were not verified. No application defect
+is established by this host sleep event.
+
+Attempt 4 is prepared separately and waits for AC power and an open lid. The
+Mac must retain both conditions throughout the two sequential 24-hour phases.
+Monitoring retains the failed attempts and does not change power settings.
+Nine gates remain passed, `linux_day` is false, and the release stays on hold.
