@@ -445,3 +445,28 @@ If uninterrupted, they finish around 23:18 UTC October 17 and October 18,
 respectively. Previous failed attempts remain preserved with zero duration
 credit. Nine gates remain passed, `linux_day` is false, and release publication
 remains on hold.
+
+### Docker shutdown invalidates attempt 4, October 17
+
+Docker backend logs record its services and API socket shutting down at
+**00:29:47 UTC on October 17**. The last minute checkpoint was at 00:28 UTC:
+4,201 seconds, 4,200,900 producer records and 5.64 MiB peak sampled app/helper
+RSS. No final report was written. Docker is unavailable, so the container's
+exit code and OOM state cannot currently be established. The shutdown trigger
+is not established either. These partial observations supply **no duration
+credit**, and the file/Prometheus phase never started.
+
+The original running journal, host-monitor state, progress and bounded Docker
+shutdown log are preserved under `attempts/04/results/`. A separate review
+records the interruption, and the stale journal is marked interrupted. Source
+and binary identity still match. Only this attempt's host watcher was stopped,
+and its owned sleep assertion was verified released after invalidation.
+
+Attempt 5 is prepared with the unchanged candidate, binary, image and two fresh
+full-duration scenarios. It requires a responding Docker engine, AC power and
+an open lid before launch. Monitoring waits for those prerequisites; it does
+not start Docker or alter its settings. If the interrupted owned container
+reappears running, the launcher verifies its recorded identity and stops only
+that invalidated container before starting the fresh attempt. All four prior
+attempts retain zero duration credit. Nine gates remain passed, `linux_day`
+remains false, and publication remains on hold.
