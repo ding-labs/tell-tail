@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import { setTimeout as delay } from 'node:timers/promises';
+import { test } from 'node:test';
+import { monitor } from './helpers.mjs';
+import { launchDesktop } from './desktop-browser.mjs';
+
+test('a native hidden tab releases its stream and resumes with the current snapshot', { skip: process.env.RUN_HEADED_TESTS !== '1' }, async t => {
+  const server = await monitor();
+  t.after(() => server.close());
+  const desktop = await launchDesktop();
+  t.after(() => desktop.close());
+  const context = desktop.browser.contexts()[0];
+  const page = await context.newPage();
+  await page.bringToFront();
+  await page.goto(server.url);
+  server.child.stdin.write('INFO first\n');
+  await page.waitForFunction(() => document.getElementById('total-records').textContent === '1');
+  const away = await context.newPage();
+  await away.bringToFront();
+  await page.waitForFunction(() => document.hidden, null, { polling: 100 });
+  const deadline = Date.now() + 3000;
+  let available;
+  do {
+    available = (await fetch(`${server.url}api/snapshot`)).headers.get('X-Tell-Tail-Streams-Available');
+    if (available === '4') break;
+    await delay(25);
+  } while (Date.now() < deadline);
+  assert.equal(available, '4', 'the hidden page releases its actual server permit');
+  server.child.stdin.write('WARN background\nERROR background\n');
+  await page.bringToFront();
+  await page.waitForFunction(() => !document.hidden && document.getElementById('total-records').textContent === '3');
+  assert.match(await page.locator('#connection').textContent(), /Live/);
+});

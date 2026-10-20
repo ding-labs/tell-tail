@@ -47,7 +47,7 @@ test('null values, u64 counters and untrusted sources render safely', async t =>
   frame.metrics.history = ['1', '2', '18446744073709551615'];
   frame.metrics.totals.records = '18446744073709551615';
   frame.metrics.totals.levels.info = frame.metrics.totals.records;
-  await page.route('**/api/snapshot', route => route.fulfill({ json: frame }));
+  await page.route('**/api/events', route => route.fulfill({ contentType: 'text/event-stream', body: `event: snapshot\ndata: ${JSON.stringify(frame)}\n\n` }));
   await page.goto(server.url);
   await page.waitForFunction(() => document.getElementById('input-state').textContent === 'complete');
   assert.equal(await page.locator('#source').textContent(), frame.metrics.source);
