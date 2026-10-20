@@ -10,6 +10,9 @@ use std::{
     time::{Duration, Instant},
 };
 
+mod apple;
+pub use apple::AppleStream;
+
 pub enum Event {
     Data { len: usize, skip: usize },
     Idle(State),
