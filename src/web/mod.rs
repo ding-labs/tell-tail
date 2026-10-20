@@ -216,13 +216,19 @@ fn router(app: App) -> Router {
 /// A loopback listener bound before ingestion starts. No runtime is needed to bind.
 pub struct Server {
     listener: TcpListener,
+    #[cfg(test)]
+    probe: Arc<socket::Probe>,
 }
 
 impl Server {
     pub fn bind(port: u16) -> io::Result<Self> {
         let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, port))?;
         listener.set_nonblocking(true)?;
-        Ok(Self { listener })
+        Ok(Self {
+            listener,
+            #[cfg(test)]
+            probe: Arc::default(),
+        })
     }
 
     pub fn address(&self) -> io::Result<SocketAddr> {
@@ -307,9 +313,14 @@ impl Server {
                                 || rustix::net::sockopt::set_socket_send_buffer_size(&socket, 64 * 1024).is_err()
                             { continue; }
                             let service = TowerToHyperService::new(app.clone());
+                            #[cfg(test)]
+                            let probe = self.probe.clone();
                             tasks.spawn(async move {
                                 let _permit = permit;
-                                let io = TokioIo::new(socket::ProgressIo::new(socket, IO_TIMEOUT));
+                                let io = socket::ProgressIo::new(socket, IO_TIMEOUT);
+                                #[cfg(test)]
+                                let io = io.with_probe(probe);
+                                let io = TokioIo::new(io);
                                 let _ = http1::Builder::new()
                                     .timer(TokioTimer::new())
                                     .keep_alive(false)
@@ -337,98 +348,4 @@ impl Server {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{
-        snapshots::{SnapshotReader, SnapshotSlot},
-        stats::Stats,
-    };
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
-
-    #[test]
-    fn serves_current_frames_and_checks_local_requests() {
-        tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap()
-            .block_on(async {
-                let server = Server::bind(0).unwrap();
-                let address = server.address().unwrap();
-                assert_eq!(address.ip(), Ipv4Addr::LOCALHOST);
-                let slot = Arc::new(SnapshotSlot::new(Stats::new(60, "stdin".into()).snapshot(
-                    Duration::ZERO,
-                    InputState::Reading,
-                    0,
-                    None,
-                )));
-                let stop = Arc::new(AtomicUsize::new(0));
-                let task = tokio::spawn(server.serve(SnapshotReader { slot }, stop.clone()));
-                for (method, path, host, headers, expected) in [
-                    ("GET", "/api/snapshot", address.to_string(), "", "200 OK"),
-                    ("GET", "/", address.to_string(), "", "200 OK"),
-                    ("GET", "/missing", address.to_string(), "", "404 Not Found"),
-                    (
-                        "GET",
-                        "/api/snapshot",
-                        "foreign.test".into(),
-                        "",
-                        "403 Forbidden",
-                    ),
-                    (
-                        "GET",
-                        "/api/snapshot",
-                        address.to_string(),
-                        "Origin: https://foreign.test\r\n",
-                        "403 Forbidden",
-                    ),
-                    (
-                        "POST",
-                        "/api/snapshot",
-                        address.to_string(),
-                        "",
-                        "405 Method Not Allowed",
-                    ),
-                    (
-                        "HEAD",
-                        "/api/snapshot",
-                        address.to_string(),
-                        "",
-                        "405 Method Not Allowed",
-                    ),
-                    (
-                        "GET",
-                        "/api/snapshot",
-                        address.to_string(),
-                        "Content-Length: 1\r\n",
-                        "400 Bad Request",
-                    ),
-                ] {
-                    let mut socket = tokio::net::TcpStream::connect(address).await.unwrap();
-                    socket
-                        .write_all(
-                            format!("{method} {path} HTTP/1.1\r\nHost: {host}\r\n{headers}\r\n")
-                                .as_bytes(),
-                        )
-                        .await
-                        .unwrap();
-                    let mut response = String::new();
-                    socket.read_to_string(&mut response).await.unwrap();
-                    assert!(
-                        response.starts_with(&format!("HTTP/1.1 {expected}")),
-                        "{response}"
-                    );
-                    assert!(response.contains("cache-control: no-store\r\n"));
-                    assert!(response.contains("frame-ancestors 'none'"));
-                    if path == "/api/snapshot" && expected == "200 OK" {
-                        let frame: serde_json::Value =
-                            serde_json::from_str(response.split_once("\r\n\r\n").unwrap().1)
-                                .unwrap();
-                        assert_eq!(frame["web_schema_version"], 1);
-                        assert_eq!(frame["sequence"], "0");
-                    }
-                }
-                stop.store(1, Ordering::Relaxed);
-                task.await.unwrap().unwrap();
-            });
-    }
-}
+mod tests;

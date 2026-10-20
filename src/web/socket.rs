@@ -11,11 +11,22 @@ use tokio::{
     time::{Instant, Sleep, sleep},
 };
 
+#[cfg(test)]
+#[derive(Default)]
+pub(super) struct Probe {
+    pub written: std::sync::atomic::AtomicUsize,
+    pub partial: std::sync::atomic::AtomicUsize,
+    pub blocked: std::sync::atomic::AtomicBool,
+    pub expired: std::sync::atomic::AtomicUsize,
+}
+
 pub(super) struct ProgressIo<T> {
     inner: T,
     deadline: Pin<Box<Sleep>>,
     waiting: bool,
     timeout: Duration,
+    #[cfg(test)]
+    probe: Option<std::sync::Arc<Probe>>,
 }
 
 impl<T> ProgressIo<T> {
@@ -25,7 +36,15 @@ impl<T> ProgressIo<T> {
             deadline: Box::pin(sleep(timeout)),
             waiting: false,
             timeout,
+            #[cfg(test)]
+            probe: None,
         }
+    }
+
+    #[cfg(test)]
+    pub(super) fn with_probe(mut self, probe: std::sync::Arc<Probe>) -> Self {
+        self.probe = Some(probe);
+        self
     }
 }
 
@@ -48,19 +67,49 @@ impl<T: AsyncWrite + Unpin> AsyncWrite for ProgressIo<T> {
         let this = self.get_mut();
         match Pin::new(&mut this.inner).poll_write(cx, bytes) {
             Poll::Ready(result) => {
+                #[cfg(test)]
+                if let Some(probe) = &this.probe {
+                    probe
+                        .blocked
+                        .store(false, std::sync::atomic::Ordering::Relaxed);
+                    if let Ok(n) = &result {
+                        probe
+                            .written
+                            .fetch_add(*n, std::sync::atomic::Ordering::Relaxed);
+                        if *n > 0 && *n < bytes.len() {
+                            probe
+                                .partial
+                                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        }
+                    }
+                }
                 this.waiting = false;
                 Poll::Ready(result)
             }
             Poll::Pending => {
+                #[cfg(test)]
+                if let Some(probe) = &this.probe {
+                    probe
+                        .blocked
+                        .store(true, std::sync::atomic::Ordering::Relaxed);
+                }
                 if !this.waiting {
                     this.deadline.as_mut().reset(Instant::now() + this.timeout);
                     this.waiting = true;
                 }
                 match this.deadline.as_mut().poll(cx) {
-                    Poll::Ready(()) => Poll::Ready(Err(io::Error::new(
-                        io::ErrorKind::TimedOut,
-                        "web socket made no write progress",
-                    ))),
+                    Poll::Ready(()) => {
+                        #[cfg(test)]
+                        if let Some(probe) = &this.probe {
+                            probe
+                                .expired
+                                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        }
+                        Poll::Ready(Err(io::Error::new(
+                            io::ErrorKind::TimedOut,
+                            "web socket made no write progress",
+                        )))
+                    }
                     Poll::Pending => Poll::Pending,
                 }
             }
