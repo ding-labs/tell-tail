@@ -110,11 +110,22 @@ async fn snapshot(State(app): State<App>) -> Response {
     if frame.failed {
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
-    (
+    let mut response = (
         [(header::CONTENT_TYPE, "application/json; charset=utf-8")],
         frame.json.clone(),
     )
-        .into_response()
+        .into_response();
+    // EventSource does not expose HTTP errors. A one-shot snapshot fetch lets
+    // the dashboard distinguish stream capacity from an unavailable server.
+    response.headers_mut().insert(
+        "x-tell-tail-streams-available",
+        app.streams
+            .available_permits()
+            .to_string()
+            .parse()
+            .expect("bounded stream count"),
+    );
+    response
 }
 
 async fn events(State(app): State<App>) -> Response {

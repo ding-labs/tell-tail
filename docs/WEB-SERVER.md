@@ -45,6 +45,11 @@ rejected. JSON and SSE are uncompressed; responses use `Cache-Control: no-store`
 There is no HTTP Prometheus scrape route, filesystem browser, WebSocket route, or
 mutable API.
 
+Successful snapshot responses include `X-Tell-Tail-Streams-Available` (0 through
+4). This advisory count lets a browser diagnose stream capacity after EventSource
+reports an opaque error, without consuming a stream slot or changing the frame
+schema. Admission remains authoritative; another tab can take a slot immediately.
+
 To inspect the server using a fixed port:
 
 ```sh

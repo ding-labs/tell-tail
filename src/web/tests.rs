@@ -192,6 +192,12 @@ fn default_http_port_accepts_browser_authorities_without_weakening_origin_checks
 #[tokio::test(flavor = "current_thread")]
 async fn stream_capacity_is_independent_of_snapshot_requests_and_released_on_disconnect() {
     let harness = Harness::new("stdin".into());
+    assert!(
+        harness
+            .get("/api/snapshot")
+            .await
+            .contains("x-tell-tail-streams-available: 4")
+    );
     let mut readers = Vec::new();
     for _ in 0..STREAMS {
         let (header, reader) = harness.events(false).await;
@@ -205,12 +211,9 @@ async fn stream_capacity_is_independent_of_snapshot_requests_and_released_on_dis
             .0
             .starts_with("HTTP/1.1 429 Too Many Requests")
     );
-    assert!(
-        harness
-            .get("/api/snapshot")
-            .await
-            .starts_with("HTTP/1.1 200 OK")
-    );
+    let snapshot = harness.get("/api/snapshot").await;
+    assert!(snapshot.starts_with("HTTP/1.1 200 OK"));
+    assert!(snapshot.contains("x-tell-tail-streams-available: 0"));
     drop(readers.pop());
     let deadline = Instant::now() + Duration::from_secs(1);
     loop {
