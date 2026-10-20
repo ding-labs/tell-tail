@@ -19,7 +19,12 @@ impl Framer {
     pub fn pending_bytes(&self) -> u64 {
         self.pending
     }
-    pub fn feed(&mut self, mut input: &[u8], mut emit: impl FnMut(&[u8], bool)) {
+    pub fn feed(&mut self, input: &[u8], mut emit: impl FnMut(&[u8], bool)) {
+        self.feed_counted(input, |line, oversized, _| emit(line, oversized));
+    }
+    /// Also report consumed physical bytes, including CR/LF terminators. This
+    /// permits source metadata to be skipped without losing byte accounting.
+    pub fn feed_counted(&mut self, mut input: &[u8], mut emit: impl FnMut(&[u8], bool, u64)) {
         while !input.is_empty() {
             let end = memchr::memchr(b'\n', input);
             let size = end.unwrap_or(input.len());
@@ -27,13 +32,14 @@ impl Framer {
             self.pending = self.pending.saturating_add(size as u64);
             self.oversized |= self.pending > self.limit as u64;
             if end.is_some() {
+                let consumed = self.pending.saturating_add(1);
                 if self.oversized {
-                    emit(&[], true);
+                    emit(&[], true, consumed);
                 } else if self.partial.is_empty() {
-                    emit(strip_cr(segment), false);
+                    emit(strip_cr(segment), false, consumed);
                 } else {
                     self.partial.extend_from_slice(segment);
-                    emit(strip_cr(&self.partial), false);
+                    emit(strip_cr(&self.partial), false, consumed);
                 }
                 self.clear();
                 input = &input[size + 1..];
@@ -46,6 +52,10 @@ impl Framer {
         }
     }
     pub fn finish(&mut self, mut emit: impl FnMut(&[u8], bool)) {
+        self.finish_counted(|line, oversized, _| emit(line, oversized));
+    }
+    /// Emit an unterminated final record with its physical byte count.
+    pub fn finish_counted(&mut self, mut emit: impl FnMut(&[u8], bool, u64)) {
         if self.pending != 0 {
             emit(
                 if self.oversized {
@@ -54,6 +64,7 @@ impl Framer {
                     strip_cr(&self.partial)
                 },
                 self.oversized,
+                self.pending,
             );
             self.clear();
         }
@@ -72,6 +83,24 @@ fn strip_cr(line: &[u8]) -> &[u8] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn physical_byte_counts_include_terminators_and_oversized_payloads() {
+        let input = b"a\r\n\nbcdef\nlast\r";
+        for chunk in 1..=input.len() {
+            let mut framer = Framer::new(4);
+            let mut counts = Vec::new();
+            for part in input.chunks(chunk) {
+                framer.feed_counted(part, |_, oversized, bytes| counts.push((oversized, bytes)));
+            }
+            framer.finish_counted(|_, oversized, bytes| counts.push((oversized, bytes)));
+            assert_eq!(counts, [(false, 3), (false, 1), (true, 6), (true, 5)]);
+            assert_eq!(
+                counts.iter().map(|(_, n)| n).sum::<u64>(),
+                input.len() as u64
+            );
+            assert_eq!(framer.pending_bytes(), 0);
+        }
+    }
     fn collect(input: &[u8], chunk: usize, limit: usize) -> Vec<(Vec<u8>, bool)> {
         let mut framer = Framer::new(limit);
         let mut result = vec![];
