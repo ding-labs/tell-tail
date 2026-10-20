@@ -23,8 +23,10 @@ jobs:
       - run: python3 scripts/test_release_gate.py && python3 scripts/test_release_artifacts.py && python3 scripts/test_render_formula.py
       - run: cargo clippy --all-targets --locked -- -D warnings
       - run: cargo test --locked
-      - run: cargo clippy --all-targets --features snapshot-notifications --locked -- -D warnings
-      - run: cargo test --features snapshot-notifications --locked
+      - run: cargo clippy --all-targets --no-default-features --locked -- -D warnings
+      - run: cargo test --no-default-features --locked
+      - run: cargo clippy --all-targets --no-default-features --features snapshot-notifications --locked -- -D warnings
+      - run: cargo test --no-default-features --features snapshot-notifications --locked
       - run: cargo build --locked
       - run: python3 scripts/check_output.py
       - run: python3 scripts/check_terminal.py
