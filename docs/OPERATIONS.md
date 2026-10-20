@@ -36,11 +36,12 @@ journal for runtime errors and the metric timestamp for freshness.
 | Old metrics timestamp | Check the process, destination permissions, collector path, and `--interval-ms`. A stale file can outlive a crashed process; do not rely only on its last `running` value. |
 | `source_up` is zero | The followed path may be missing, or the process may have terminated. Check `running` and the timestamp together. A missing source is retried. |
 | Growing backlog | The current file is arriving faster than it is being read. Check storage/CPU pressure and record mix. Backlog is unavailable for stdin and does not measure unread data in other rotated generations. |
-| Output error/status 1 | A full report/frame could not complete within two seconds, or an I/O operation failed. Drain stdout continuously. Cancellation gives output a shorter grace period. Broken downstream pipes exit quietly. |
+| Output error/status 1 | For stdout, a full report/frame could not complete within two seconds, or an I/O operation failed. Drain stdout continuously. Cancellation gives output a shorter grace period. Broken downstream pipes exit quietly. |
 | Counts differ after rotation | Use rename-based rotation with completed lines. Late writes after handoff and truncate/regrow cycles between observations can be missed. Partial records at observed generation boundaries are discarded and counted separately. |
 | Web process stays running after stdin EOF | This is intentional: final metrics remain available until Ctrl+C. `--once --output web` is rejected. |
 | Web stream receives 429 | Four SSE streams are already active. Close another stream; current metrics remain available through `/api/snapshot`. |
 | Web page receives 403 | Use the exact printed `127.0.0.1` URL and port; foreign Host and Origin values are rejected. |
+| Web stream disconnects while ingestion continues | A socket with no write progress for two seconds is closed independently. Drain the stream or reconnect for current state. |
 | Ratios differ from request failure rates | Ratios describe physical log lines, including unknowns. Error ratio combines error and fatal. A request can emit many lines or none. |
 
 ## Compatibility and validation

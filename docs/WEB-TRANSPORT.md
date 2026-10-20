@@ -159,4 +159,5 @@ RUN_HEADED_TESTS=1 npm --prefix experiments/web-transport test
 The read-only snapshot subscription and direct-notification experiment publisher
 are now [implemented and measured](SNAPSHOTS.md), and the
 [production web frame contract](WEB-FRAMES.md) is implemented. The production
-loopback server and lifecycle are the next planned increment.
+loopback server and lifecycle are now [implemented and tested](WEB-SERVER.md).
+The usable embedded dashboard is the next planned increment.

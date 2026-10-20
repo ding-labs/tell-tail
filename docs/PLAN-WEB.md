@@ -1,10 +1,11 @@
 # Local web UI plan
 
-Status: web frame contract implemented, October 20, 2026. The
+Status: production loopback server and lifecycle implemented, October 20, 2026. The
 [local transport measurements](WEB-TRANSPORT.md) support SSE, and the
 [subscription and freshness results](SNAPSHOTS.md) cover direct publication.
 The [web frame contract](WEB-FRAMES.md) provides bounded version 1 encoding.
-The dashboard and production server remain planned; this does not change the
+The [production server](WEB-SERVER.md) supplies bounded HTTP/SSE and CLI lifecycle.
+The dashboard remains planned; this does not change the
 0.2 release gates.
 The first UI covers live aggregate metrics, as agreed. Raw log viewing and search
 are outside this milestone.
@@ -71,13 +72,15 @@ bottleneck before adding them.
 
 ## User experience and CLI
 
-Proposed commands, unavailable until implementation:
+Available server commands:
 
 ```sh
-tell-tail app.log --output web --open
+tell-tail app.log --output web
 my-app 2>&1 | tell-tail --output web
 tell-tail app.log --output web --web-port 8765
 ```
+
+The interactive dashboard and `--open` remain planned in increment 5.
 
 - Bind `127.0.0.1` with an OS-selected port by default. Print the URL using the
   existing bounded diagnostic path. `--open` optionally launches the system
@@ -140,13 +143,11 @@ release every channel borrow before I/O or awaiting. Ingestion must never wait
 for serialization, a client socket, or a per-client queue. Alerts continue to
 observe snapshots through the existing path.
 
-The current notification feature is opt-in and enables only Tokio's `sync`
-primitives. Keep future web dependencies behind a default-enabled Cargo `web`
-feature so distributed binaries include the UI and a CLI-only build remains
-possible. Pin versions that
-build with Rust 1.88.0, minimize enabled dependency features, and review the
-lockfile/licenses during the transport experiment. No dependency upgrade is
-implied by this document.
+The independent notification feature enables only Tokio's `sync` primitives.
+The implemented, default-enabled Cargo `web` feature adds pinned Axum/Hyper and
+Tokio I/O, time, and single-thread runtime support. A CLI-only build remains
+available with `--no-default-features`. Versions build with Rust 1.88.0, and the
+[dependency review](DEPENDENCIES.md) records licenses and audit results.
 
 Use embedded HTML, CSS, and small JavaScript modules with JSDoc types and an SVG
 chart. Sixty points and a few counters do not need a charting framework. Keep
@@ -275,10 +276,11 @@ change. Split the following milestones into smaller commits where appropriate.
    counters, nulls, states, and completed-second history in web schema 1. Encoding
    enforces the 64 KiB JSON limit and rejects invalid data. The experiment uses
    production frames with separate benchmark metadata; see `docs/WEB-FRAMES.md`.
-4. **Loopback server and lifecycle.** Add CLI arguments, current-frame and SSE
-   routes, admission/buffer limits, and bounded teardown. Test reconnect, EOF,
-   signals, invalid hosts/origins, bind failure, malformed/slow requests, and
-   undrained sockets before integrating a browser.
+4. **Loopback server and lifecycle — complete.** CLI web output serves current
+   JSON and SSE with admission/header/buffer limits and bounded teardown. Tests
+   cover reconnect, EOF, signals, input/encoder failure, invalid hosts/origins,
+   occupied ports, malformed/slow requests, and actual undrained socket writes.
+   See `docs/WEB-SERVER.md`; the root page is informational until increment 5.
 5. **Usable embedded dashboard.** Build against real frames, then add responsive
    layout, freeze/resume, freshness/final/capacity states, and browser opening.
    Verify keyboard use, null/large values, and safe source rendering. Use browser

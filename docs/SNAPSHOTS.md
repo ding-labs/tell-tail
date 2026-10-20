@@ -3,7 +3,8 @@
 Implemented October 20, 2026. A web publisher can now react to each native
 publication without adding a polling interval. The experimental server uses this
 path for real stdin and followed files; fixture replay keeps its synthetic timer.
-The production web server and dashboard remain later increments.
+The [production web server](WEB-SERVER.md) is implemented; the dashboard remains
+the next increment.
 
 ## API and ownership
 
@@ -12,7 +13,8 @@ outlive ingestion. `latest()` clones a `PublishedSnapshot` containing the curren
 `generation` and `snapshot`. Generation zero is initial state; each native
 publication advances it. This metadata does not change CLI JSON schema 2.
 
-Enable Cargo feature `snapshot-notifications` to use the asynchronous subscription:
+Cargo feature `snapshot-notifications` enables the asynchronous subscription and
+is also included by default through `web`:
 
 ```rust
 let mut publications = running.snapshot_reader().subscribe()?;
@@ -44,10 +46,12 @@ discard stale permits. Encoding and network I/O receive owned snapshots with no
 ingestion lock retained. The worker still publishes approximately every 100 ms,
 plus immediate final state; this change adds no per-record work.
 
-The Cargo feature enables only Tokio's `sync` primitives. It starts no runtime;
-the caller supplies the executor. Default builds exclude Tokio from their active
-dependency graph. The asynchronous subscription adds one weak registration and
-one notifier for the active publisher, independent of browser-client count.
+The standalone `--no-default-features --features snapshot-notifications` build
+enables only Tokio's `sync` primitives. The subscription starts no runtime; the
+caller supplies the executor. Default builds now include web support, whose
+runtime starts only in web mode. `--no-default-features` excludes Tokio from the
+active normal dependency graph. The asynchronous subscription adds one weak
+registration and one notifier for the active publisher, independent of browser-client count.
 
 ## Local freshness validation
 

@@ -3,8 +3,9 @@
 Implemented October 20, 2026 in [`web_frame.rs`](../src/web_frame.rs). The library
 encodes production frames without HTTP, Tokio, or new dependencies. The
 [transport experiment](../experiments/web-transport/README.md) now uses this
-encoder. The production loopback server, CLI web mode, and dashboard remain the
-next [delivery increments](PLAN-WEB.md#delivery-increments).
+encoder. The [production loopback server and CLI web mode](WEB-SERVER.md) are
+implemented; the dashboard remains the next
+[delivery increment](PLAN-WEB.md#delivery-increments).
 
 ## API and ownership
 
@@ -111,7 +112,8 @@ all states and nullable values, every u64 field through `u64::MAX`, history acro
 startup/second boundaries/ring reuse, UTF-8 and escaping at the exact size limit,
 and invalid data. The CLI schema 2 compatibility fixture remains unchanged.
 
-On macOS / Rust 1.88.0, verification passed: 61 default Rust tests, 67 with
+At the frame-contract milestone, before default web support, verification passed
+on macOS / Rust 1.88.0: 61 default Rust tests, 67 with
 snapshot notifications, three experiment Rust tests, and 12 Node/network/browser
 checks including native hidden-tab resume. Clippy passes with warnings denied
 in both root feature modes and the experiment. Existing CI runs root tests in both

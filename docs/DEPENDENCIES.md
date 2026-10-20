@@ -21,8 +21,8 @@ zero warnings across 156 locked packages, using RustSec database commit
 `b19b2c83c2493961ccb12f9fc4699a00fb2c6c44`. The opt-in
 `snapshot-notifications` feature adds Tokio 1.52.3 (MIT, Rust 1.71 minimum),
 with only `sync` enabled, and pin-project-lite 0.2.17 (Apache-2.0 OR MIT).
-At that review, default builds excluded both from their active dependency graph. The library
-starts no async runtime; an enabled consumer supplies its own executor.
+At that review, default builds excluded both from their active dependency graph.
+The snapshot API starts no runtime; consumers of its subscription supply an executor.
 
 A later October 20 audit picked up RUSTSEC-2026-0382 and RUSTSEC-2026-0381 in
 the existing webhook TLS dependencies. All three lockfiles now pin the patched
@@ -46,7 +46,22 @@ Declared direct dependency licenses from `cargo metadata --locked`:
 | tempfile | 3.27.0 | MIT OR Apache-2.0 |
 | ureq | 3.4.2 | MIT OR Apache-2.0 |
 | proptest (tests) | 1.12.0 | MIT OR Apache-2.0 |
-| tokio (optional snapshot notifications) | 1.52.3 | MIT |
+| tokio (notifications / web) | 1.52.3 | MIT |
+| axum (web) | 0.8.9 | MIT |
+| bytes (web) | 1.12.1 | MIT |
+| futures-util (web) | 0.3.34 | MIT OR Apache-2.0 |
+| hyper (web) | 1.12.0 | MIT |
+| hyper-util (web) | 0.1.21 | MIT |
+
+The default-enabled `web` feature activates these pinned HTTP dependencies and
+Tokio I/O, time, macros, and a single-thread runtime. Axum uses only `http1` and
+`tokio`; Hyper uses only `http1` and `server`; hyper-util uses `tokio` and `service`.
+No WebSocket, HTTP/2, compression, or additional TLS stack is enabled for the
+loopback listener. Only `--output web` starts its runtime. The active normal
+dependency graph for `--no-default-features` excludes Axum, Hyper, and Tokio;
+`--no-default-features --features snapshot-notifications` keeps only Tokio sync.
+Fuzz and experiment manifests explicitly disable default web features. All three
+build modes pass on Rust 1.88.0; see [server validation](WEB-SERVER.md).
 
 The screen-observation script uses pyte 0.8.2 (LGPLv3 package classifier) and wcwidth
 0.2.13 (MIT) in a development virtual environment. Neither is linked into the

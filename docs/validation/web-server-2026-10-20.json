@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-20",
+  "tested_source_commit": "aad70ee69c89a4d54c19ba3930dd22fb0031d934",
+  "host": {
+    "platform": "Darwin",
+    "release": "27.0.0",
+    "machine": "arm64",
+    "rust": "rustc 1.88.0 (6b00bc388 2025-06-23)"
+  },
+  "default_release_binary_sha256": "270d471fa1c4a440eca5b6780b2674f574f85279b7765f9810b4aeebbc463da1",
+  "checks": {
+    "rust_tests_passed": {
+      "default": 82,
+      "cli": 61,
+      "notification": 67
+    },
+    "clippy_warnings_denied": [
+      "default",
+      "no-default-features",
+      "no-default-features + snapshot-notifications",
+      "isolated transport experiment"
+    ],
+    "isolated_experiment_rust_tests_passed": 3,
+    "fuzz_lockfile_metadata_locked": true,
+    "remote_ci_run": false,
+    "release_gate_python_checks": "passed",
+    "release_artifact_python_checks": "passed",
+    "render_formula_python_checks": "passed"
+  },
+  "socket_stall_proof": {
+    "source_bytes": 60000,
+    "client_receive_buffer_requested_bytes": 1024,
+    "real_tcp_poll_write_observed": true,
+    "successful_bytes_observed": true,
+    "partial_write_observed": true,
+    "pending_write_observed": true,
+    "deadline_expirations_asserted": 1,
+    "four_streams_readmitted_after_expiry": true,
+    "other_snapshot_request_succeeded": true,
+    "shutdown_with_undrained_clients_under_one_second": true,
+    "instrumentation": "test-only observer around the real TcpStream beneath Hyper, not HTTP body polling"
+  },
+  "limits": {
+    "http_connection_tasks": 16,
+    "sse_streams": 4,
+    "header_bytes": 8192,
+    "header_fields": 64,
+    "header_deadline_seconds": 2,
+    "socket_no_write_progress_seconds": 2,
+    "json_bytes": 65536,
+    "final_delivery_milliseconds": 250,
+    "heartbeat_seconds": 15,
+    "retry_hint_milliseconds": 500
+  },
+  "package_validation": {
+    "package": "tell-tail-0.2.0",
+    "files": 93,
+    "bytes": 172075,
+    "sha256": "291e96fff4ff785da4fcc81b10b1c93cf0a2f2089ccfd25312cf42e9ad764366",
+    "allow_dirty": true,
+    "clean_install_smoke": "passed",
+    "offline_install": true,
+    "installed_web_smoke": "passed"
+  },
+  "package_validation_preceded_documentation_updates": true,
+  "dependencies": [
+    {
+      "name": "axum",
+      "version": "0.8.9",
+      "license": "MIT",
+      "rust_version": "1.80"
+    },
+    {
+      "name": "bytes",
+      "version": "1.12.1",
+      "license": "MIT",
+      "rust_version": "1.57"
+    },
+    {
+      "name": "futures-util",
+      "version": "0.3.34",
+      "license": "MIT OR Apache-2.0",
+      "rust_version": "1.71"
+    },
+    {
+      "name": "hyper",
+      "version": "1.12.0",
+      "license": "MIT",
+      "rust_version": "1.63"
+    },
+    {
+      "name": "hyper-util",
+      "version": "0.1.21",
+      "license": "MIT",
+      "rust_version": "1.85"
+    },
+    {
+      "name": "tokio",
+      "version": "1.52.3",
+      "license": "MIT",
+      "rust_version": "1.71"
+    }
+  ],
+  "audit": {
+    "database": {
+      "advisory-count": 1348,
+      "last-commit": "e6f94f3760d5e6c54c1b05f204002263bc025524",
+      "last-updated": "2026-10-20T21:24:19+02:00"
+    },
+    "lockfile": {
+      "dependency-count": 176
+    },
+    "vulnerabilities": 0,
+    "warnings": 0,
+    "ignored_advisories": []
+  },
+  "remaining_validation": [
+    "Embedded dashboard, browser opening, and production browser behavior are the next milestone.",
+    "No one-hour resource plateau or maximum-ingestion overhead claim.",
+    "Local macOS verification; Linux CI is configured but has not run remotely in this session."
+  ]
+}

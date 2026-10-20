@@ -122,7 +122,7 @@ webhook delivery retains its separate bounded shutdown allowance. Tests enforce
 the existing one-second overall shutdown target, including stalled sockets.
 
 Default builds enable the `web` feature. Only web mode starts a single-threaded
-Tokio runtime. CLI-only builds exclude active HTTP/runtime dependencies:
+Tokio runtime. CLI-only builds exclude the server's active HTTP/runtime dependencies:
 
 ```sh
 cargo build --release --locked
