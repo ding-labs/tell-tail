@@ -15,7 +15,7 @@ use tell_tail::{
 };
 
 fn run(args: &Args) -> io::Result<i32> {
-    if args.path().is_none() && io::stdin().is_terminal() {
+    if !args.apple_unified && args.path().is_none() && io::stdin().is_terminal() {
         Args::command().print_help()?;
         return Ok(0);
     }

@@ -19,12 +19,16 @@ impl Engine {
         Self {
             stats: Stats::new(
                 args.window,
-                args.path()
-                    .map(|p| p.display().to_string())
-                    .unwrap_or_else(|| "stdin".into()),
+                if args.apple_unified {
+                    "macOS unified log".into()
+                } else {
+                    args.path()
+                        .map(|p| p.display().to_string())
+                        .unwrap_or_else(|| "stdin".into())
+                },
             ),
             framer: Framer::new(args.max_record_bytes as usize),
-            classifier: Classifier::new(args.format, args.level_field.clone()),
+            classifier: Classifier::new(args.input_format(), args.level_field.clone()),
         }
     }
     pub fn feed(&mut self, bytes: &[u8], at: Duration) {

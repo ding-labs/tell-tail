@@ -32,6 +32,9 @@ pub enum From {
 pub struct Args {
     /// File to follow; omit or use - to read stdin.
     pub file: Option<PathBuf>,
+    /// Stream macOS unified logs at info level; no pipe or jq required.
+    #[arg(long, conflicts_with_all = ["file", "once", "from"])]
+    pub apple_unified: bool,
     /// Read a file from the beginning and exit at EOF.
     #[arg(long)]
     pub once: bool,
@@ -82,13 +85,30 @@ pub struct Args {
     pub alert_cooldown: u32,
 }
 impl Args {
+    pub fn input_format(&self) -> Format {
+        if self.apple_unified {
+            Format::AppleUnified
+        } else {
+            self.format
+        }
+    }
     pub fn path(&self) -> Option<&std::path::Path> {
         self.file
             .as_deref()
             .filter(|p| *p != std::path::Path::new("-"))
     }
     pub fn validate(&self) -> Result<(), &'static str> {
-        if self.format == Format::AppleUnified
+        if self.apple_unified {
+            if !cfg!(target_os = "macos") {
+                return Err(
+                    "--apple-unified live capture requires macOS; use --format apple-unified for saved NDJSON",
+                );
+            }
+            if !matches!(self.format, Format::Auto | Format::AppleUnified) {
+                return Err("--apple-unified selects the apple-unified format; omit --format");
+            }
+        }
+        if self.input_format() == Format::AppleUnified
             && !matches!(self.level_field.as_str(), "level" | "messageType")
         {
             return Err("--format apple-unified uses messageType; omit --level-field");
@@ -144,6 +164,50 @@ impl Args {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn apple_source_and_capture_format_have_explicit_contracts() {
+        let args = Args::parse_from(["tell-tail", "--apple-unified"]);
+        assert_eq!(args.input_format(), Format::AppleUnified);
+        assert_eq!(args.validate().is_ok(), cfg!(target_os = "macos"));
+        for extra in [
+            vec!["capture.ndjson"],
+            vec!["-"],
+            vec!["--once"],
+            vec!["--from", "start"],
+        ] {
+            assert!(
+                Args::try_parse_from([vec!["tell-tail", "--apple-unified"], extra].concat())
+                    .is_err()
+            );
+        }
+        assert!(
+            Args::parse_from(["tell-tail", "--apple-unified", "--format", "text"])
+                .validate()
+                .is_err()
+        );
+        assert!(
+            Args::parse_from([
+                "tell-tail",
+                "--format",
+                "apple-unified",
+                "--level-field",
+                "severity"
+            ])
+            .validate()
+            .is_err()
+        );
+        assert!(
+            Args::parse_from([
+                "tell-tail",
+                "capture.ndjson",
+                "--once",
+                "--format",
+                "apple-unified"
+            ])
+            .validate()
+            .is_ok()
+        );
+    }
     #[test]
     fn rejects_invalid_combinations() {
         for argv in [

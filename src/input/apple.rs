@@ -194,4 +194,14 @@ mod tests {
         assert!(began.elapsed() < Duration::from_millis(500));
         gone(pid);
     }
+
+    #[test]
+    fn successful_capture_exit_is_still_unexpected_for_a_live_source() {
+        let mut stream = AppleStream::spawn(command("exit 0")).unwrap();
+        let error = stream
+            .next(&mut [0; 64])
+            .err()
+            .expect("live capture cannot complete silently");
+        assert!(error.to_string().contains("exit status: 0"));
+    }
 }

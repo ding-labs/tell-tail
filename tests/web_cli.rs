@@ -11,6 +11,18 @@ struct Monitor {
     address: SocketAddr,
 }
 
+#[cfg(target_os = "macos")]
+#[test]
+fn native_apple_logs_stream_into_the_dashboard_without_stdin() {
+    let mut monitor = Monitor::start(&["--apple-unified"]);
+    drop(monitor.child.stdin.take());
+    let frame = monitor.until(|f| f["metrics"]["totals"]["records"].as_str().unwrap() != "0");
+    assert_eq!(frame["metrics"]["source"], "macOS unified log");
+    assert_eq!(frame["metrics"]["state"], "reading");
+    assert_eq!(frame["metrics"]["totals"]["parse_failures"], "0");
+    monitor.signal("-TERM", 143);
+}
+
 impl Monitor {
     fn start(extra: &[&str]) -> Self {
         let child = Command::new(env!("CARGO_BIN_EXE_tell-tail"))

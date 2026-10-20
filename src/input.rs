@@ -22,10 +22,14 @@ pub enum Event {
 pub enum Input {
     Finite(File),
     Stdin(platform::Stdin),
+    Apple(AppleStream),
     Follow(Follower),
 }
 impl Input {
     pub fn open(args: &Args) -> io::Result<Self> {
+        if args.apple_unified {
+            return Ok(Self::Apple(AppleStream::open()?));
+        }
         match args.path() {
             Some(path) if args.once => Ok(Self::Finite(platform::open_regular(path)?)),
             Some(path) => Ok(Self::Follow(Follower::open(
@@ -41,6 +45,7 @@ impl Input {
             Self::Stdin(file) if !file.readable()? => Ok(Event::Idle(State::Reading)),
             Self::Stdin(file) => read_event(file, buffer),
             Self::Finite(file) => read_event(file, buffer),
+            Self::Apple(stream) => stream.next(buffer),
         }
     }
     pub fn backlog(&self) -> Option<u64> {

@@ -164,3 +164,14 @@ fn saved_apple_ndjson_runs_through_the_existing_file_cli() {
     assert_eq!(frame["skipped_bytes"], b"Filtering the log data\n".len());
     assert_eq!(frame["error_ratio"], 0.5);
 }
+
+#[cfg(not(target_os = "macos"))]
+#[test]
+fn live_apple_capture_is_rejected_clearly_on_other_platforms() {
+    let output = Command::new(env!("CARGO_BIN_EXE_tell-tail"))
+        .arg("--apple-unified")
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("requires macOS"));
+}
