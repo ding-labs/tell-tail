@@ -58,7 +58,8 @@ export function parseFrame(json) {
     requireField(Number.isInteger(w.configured_seconds) && w.configured_seconds >= 1 && w.configured_seconds <= 3600);
     requireField(w.resolution_seconds === 0.1);
     number(w.observed_seconds);
-    requireField(w.observed_seconds <= w.configured_seconds);
+    // The engine retains the whole oldest bucket; its partial edge adds <100 ms.
+    requireField(w.observed_seconds < w.configured_seconds + w.resolution_seconds);
     counts(w.counts);
     counter(w.bytes_read);
     number(w.records_per_second);

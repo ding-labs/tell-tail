@@ -162,3 +162,20 @@ test('invalid contracts and publisher failures stop streams and preserve last va
   assert.equal(await page.locator('#total-records').textContent(), '8');
   assert.equal(await page.evaluate(() => window.streams.at(-1).closed), true);
 });
+
+test('dashboard stays live across the full rolling window and history ring', async t => {
+  const { page } = await setup(t, true);
+  const errors = [];
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+  for (const [index, seconds] of [59.999, 60, 60.001, 60.099, 60.1, 61.099, 120.099].entries()) {
+    const next = frame(index, index + 1);
+    next.metrics.elapsed_seconds = seconds;
+    next.metrics.window.observed_seconds = seconds < 60 ? seconds : 60 + (Math.round(seconds * 1000) % 100) / 1000;
+    next.metrics.history = Array(Math.min(60, Math.floor(seconds))).fill('1');
+    await send(page, [next]);
+    await page.waitForFunction(count => document.getElementById('total-records').textContent === String(count), index + 1);
+    assert.match(await page.locator('#connection').textContent(), /^Live/);
+    assert.equal(await page.evaluate(() => window.streams.at(-1).closed), false);
+  }
+  assert.deepEqual(errors, []);
+});

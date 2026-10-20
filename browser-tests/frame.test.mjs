@@ -57,3 +57,21 @@ test('invalid versions, states, numbers, counter encodings and sizes fail clearl
     assert.throws(() => parseFrame(malformed), /Unsupported or invalid/);
   }
 });
+
+// Stats retains the whole oldest 100 ms bucket, including its partial edge.
+test('quantized rolling windows remain valid after filling and wrapping', () => {
+  for (const seconds of [1, 60, 3600]) {
+    for (const observed of [seconds - 0.001, seconds, seconds + 0.001, seconds + 0.099999999]) {
+      const frame = JSON.parse(fixture);
+      frame.metrics.window.configured_seconds = seconds;
+      frame.metrics.window.observed_seconds = observed;
+      assert.equal(parseFrame(JSON.stringify(frame)).metrics.window.observed_seconds, observed);
+    }
+    for (const observed of [seconds + 0.1, seconds + 1]) {
+      const frame = JSON.parse(fixture);
+      frame.metrics.window.configured_seconds = seconds;
+      frame.metrics.window.observed_seconds = observed;
+      assert.throws(() => parseFrame(JSON.stringify(frame)), /Unsupported or invalid/);
+    }
+  }
+});
