@@ -11,6 +11,8 @@ import { chromium } from './helpers.mjs';
 export async function launchDesktop() {
   const profile = await mkdtemp(join(tmpdir(), 'tell-tail-visibility-'));
   const child = spawn(chromium.executablePath(), [
+    // Match Playwright's test launcher on Linux runners with restricted userns.
+    ...(process.platform === 'linux' ? ['--no-sandbox'] : []),
     '--remote-debugging-port=0', '--remote-debugging-address=127.0.0.1',
     `--user-data-dir=${profile}`, '--disable-background-networking',
     '--disable-backgrounding-occluded-windows', '--no-first-run',
