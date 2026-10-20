@@ -18,6 +18,8 @@ pub mod runtime;
 
 pub mod snapshots;
 
+pub mod web_frame;
+
 pub mod prometheus;
 
 pub mod tui;
