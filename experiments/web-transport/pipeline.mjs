@@ -28,6 +28,7 @@ try {
     await writeFile(path, '');
     const fd = source === 'file' ? openSync(path, 'a') : null;
     const server = await startServer(['--source', source, ...(source === 'file' ? ['--input-file', path] : [])]);
+    assert.equal(server.publication_mode, 'notifications', 'rebuild the experiment with direct notifications');
     const page = await browser.newPage();
     let timer;
     try {
@@ -79,7 +80,7 @@ try {
       results.push(result);
       console.error(`${source} ${load} ${transport}: write-to-DOM p95 ${result.write_to_dom_ms.p95.toFixed(2)} ms, ${produced} exact records`);
       await mkdir(dirname(resolve(values.output)), { recursive: true });
-      await writeFile(values.output, JSON.stringify({ schema_version: 1, browser: browser.version(), results }, null, 2) + '\n');
+      await writeFile(values.output, JSON.stringify({ schema_version: 1, publication_mode: 'notifications', browser: browser.version(), results }, null, 2) + '\n');
     } finally {
       clearInterval(timer);
       if (fd !== null) closeSync(fd);

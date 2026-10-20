@@ -114,3 +114,64 @@ test('stdin counts come from ingestion and not the replay fixture', async () => 
     assert.equal(status.frame.metrics.totals.levels.warn, '1');
   } finally { await server.stop(); }
 });
+
+test('native EOF bypasses the replay timer and retains a quiet final stream', async () => {
+  const server = await startServer(['--source', 'stdin', '--hz', '1']);
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), 750);
+  try {
+    assert.equal(server.publication_mode, 'notifications');
+    const response = await fetch(`${server.url}/events`, { signal: abort.signal });
+    const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+    server.child.stdin.end('INFO complete\nWARN unterminated');
+    let buffer = '';
+    let final;
+    while (!final) {
+      const part = await reader.read();
+      assert.ok(!part.done, 'stream ended before final state');
+      buffer += part.value;
+      let boundary;
+      while ((boundary = buffer.indexOf('\n\n')) !== -1) {
+        const event = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+        const data = JSON.parse(event.split('\n').find(line => line.startsWith('data: ')).slice(6));
+        if (data.metrics.state === 'complete') final = data;
+      }
+    }
+    clearTimeout(timer);
+    assert.equal(final.metrics.totals.records, '2');
+    const extra = reader.read().then(() => 'unexpected event or close', () => 'aborted');
+    assert.equal(await Promise.race([extra, delay(200).then(() => 'quiet')]), 'quiet');
+    const status = await server.status();
+    assert.equal(String(status.sequence), final.sequence);
+    assert.equal(status.frame.metrics.state, 'complete');
+  } finally { clearTimeout(timer); abort.abort(); await server.stop(); }
+});
+
+test('live stdin keeps exact totals with an unread web client', async () => {
+  const server = await startServer(['--source', 'stdin', '--padding-bytes', '60000']);
+  const url = new URL(server.url);
+  const socket = createConnection({ host: url.hostname, port: Number(url.port) });
+  try {
+    await once(socket, 'connect');
+    socket.write(`GET /events HTTP/1.1\r\nHost: ${url.host}\r\n\r\n`);
+    socket.pause();
+    const batch = 'INFO live\n'.repeat(1000);
+    for (let i = 0; i < 40; i++) {
+      server.child.stdin.write(batch);
+      await delay(50);
+    }
+    server.child.stdin.end('WARN final');
+    const deadline = performance.now() + 2000;
+    let status;
+    do { await delay(20); status = await server.status(); }
+    while (status.frame.metrics.state !== 'complete' && performance.now() < deadline);
+    assert.equal(status.frame.metrics.state, 'complete');
+    assert.equal(status.frame.metrics.totals.records, '40001');
+    assert.ok(status.sequence > 2);
+    assert.ok(await server.stop() < 1000);
+  } finally {
+    socket.destroy();
+    if (server.child.exitCode === null && server.child.signalCode === null) await server.stop();
+  }
+});

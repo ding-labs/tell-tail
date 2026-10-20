@@ -18,9 +18,11 @@ loopback server on a random port. Its first stdout line is machine-readable JSON
 with the URL and PID. `/events` and `/ws` carry identical frames; `/clock` exposes
 the server monotonic clock for calibration, and `/status` reports current state.
 `--hz 10|50|100`, `--profile representative|large-counters`, and
-`--source fixture|stdin|file` select a workload. File input also needs
-`--input-file PATH` and follows from the start. Actual ingestion still publishes
-at its existing cadence; sampling it at 100 Hz does not produce 100 new snapshots.
+`--source fixture|stdin|file` select a workload. Rate/profile settings apply to
+fixture replay. File input also needs `--input-file PATH` and follows from the
+start. Real inputs use direct snapshot notifications at the engine's existing
+approximately 100 ms cadence, plus immediate final publication. They do not poll
+or synthesize updates at `--hz`; startup metadata identifies the publication mode.
 `--padding-bytes` is exclusively for forcing socket backpressure in stress checks.
 The server caps active streams at four and exits on SIGINT/SIGTERM.
 
@@ -75,10 +77,12 @@ freshness, hidden-tab behavior, or a long-run memory plateau.
 per transport with real stdin/file following, idle and nominally paced 20K
 records/second. All injected records must be accounted for exactly. Timing uses
 one host monotonic clock from producer write through Playwright's observation of
-the DOM; automation round-trip cost is reported, not subtracted. The benchmark
-samples `Running::snapshot()` at 10 Hz, adding a possible sampling interval on top
-of engine publication; the planned notification subscription is not implemented
-by this experiment. Paced input is a correctness/freshness workload and does not
+the DOM; automation round-trip cost is reported, not subtracted. The publisher
+awaits `SnapshotSubscription::changed()` and serializes each new native generation
+once. It retains final state without repeated serialization or polling after EOF.
+The pipeline harness requires notification-mode startup metadata so an outdated
+binary cannot silently measure the former polling path.
+Paced input is a correctness/freshness workload and does not
 measure maximum ingestion capacity or establish the 5% overhead target.
 
 Frames use actual engine statistics with 60 completed history buckets. The

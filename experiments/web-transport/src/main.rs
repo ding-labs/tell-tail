@@ -22,12 +22,14 @@ use std::{
     time::{Duration, Instant},
 };
 use tell_tail::{cli::Args, runtime::Running};
-use tell_tail_web_transport::{Frame, Profile, fixture, metrics};
+use tell_tail_web_transport::{Frame, Profile, fixture};
 use tokio::{
     net::TcpListener,
     sync::{Semaphore, watch},
-    time::{MissedTickBehavior, timeout},
+    time::timeout,
 };
+
+mod publisher;
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
 enum Source {
@@ -41,6 +43,7 @@ enum Source {
 struct Config {
     #[arg(long, default_value_t = 0)]
     port: u16,
+    /// Synthetic replay rate; real inputs use direct snapshot notifications.
     #[arg(long, default_value_t = 10, value_parser = clap::value_parser!(u32).range(1..=100))]
     hz: u32,
     #[arg(long, value_enum, default_value = "representative")]
@@ -179,42 +182,20 @@ async fn main() -> io::Result<()> {
     let config = Config::parse();
     let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, config.port)).await?;
     let host = listener.local_addr()?.to_string();
-    let mut running = input(&config)?;
+    let running = input(&config)?;
+    let publication_mode = if running.is_some() {
+        "notifications"
+    } else {
+        "replay"
+    };
     let captured = fixture(config.profile);
     let clock = Instant::now();
-    let initial = running.as_ref().map_or_else(
-        || captured.clone(),
-        |r| metrics(serde_json::to_value(r.snapshot()).unwrap()),
-    );
-    let (tx, rx) = watch::channel(Arc::new(Frame::new(0, 0, &initial)));
-    let mut publisher = tokio::spawn(async move {
-        let mut tick = tokio::time::interval(Duration::from_secs_f64(1.0 / f64::from(config.hz)));
-        tick.set_missed_tick_behavior(MissedTickBehavior::Skip);
-        let mut sequence = 0;
-        loop {
-            tick.tick().await;
-            let mut value = match running.as_mut() {
-                Some(running) => metrics(serde_json::to_value(running.snapshot()).unwrap()),
-                None => captured.clone(),
-            };
-            if config.padding_bytes != 0 {
-                value["stress_padding"] = "x".repeat(config.padding_bytes as usize).into();
-            }
-            sequence += 1;
-            let frame = Arc::new(Frame::new(
-                sequence,
-                clock.elapsed().as_micros() as u64,
-                &value,
-            ));
-            assert!(
-                frame.json.len() <= 64 * 1024,
-                "benchmark frame exceeds 64 KiB"
-            );
-            tx.send_replace(frame);
-        }
-    });
+    let publisher::Publisher {
+        frames,
+        task: mut publisher,
+    } = publisher::start(running, captured, config.hz, config.padding_bytes, clock).await?;
     let app = App {
-        frames: rx,
+        frames,
         clients: Arc::new(Semaphore::new(4)),
         clock,
         host: host.clone(),
@@ -241,7 +222,8 @@ async fn main() -> io::Result<()> {
         .with_state(app);
     println!(
         "{}",
-        json!({"url": format!("http://{host}"), "pid": std::process::id(), "hz": config.hz})
+        json!({"url": format!("http://{host}"), "pid": std::process::id(), "hz": config.hz,
+            "publication_mode": publication_mode})
     );
     let shutdown = async {
         let mut terminate =
