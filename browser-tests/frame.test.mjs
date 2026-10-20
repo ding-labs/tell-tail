@@ -75,3 +75,22 @@ test('quantized rolling windows remain valid after filling and wrapping', () => 
     }
   }
 });
+
+test('validation errors identify fields without echoing untrusted payloads', () => {
+  for (const [mutate, field] of [
+    [f => f.metrics.window.observed_seconds = 61, 'metrics.window.observed_seconds'],
+    [f => f.metrics.totals.levels.info = 'private log content', 'metrics.totals.levels.info'],
+    [f => f.metrics.window = null, 'metrics.window'],
+    [f => f.metrics.history = ['secret'], 'metrics.history[]'],
+  ]) {
+    const f = JSON.parse(fixture);
+    mutate(f);
+    assert.throws(() => parseFrame(JSON.stringify(f)), error => {
+      assert.equal(error.name, 'FrameError');
+      assert.equal(error.field, field);
+      assert.doesNotMatch(error.message, /private|secret/);
+      return true;
+    });
+  }
+  assert.throws(() => parseFrame('{"secret'), /frame must be valid JSON/);
+});
