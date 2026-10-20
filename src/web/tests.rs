@@ -491,6 +491,9 @@ fn serves_current_frames_and_checks_local_requests() {
                 );
                 assert!(response.contains("cache-control: no-store\r\n"));
                 assert!(response.contains("frame-ancestors 'none'"));
+                if expected == "405 Method Not Allowed" {
+                    assert!(response.contains("allow: GET\r\n"));
+                }
                 if path == "/api/snapshot" && expected == "200 OK" {
                     let frame: serde_json::Value =
                         serde_json::from_str(response.split_once("\r\n\r\n").unwrap().1).unwrap();

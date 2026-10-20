@@ -193,6 +193,11 @@ async fn local_request(State(app): State<App>, request: Request, next: Next) -> 
         Some(status) => status.into_response(),
         None => next.run(request).await,
     };
+    if response.status() == StatusCode::METHOD_NOT_ALLOWED {
+        response
+            .headers_mut()
+            .insert(header::ALLOW, "GET".parse().expect("static header"));
+    }
     for (key, value) in [
         ("cache-control", "no-store"),
         ("x-content-type-options", "nosniff"),
