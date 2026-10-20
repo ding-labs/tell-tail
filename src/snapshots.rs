@@ -32,7 +32,7 @@ impl SnapshotReader {
             .clone()
     }
 
-    /// Whether the ingestion worker has exited, including unwinding on panic.
+    /// Whether ingestion has closed publication, including unwinding on panic.
     /// A closed reader still retains its last publication.
     pub fn is_closed(&self) -> bool {
         self.slot

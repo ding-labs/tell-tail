@@ -16,6 +16,14 @@ commit: `edb58f5974b83eb8302332821cb6d389777aa351` (1,329 advisories). There are
 ignored advisories. Rerun at candidate validation: this is dated evidence, not a
 promise about future advisories. Audit source: [RustSec](https://rustsec.org/).
 
+The October 20, 2026 notification-feature review found zero vulnerabilities and
+zero warnings across 156 locked packages, using RustSec database commit
+`b19b2c83c2493961ccb12f9fc4699a00fb2c6c44`. The opt-in
+`snapshot-notifications` feature adds Tokio 1.52.3 (MIT, Rust 1.71 minimum),
+with only `sync` enabled, and pin-project-lite 0.2.17 (Apache-2.0 OR MIT).
+Default builds exclude both from their active dependency graph. The library
+starts no async runtime; an enabled consumer supplies its own executor.
+
 Declared direct dependency licenses from `cargo metadata --locked`:
 
 | Dependency | Locked version | Declared license |
@@ -31,6 +39,7 @@ Declared direct dependency licenses from `cargo metadata --locked`:
 | tempfile | 3.27.0 | MIT OR Apache-2.0 |
 | ureq | 3.4.2 | MIT OR Apache-2.0 |
 | proptest (tests) | 1.12.0 | MIT OR Apache-2.0 |
+| tokio (optional snapshot notifications) | 1.52.3 | MIT |
 
 The screen-observation script uses pyte 0.8.2 (LGPLv3 package classifier) and wcwidth
 0.2.13 (MIT) in a development virtual environment. Neither is linked into the

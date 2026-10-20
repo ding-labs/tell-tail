@@ -1,5 +1,9 @@
 # Local web transport decision
 
+Follow-up: [direct snapshot notifications](SNAPSHOTS.md) now replace polling for
+real inputs. The measurements below preserve the earlier transport experiment;
+the follow-up records the new input-to-DOM results.
+
 Decision: use SSE for the first local metrics dashboard. The October 20, 2026
 local comparison found both transports comfortably responsive at the intended
 10 Hz update rate. The differences do not justify WebSocket connection/reconnect
@@ -150,6 +154,6 @@ node experiments/web-transport/pipeline.mjs --samples 25
 RUN_HEADED_TESTS=1 npm --prefix experiments/web-transport test
 ```
 
-Next increment: expose a read-only snapshot subscription with a coalescing wakeup
-so the production SSE publisher can react directly to publication, without an
-extra polling interval. Keep the serializer and all network I/O off ingestion.
+The read-only snapshot subscription and direct-notification experiment publisher
+are now [implemented and measured](SNAPSHOTS.md). The production web frame contract
+is the next planned increment.

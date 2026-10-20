@@ -1,8 +1,10 @@
 # Local web UI plan
 
-Status: transport experiment complete, October 20, 2026. The
-[local measurements and decision](WEB-TRANSPORT.md) support SSE. The dashboard and
-production server remain planned; this does not change the 0.2 release gates.
+Status: snapshot notifications implemented, October 20, 2026. The
+[local transport measurements](WEB-TRANSPORT.md) support SSE, and the
+[subscription and freshness results](SNAPSHOTS.md) cover direct publication.
+The dashboard and production server remain planned; this does not change the
+0.2 release gates.
 The first UI covers live aggregate metrics, as agreed. Raw log viewing and search
 are outside this milestone.
 
@@ -26,8 +28,10 @@ of HTTP versus faster alternatives.
 ## What already exists
 
 - [`runtime.rs`](../src/runtime.rs) ingests on a dedicated thread and replaces
-  one `Arc<Mutex<Snapshot>>` approximately every 100 ms, plus a final snapshot.
+  one versioned snapshot approximately every 100 ms, plus a final snapshot.
   Publication occurs between input batches, so this is not a hard deadline.
+- [`snapshots.rs`](../src/snapshots.rs) supplies read-only handles and an optional
+  single-publisher subscription with coalescing notifications and closure handling.
 - [`stats.rs`](../src/stats.rs) supplies rates, severity counts, rolling and
   cumulative totals, source state, diagnostics, and up to 60 completed seconds
   of throughput history. Rolling statistics use 100 ms buckets.
@@ -122,21 +126,23 @@ Use Axum for HTTP routing/SSE and a Tokio runtime active only in web mode.
 retains the latest value and suits frame distribution. Prefer a single runtime
 thread initially. Keep the parser and ingestion loop synchronous.
 
-Expose a read-only snapshot handle plus an internal publication generation from
-`Running`. After replacing the current snapshot, optionally notify one web
-publisher with [`Notify::notify_one`][tokio-notify], which coalesces wakeups.
-Copy the current value and release its mutex before serialization. The publisher
-tracks generation, skips duplicates, and serializes the newest available state.
-Test startup/final-publication races; do not wait for a future change before
-sending the first snapshot.
+The implemented `Running::snapshot_reader()` exposes a read-only handle and
+internal publication generation. With Cargo feature `snapshot-notifications`,
+`subscribe()?.changed().await` returns initial state immediately and then waits
+for new generations. [`Notify::notify_one`][tokio-notify] coalesces wakeups, with
+one active publisher registration. The owned result carries no lock into
+serialization. Startup, cancellation, final-publication races, and idle expiry
+have regression coverage; see the [subscription contract](SNAPSHOTS.md).
 
 Share the resulting bytes through a `watch` channel. Clone the frame handle and
 release every channel borrow before I/O or awaiting. Ingestion must never wait
 for serialization, a client socket, or a per-client queue. Alerts continue to
 observe snapshots through the existing path.
 
-Keep web dependencies behind a default-enabled Cargo `web` feature so distributed
-binaries include the UI and a CLI-only build remains possible. Pin versions that
+The current notification feature is opt-in and enables only Tokio's `sync`
+primitives. Keep future web dependencies behind a default-enabled Cargo `web`
+feature so distributed binaries include the UI and a CLI-only build remains
+possible. Pin versions that
 build with Rust 1.88.0, minimize enabled dependency features, and review the
 lockfile/licenses during the transport experiment. No dependency upgrade is
 implied by this document.
@@ -258,12 +264,12 @@ Do not ship both live transports without a demonstrated need.
 Verify and commit each coherent increment before starting the next independent
 change. Split the following milestones into smaller commits where appropriate.
 
-1. **Transport experiment and decision.** Add the development-only harness,
-   compare SSE/WebSocket, check Rust 1.88 dependency compatibility, and record
-   results in `docs/WEB-TRANSPORT.md`. Keep experiment routes out of release builds.
-2. **Snapshot subscription.** Add the read-only handle, generation, and optional
-   coalescing wakeup. Test idle expiry, startup/final races, slow consumers, and
-   unchanged counts/alerts. Run existing correctness/compatibility tests.
+1. **Transport experiment — complete.** The isolated harness compares SSE and
+   WebSocket on Rust 1.88, with results in `docs/WEB-TRANSPORT.md`. Experiment
+   routes remain outside release builds.
+2. **Snapshot subscription — complete.** Read-only handles, generations, and
+   coalescing wakeups are implemented. Idle expiry, startup/final races, slow and
+   cancelled consumers, exact counts, alerts, and compatibility are covered.
 3. **Web frame contract.** Add conversion/serialization with fixture tests for
    nulls, states, large integers, history alignment, and the frame-size bound.
 4. **Loopback server and lifecycle.** Add CLI arguments, current-frame and SSE
