@@ -56,7 +56,9 @@ The full JSON contains raw per-message browser samples and per-run resources.
 A separate `-summary.json` reports distributions of client/run percentiles; those
 are not pooled-message percentiles. Clock uncertainty and offset drift remain
 visible, and negative calibrated timings are not clamped. DOM timings end after
-DOM/SVG writes, not physical paint. `ps` samples process-tree CPU/RSS about once
+DOM/SVG writes, not physical paint. Received/rendered totals distinguish browser
+render coalescing from publication gaps. The publication timestamp is taken before
+JSON encoding, after cloning/converting metrics. `ps` samples process-tree CPU/RSS about once
 per second; CPU totals have OS rounding and exclude exited children whose final
 accounting is unavailable. Browser heap snapshots include benchmark sample storage.
 The protocol-only replay campaign does not establish ingestion overhead, input
