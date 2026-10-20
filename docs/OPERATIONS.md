@@ -38,11 +38,16 @@ journal for runtime errors and the metric timestamp for freshness.
 | Growing backlog | The current file is arriving faster than it is being read. Check storage/CPU pressure and record mix. Backlog is unavailable for stdin and does not measure unread data in other rotated generations. |
 | Output error/status 1 | A full report/frame could not complete within two seconds, or an I/O operation failed. Drain stdout continuously. Cancellation gives output a shorter grace period. Broken downstream pipes exit quietly. |
 | Counts differ after rotation | Use rename-based rotation with completed lines. Late writes after handoff and truncate/regrow cycles between observations can be missed. Partial records at observed generation boundaries are discarded and counted separately. |
+| Web process stays running after stdin EOF | This is intentional: final metrics remain available until Ctrl+C. `--once --output web` is rejected. |
+| Web stream receives 429 | Four SSE streams are already active. Close another stream; current metrics remain available through `/api/snapshot`. |
+| Web page receives 403 | Use the exact printed `127.0.0.1` URL and port; foreign Host and Origin values are rejected. |
 | Ratios differ from request failure rates | Ratios describe physical log lines, including unknowns. Error ratio combines error and fatal. A request can emit many lines or none. |
 
 ## Compatibility and validation
 
-JSON is NDJSON with schema 2. Empty ratios are `null`; Prometheus window ratios
+CLI JSON is NDJSON with schema 2; [web JSON](WEB-FRAMES.md) has a separate schema 1
+with decimal counter strings. See [web server behavior](WEB-SERVER.md) for local
+access and shutdown limits. Empty ratios are `null`; Prometheus window ratios
 are `NaN` when empty. Prometheus counters reset on restart, and the set of severity
 labels is fixed. Window membership uses processing time with 100 ms buckets;
 replaying an old file measures present scan throughput. See the

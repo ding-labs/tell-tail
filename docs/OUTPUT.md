@@ -1,8 +1,11 @@
 # Output isolation
 
-Tell-Tail uses one helper process for stdout. The helper inherits stdout without
+Tell-Tail's terminal, text, JSON, and Prometheus-stdout outputs use one helper
+process for stdout. The helper inherits stdout without
 changing its status flags. Only newly created private control pipes are made
-nonblocking. Metrics-file output creates no helper. Input descriptors duplicated
+nonblocking. Metrics-file and web output create no persistent stdout helper;
+runtime diagnostics still use the bounded diagnostic path. See the
+[web connection and lifecycle bounds](WEB-SERVER.md). Input descriptors duplicated
 by Tell-Tail are close-on-exec so the helper cannot retain the log stream.
 
 The parent sends a length-prefixed chunk of at most 64 KiB and waits for an errno
