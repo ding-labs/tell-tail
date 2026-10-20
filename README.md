@@ -98,6 +98,26 @@ stdout snapshots. Normal stdin EOF keeps final metrics available until Ctrl+C;
 tabs show a capacity message and a retry button. JSON and SSE are also available
 at `/api/snapshot` and `/api/events`.
 
+On macOS, stream real system activity into the dashboard (requires `jq`):
+
+```sh
+/usr/bin/log stream --style ndjson --level info --type log |
+  jq --unbuffered -Rc '
+    fromjson? | select(.messageType != null) |
+    .level = ({"Default":"info", "Info":"info", "Debug":"debug",
+               "Error":"error", "Fault":"fatal"}[.messageType] // "unknown")
+  ' |
+  tell-tail --format json --output web --open
+```
+
+This streams live events without saving a log file. The filter skips status lines
+and maps Apple's Default/Fault levels to info/fatal. Traffic follows actual
+system activity; add `--level debug` in place of `--level info` for more detail.
+Press Ctrl+C in the terminal to stop the pipeline and server. To try a predictable
+continuous demo instead, run
+`python3 scripts/demo.py --rate 1000 | tell-tail --output web --open`
+from this repository.
+
 Web support is included by default. Build with `--no-default-features` for the
 CLI-only binary. See the [dashboard guide](docs/WEB-DASHBOARD.md),
 [server behavior and limits](docs/WEB-SERVER.md), and the
