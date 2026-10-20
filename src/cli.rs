@@ -14,6 +14,9 @@ pub enum Output {
     Text,
     Json,
     Prometheus,
+    /// Serve local metrics; stdin EOF keeps the server available until Ctrl+C.
+    #[cfg(feature = "web")]
+    Web,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 pub enum From {
@@ -43,6 +46,10 @@ pub struct Args {
     pub window: u32,
     #[arg(long, value_enum, default_value = "auto")]
     pub output: Output,
+    /// Local web port (0 selects an available port); requires --output web.
+    #[cfg(feature = "web")]
+    #[arg(long)]
+    pub web_port: Option<u16>,
     /// Atomically publish Prometheus snapshots to this file.
     #[arg(long)]
     pub metrics_file: Option<PathBuf>,
@@ -75,6 +82,17 @@ impl Args {
             .filter(|p| *p != std::path::Path::new("-"))
     }
     pub fn validate(&self) -> Result<(), &'static str> {
+        #[cfg(feature = "web")]
+        {
+            if self.web_port.is_some() && self.output != Output::Web {
+                return Err("--web-port requires --output web");
+            }
+            if self.once && self.output == Output::Web {
+                return Err(
+                    "--once cannot be combined with --output web; web serves final stdin metrics until Ctrl+C",
+                );
+            }
+        }
         if self
             .alert_error_percent
             .is_some_and(|p| !p.is_finite() || !(0.0..=100.0).contains(&p))
@@ -134,6 +152,34 @@ mod tests {
         ] {
             assert!(Args::try_parse_from(argv).unwrap().validate().is_ok());
         }
+    }
+
+    #[cfg(feature = "web")]
+    #[test]
+    fn web_arguments_keep_eof_and_port_contracts_explicit() {
+        for port in ["0", "8765", "65535"] {
+            assert!(
+                Args::try_parse_from(["tell-tail", "--output", "web", "--web-port", port])
+                    .unwrap()
+                    .validate()
+                    .is_ok()
+            );
+        }
+        assert!(
+            Args::try_parse_from(["tell-tail", "--output", "web", "--web-port", "65536"]).is_err()
+        );
+        assert!(
+            Args::try_parse_from(["tell-tail", "--web-port", "0"])
+                .unwrap()
+                .validate()
+                .is_err()
+        );
+        assert!(
+            Args::try_parse_from(["tell-tail", "input.log", "--output", "web", "--once"])
+                .unwrap()
+                .validate()
+                .is_err()
+        );
     }
 
     #[test]

@@ -44,6 +44,24 @@ const IO_TIMEOUT: Duration = Duration::from_secs(2);
 const FINAL_GRACE: Duration = Duration::from_millis(250);
 const HEARTBEAT: Duration = Duration::from_secs(15);
 
+/// Start only the web runtime, with the listener ready before input is opened.
+pub fn run(args: &crate::cli::Args, signals: &crate::runtime::Signals) -> io::Result<i32> {
+    let server = Server::bind(args.web_port.unwrap_or(0))?;
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_io()
+        .enable_time()
+        .build()?;
+    let mut running = crate::runtime::Running::start(args, signals.requested.clone())?;
+    let result =
+        runtime.block_on(server.serve(running.snapshot_reader(), signals.requested.clone()));
+    running.stop();
+    // Preserve the actual input failure when the server observed a failed frame.
+    running.join()?;
+    result?;
+    let signal = signals.requested.load(Ordering::Relaxed);
+    Ok(if signal > 1 { 128 + signal as i32 } else { 0 })
+}
+
 struct Delivery {
     json: Bytes,
     event: Bytes,

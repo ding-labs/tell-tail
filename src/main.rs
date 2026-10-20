@@ -32,6 +32,10 @@ fn run(args: &Args) -> io::Result<i32> {
         .map(|p| MetricsFile::new(p.clone(), args.path().map(|p| p.to_owned())))
         .transpose()?;
     let signals = Signals::install()?;
+    #[cfg(feature = "web")]
+    if args.output == Output::Web {
+        return tell_tail::web::run(args, &signals);
+    }
     let mut running = Running::start(args, signals.requested.clone())?;
     if use_tui {
         let writer = StdoutWriter::new(signals.requested.clone())?;
