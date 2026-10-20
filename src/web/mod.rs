@@ -157,12 +157,18 @@ async fn events(State(app): State<App>) -> Response {
 
 fn request_status(request: &Request, host: &str) -> Option<StatusCode> {
     let headers = request.headers();
+    // Browsers omit the default HTTP port from Host and serialized Origin.
+    let default_http = host == "127.0.0.1:80";
     if headers.get_all(header::HOST).iter().count() != 1
-        || headers.get(header::HOST).and_then(|h| h.to_str().ok()) != Some(host)
-        || headers.get_all(header::ORIGIN).iter().count() > 1
         || headers
-            .get(header::ORIGIN)
-            .is_some_and(|h| h.as_bytes() != format!("http://{host}").as_bytes())
+            .get(header::HOST)
+            .and_then(|h| h.to_str().ok())
+            .is_none_or(|h| h != host && !(default_http && h == "127.0.0.1"))
+        || headers.get_all(header::ORIGIN).iter().count() > 1
+        || headers.get(header::ORIGIN).is_some_and(|h| {
+            h.as_bytes() != format!("http://{host}").as_bytes()
+                && !(default_http && h == "http://127.0.0.1")
+        })
     {
         return Some(StatusCode::FORBIDDEN);
     }

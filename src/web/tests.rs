@@ -129,6 +129,42 @@ async fn next_data(reader: &mut BufReader<TcpStream>) -> serde_json::Value {
     .unwrap()
 }
 
+#[test]
+fn default_http_port_accepts_browser_authorities_without_weakening_origin_checks() {
+    for host in ["127.0.0.1", "127.0.0.1:80"] {
+        for origin in ["http://127.0.0.1", "http://127.0.0.1:80"] {
+            let request = Request::builder()
+                .uri("/api/snapshot")
+                .header(header::HOST, host)
+                .header(header::ORIGIN, origin)
+                .body(Body::empty())
+                .unwrap();
+            assert_eq!(request_status(&request, "127.0.0.1:80"), None);
+            assert_eq!(
+                request_status(&request, "127.0.0.1:8765"),
+                Some(StatusCode::FORBIDDEN)
+            );
+        }
+    }
+    for origin in [
+        "https://127.0.0.1",
+        "http://127.0.0.1:81",
+        "http://localhost",
+        "null",
+    ] {
+        let request = Request::builder()
+            .uri("/api/snapshot")
+            .header(header::HOST, "127.0.0.1")
+            .header(header::ORIGIN, origin)
+            .body(Body::empty())
+            .unwrap();
+        assert_eq!(
+            request_status(&request, "127.0.0.1:80"),
+            Some(StatusCode::FORBIDDEN)
+        );
+    }
+}
+
 #[tokio::test(flavor = "current_thread")]
 async fn stream_capacity_is_independent_of_snapshot_requests_and_released_on_disconnect() {
     let harness = Harness::new("stdin".into());
