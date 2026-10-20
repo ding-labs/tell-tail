@@ -178,6 +178,9 @@ reliability, window semantics, adversarial testing, and release validation.
 Multiple sources, Windows support, logfmt/numeric severity profiles, an HTTP scrape
 endpoint, persistent aggregate history, and a local web interface.
 
+The [local web UI plan](PLAN-WEB.md) defines the proposed metrics dashboard,
+streaming transport comparison, bounded delivery, and implementation increments.
+
 ## References
 
 - [GNU tail semantics](https://www.gnu.org/s/coreutils/manual/html_node/tail-invocation.html)
