@@ -7,7 +7,7 @@ description = "Bounded-memory log throughput and severity monitor"
 license = "MIT"
 repository = "https://github.com/zuchka/tell-tail"
 readme = "README.md"
-include = ["src/**", "tests/**", "/Cargo.toml", "/Cargo.lock", "/LICENSE", "/README.md", "/CHANGELOG.md", "docs/**", "packaging/**", "examples/*.service", "scripts/*.py", "scripts/*.txt", "/rust-toolchain.toml"]
+include = ["src/**", "tests/**", "web/**", "/Cargo.toml", "/Cargo.lock", "/LICENSE", "/README.md", "/CHANGELOG.md", "docs/**", "packaging/**", "examples/*.service", "scripts/*.py", "scripts/*.txt", "/rust-toolchain.toml"]
 
 [features]
 default = ["web"]

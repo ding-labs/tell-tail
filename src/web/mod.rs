@@ -1,4 +1,5 @@
 //! Loopback web output, enabled by the `web` Cargo feature.
+mod assets;
 mod socket;
 
 use crate::{
@@ -12,7 +13,7 @@ use axum::{
     extract::{Request, State},
     http::{Method, StatusCode, header},
     middleware::{self, Next},
-    response::{Html, IntoResponse, Response},
+    response::{IntoResponse, Response},
     routing::get,
 };
 use futures_util::stream;
@@ -216,8 +217,7 @@ async fn local_request(State(app): State<App>, request: Request, next: Next) -> 
 }
 
 fn router(app: App) -> Router {
-    Router::new()
-        .route("/", get(|| async { Html("<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><title>Tell-Tail local server</title><h1>Tell-Tail local server</h1><p>The metrics API is running. The dashboard is a later milestone.</p><p><a href=\"/api/snapshot\">Current snapshot</a></p></html>") }))
+    assets::routes()
         .route("/api/snapshot", get(snapshot))
         .route("/api/events", get(events))
         .layer(middleware::from_fn_with_state(app.clone(), local_request))

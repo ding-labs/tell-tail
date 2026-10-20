@@ -7,6 +7,30 @@ use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 use tokio::time::{sleep, timeout};
 
+#[tokio::test(flavor = "current_thread")]
+async fn dashboard_assets_are_embedded_fixed_routes_with_local_security_headers() {
+    let h = Harness::new("stdin".into());
+    for (path, mime, marker) in [
+        ("/", "text/html", "id=\"record-rate\""),
+        ("/dashboard.css", "text/css", ".metrics-grid"),
+        ("/dashboard.mjs", "text/javascript", "./frame.mjs"),
+        ("/frame.mjs", "text/javascript", "parseFrame"),
+        ("/render.mjs", "text/javascript", "textContent"),
+        ("/favicon.svg", "image/svg+xml", "<svg"),
+    ] {
+        let response = h.get(path).await;
+        assert!(response.starts_with("HTTP/1.1 200"), "{path}: {response}");
+        assert!(response.contains(&format!("content-type: {mime}")));
+        assert!(response.contains("cache-control: no-store"));
+        assert!(response.contains("script-src 'self'"));
+        assert!(response.contains(marker));
+    }
+    for path in ["/web/index.html", "/../Cargo.toml", "/missing.mjs"] {
+        assert!(h.get(path).await.starts_with("HTTP/1.1 404"));
+    }
+    h.finish().await.unwrap();
+}
+
 struct Harness {
     address: SocketAddr,
     slot: Arc<SnapshotSlot>,
