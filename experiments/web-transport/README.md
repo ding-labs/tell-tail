@@ -35,6 +35,11 @@ of 12 local round trips; report at least half its RTT as timing uncertainty.
 Browser checks need Playwright 1.62.1 and its Chromium. Either install these as
 development tools or point `PLAYWRIGHT_MODULE_DIR` at an existing `playwright`
 package directory, then run `node --test experiments/web-transport/browser.test.mjs`.
+Set `RUN_HEADED_TESTS=1` to also verify real desktop-tab visibility changes in a
+separate temporary Chromium profile attached with Playwright's `noDefaults` option
+to avoid its default focus emulation. Normal headless timing runs cannot establish
+that behavior. On macOS, undrained-socket tests also confirm pending kernel send
+queues for both transports; stream admission/release is checked independently.
 
 For a fresh development setup, run `npm ci` and `npx playwright install chromium`
 inside this directory. No JavaScript tooling is needed by the released CLI.

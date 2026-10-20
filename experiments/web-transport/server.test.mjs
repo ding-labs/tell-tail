@@ -3,6 +3,8 @@ import { test } from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
 import { createConnection } from 'node:net';
 import { once } from 'node:events';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { startServer } from './server.mjs';
 
 test('SSE and WebSocket deliver identical frames, current-state reconnect, and reject foreign origins', async () => {
@@ -49,16 +51,25 @@ test('SSE and WebSocket deliver identical frames, current-state reconnect, and r
   }
 });
 
-test('an undrained socket does not stop publication, a second client, or shutdown', async () => {
+for (const transport of ['sse', 'websocket']) test(`an undrained ${transport} socket preserves publication, other clients, and shutdown`, async () => {
   const server = await startServer(['--hz', '100', '--padding-bytes', '60000']);
   const url = new URL(server.url);
   const socket = createConnection({ host: url.hostname, port: Number(url.port) });
   try {
     await once(socket, 'connect');
-    socket.write(`GET /events HTTP/1.1\r\nHost: ${url.host}\r\n\r\n`);
+    const upgrade = transport === 'websocket'
+      ? 'Connection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n' : '';
+    socket.write(`GET /${transport === 'sse' ? 'events' : 'ws'} HTTP/1.1\r\nHost: ${url.host}\r\n${upgrade}\r\n`);
     socket.pause();
     const first = await server.status();
-    await delay(2500);
+    await delay(1000);
+    if (process.platform === 'darwin') {
+      const { stdout } = await promisify(execFile)('netstat', ['-an', '-p', 'tcp']);
+      const own = stdout.split('\n').map(line => line.trim().split(/\s+/))
+        .filter(fields => fields[3] === `127.0.0.1.${url.port}` && fields[5] === 'ESTABLISHED');
+      assert.ok(own.some(fields => Number(fields[2]) > 0), 'verify a pending kernel send queue, not just a paused JS reader');
+    }
+    await delay(1500);
     const current = await server.status();
     assert.ok(current.sequence > first.sequence + 100);
     const active = await fetch(`${server.url}/events`, { signal: AbortSignal.timeout(1000) });
@@ -69,6 +80,25 @@ test('an undrained socket does not stop publication, a second client, or shutdow
     socket.destroy();
     if (server.child.exitCode === null && server.child.signalCode === null) await server.stop();
   }
+});
+
+test('stream admission is capped and a disconnected client releases capacity', async () => {
+  const server = await startServer();
+  const controllers = Array.from({ length: 4 }, () => new AbortController());
+  try {
+    for (const controller of controllers) {
+      const response = await fetch(`${server.url}/events`, { signal: controller.signal });
+      assert.equal(response.status, 200);
+    }
+    assert.equal((await server.status()).active_clients, 4);
+    assert.equal((await fetch(`${server.url}/events`)).status, 429);
+    controllers[0].abort();
+    const deadline = performance.now() + 1000;
+    while ((await server.status()).active_clients === 4 && performance.now() < deadline) await delay(20);
+    controllers[0] = new AbortController();
+    const recovered = await fetch(`${server.url}/events`, { signal: controllers[0].signal });
+    assert.equal(recovered.status, 200);
+  } finally { for (const controller of controllers) controller.abort(); await server.stop(); }
 });
 
 test('stdin counts come from ingestion and not the replay fixture', async () => {
