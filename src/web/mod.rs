@@ -1,5 +1,6 @@
 //! Loopback web output, enabled by the `web` Cargo feature.
 mod assets;
+mod browser;
 mod socket;
 
 use crate::{
@@ -47,7 +48,8 @@ const HEARTBEAT: Duration = Duration::from_secs(15);
 
 /// Start only the web runtime, with the listener ready before input is opened.
 pub fn run(args: &crate::cli::Args, signals: &crate::runtime::Signals) -> io::Result<i32> {
-    let server = Server::bind(args.web_port.unwrap_or(0))?;
+    let mut server = Server::bind(args.web_port.unwrap_or(0))?;
+    server.open_browser = args.open;
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_io()
         .enable_time()
@@ -238,6 +240,7 @@ fn router(app: App) -> Router {
 /// A loopback listener bound before ingestion starts. No runtime is needed to bind.
 pub struct Server {
     listener: TcpListener,
+    open_browser: bool,
     #[cfg(test)]
     probe: Arc<socket::Probe>,
 }
@@ -248,6 +251,7 @@ impl Server {
         listener.set_nonblocking(true)?;
         Ok(Self {
             listener,
+            open_browser: false,
             #[cfg(test)]
             probe: Arc::default(),
         })
@@ -279,7 +283,21 @@ impl Server {
         let mut deadline = None;
         let mut failure = None;
         crate::writer::diagnostic(&format!("tell-tail: web http://{host}/ (Ctrl+C to stop)\n"));
+        let mut browser = if self.open_browser && stop.load(Ordering::Relaxed) == 0 {
+            match browser::Browser::open(&format!("http://{host}/")) {
+                Ok(browser) => Some(browser),
+                Err(_) => {
+                    browser::report_failure();
+                    None
+                }
+            }
+        } else {
+            None
+        };
         loop {
+            if browser.as_mut().is_some_and(browser::Browser::failed) {
+                browser::report_failure();
+            }
             if tx.borrow().state == InputState::Complete && !completed {
                 completed = true;
                 crate::writer::diagnostic(

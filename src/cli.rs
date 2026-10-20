@@ -50,6 +50,10 @@ pub struct Args {
     #[cfg(feature = "web")]
     #[arg(long)]
     pub web_port: Option<u16>,
+    /// Open the local dashboard in the default browser; requires --output web.
+    #[cfg(feature = "web")]
+    #[arg(long)]
+    pub open: bool,
     /// Atomically publish Prometheus snapshots to this file.
     #[arg(long)]
     pub metrics_file: Option<PathBuf>,
@@ -86,6 +90,9 @@ impl Args {
         {
             if self.web_port.is_some() && self.output != Output::Web {
                 return Err("--web-port requires --output web");
+            }
+            if self.open && self.output != Output::Web {
+                return Err("--open requires --output web");
             }
             if self.once && self.output == Output::Web {
                 return Err(
@@ -157,6 +164,18 @@ mod tests {
     #[cfg(feature = "web")]
     #[test]
     fn web_arguments_keep_eof_and_port_contracts_explicit() {
+        assert!(
+            Args::try_parse_from(["tell-tail", "--output", "web", "--open"])
+                .unwrap()
+                .validate()
+                .is_ok()
+        );
+        assert!(
+            Args::try_parse_from(["tell-tail", "--open"])
+                .unwrap()
+                .validate()
+                .is_err()
+        );
         for port in ["0", "8765", "65535"] {
             assert!(
                 Args::try_parse_from(["tell-tail", "--output", "web", "--web-port", port])
