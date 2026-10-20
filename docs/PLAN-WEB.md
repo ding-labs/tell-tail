@@ -1,7 +1,8 @@
 # Local web UI plan
 
-Status: proposed, October 20, 2026. This document plans a new feature milestone;
-it does not change the 0.2 release gates or claim that web support is implemented.
+Status: transport experiment complete, October 20, 2026. The
+[local measurements and decision](WEB-TRANSPORT.md) support SSE. The dashboard and
+production server remain planned; this does not change the 0.2 release gates.
 The first UI covers live aggregate metrics, as agreed. Raw log viewing and search
 are outside this milestone.
 
@@ -12,9 +13,9 @@ metrics snapshots over Server-Sent Events (SSE). Start at the engine's existing
 approximately 100 ms publication cadence. Use one serializer and bounded,
 latest-value delivery to every browser.
 
-Validate SSE against WebSocket with the same payload and browser renderer before
-committing to the production transport. SSE is the starting choice for this
-one-way workload, not a measured claim that it is the fastest protocol.
+The completed comparison uses the same payload and browser renderer for SSE and
+WebSocket. SSE is the selected transport for this one-way workload; the local
+measurements do not establish that it is universally the fastest protocol.
 
 HTTP does not imply polling: SSE keeps an HTTP response open and delivers events
 incrementally. WebSocket provides two-way messages after its handshake. gRPC
