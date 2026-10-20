@@ -36,6 +36,32 @@ Browser checks need Playwright 1.62.1 and its Chromium. Either install these as
 development tools or point `PLAYWRIGHT_MODULE_DIR` at an existing `playwright`
 package directory, then run `node --test experiments/web-transport/browser.test.mjs`.
 
+For a fresh development setup, run `npm ci` and `npx playwright install chromium`
+inside this directory. No JavaScript tooling is needed by the released CLI.
+
+Run a paired browser campaign from the repository root:
+
+```sh
+node experiments/web-transport/benchmark.mjs --hz 10 --clients 0,1,4 \
+  --profiles representative,large-counters --pairs 5 --seconds 10 --warmup 1
+```
+
+Transport order alternates within successive pairs. Each run uses a fresh server
+and browser context, with one shared Chromium process across the campaign. The
+four-page case keeps all documents visible in headless Chromium with background
+throttling disabled; it is a foreground stress case, not four ordinary focused
+desktop tabs. Warmup and clock calibration precede measured intervals.
+
+The full JSON contains raw per-message browser samples and per-run resources.
+A separate `-summary.json` reports distributions of client/run percentiles; those
+are not pooled-message percentiles. Clock uncertainty and offset drift remain
+visible, and negative calibrated timings are not clamped. DOM timings end after
+DOM/SVG writes, not physical paint. `ps` samples process-tree CPU/RSS about once
+per second; CPU totals have OS rounding and exclude exited children whose final
+accounting is unavailable. Browser heap snapshots include benchmark sample storage.
+The protocol-only replay campaign does not establish ingestion overhead, input
+freshness, hidden-tab behavior, or a long-run memory plateau.
+
 Frames use actual engine statistics with 60 completed history buckets. The
 `large-counters` profile deliberately widens cumulative counters/history to u64
 limits; it is a payload-width stress case, not a consistent ingestion ledger.
