@@ -97,6 +97,9 @@ fn receive(listener: &TcpListener) -> (TcpStream, serde_json::Value) {
         );
         std::thread::sleep(Duration::from_millis(5));
     };
+    // Accepted sockets can inherit the listener's nonblocking mode on macOS.
+    // Header reads should wait for the deadline even if accept wins the race.
+    stream.set_nonblocking(false).unwrap();
     stream
         .set_read_timeout(Some(Duration::from_secs(2)))
         .unwrap();
