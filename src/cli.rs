@@ -6,6 +6,8 @@ pub enum Format {
     Auto,
     Text,
     Json,
+    /// Apple unified log NDJSON; maps messageType and skips stream metadata.
+    AppleUnified,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 pub enum Output {
@@ -86,6 +88,11 @@ impl Args {
             .filter(|p| *p != std::path::Path::new("-"))
     }
     pub fn validate(&self) -> Result<(), &'static str> {
+        if self.format == Format::AppleUnified
+            && !matches!(self.level_field.as_str(), "level" | "messageType")
+        {
+            return Err("--format apple-unified uses messageType; omit --level-field");
+        }
         #[cfg(feature = "web")]
         {
             if self.web_port.is_some() && self.output != Output::Web {
