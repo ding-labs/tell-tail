@@ -3,6 +3,8 @@
 Follow-up: [direct snapshot notifications](SNAPSHOTS.md) now replace polling for
 real inputs. The measurements below preserve the earlier transport experiment;
 the follow-up records the new input-to-DOM results.
+The experiment now uses [production web frames](WEB-FRAMES.md) inside benchmark
+envelope version 2; historical measurements below retain their original format.
 
 Decision: use SSE for the first local metrics dashboard. The October 20, 2026
 local comparison found both transports comfortably responsive at the intended
@@ -155,5 +157,6 @@ RUN_HEADED_TESTS=1 npm --prefix experiments/web-transport test
 ```
 
 The read-only snapshot subscription and direct-notification experiment publisher
-are now [implemented and measured](SNAPSHOTS.md). The production web frame contract
-is the next planned increment.
+are now [implemented and measured](SNAPSHOTS.md), and the
+[production web frame contract](WEB-FRAMES.md) is implemented. The production
+loopback server and lifecycle are the next planned increment.

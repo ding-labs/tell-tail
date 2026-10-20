@@ -1,8 +1,9 @@
 # Local web UI plan
 
-Status: snapshot notifications implemented, October 20, 2026. The
+Status: web frame contract implemented, October 20, 2026. The
 [local transport measurements](WEB-TRANSPORT.md) support SSE, and the
 [subscription and freshness results](SNAPSHOTS.md) cover direct publication.
+The [web frame contract](WEB-FRAMES.md) provides bounded version 1 encoding.
 The dashboard and production server remain planned; this does not change the
 0.2 release gates.
 The first UI covers live aggregate metrics, as agreed. Raw log viewing and search
@@ -171,7 +172,7 @@ a CDN, or a separate frontend server. Browser test tooling is development-only.
   EOF gets that final frame immediately. Heartbeat comments every 15 seconds
   can maintain an otherwise idle stream but do not make old metrics fresh.
 
-Define a separate web schema version 1 envelope containing `web_schema_version`,
+The implemented [web schema version 1](WEB-FRAMES.md) envelope contains `web_schema_version`,
 `sequence`, and `metrics`. Reuse the existing snapshot's meanings and field
 names inside `metrics`, omitting its CLI `schema_version` field. Encode all u64
 counters, byte counts, history counts, and sequence numbers as decimal strings;
@@ -270,8 +271,10 @@ change. Split the following milestones into smaller commits where appropriate.
 2. **Snapshot subscription — complete.** Read-only handles, generations, and
    coalescing wakeups are implemented. Idle expiry, startup/final races, slow and
    cancelled consumers, exact counts, alerts, and compatibility are covered.
-3. **Web frame contract.** Add conversion/serialization with fixture tests for
-   nulls, states, large integers, history alignment, and the frame-size bound.
+3. **Web frame contract — complete.** A typed encoder preserves exact u64
+   counters, nulls, states, and completed-second history in web schema 1. Encoding
+   enforces the 64 KiB JSON limit and rejects invalid data. The experiment uses
+   production frames with separate benchmark metadata; see `docs/WEB-FRAMES.md`.
 4. **Loopback server and lifecycle.** Add CLI arguments, current-frame and SSE
    routes, admission/buffer limits, and bounded teardown. Test reconnect, EOF,
    signals, invalid hosts/origins, bind failure, malformed/slow requests, and

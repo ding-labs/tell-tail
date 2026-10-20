@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-20",
+  "contract": {
+    "web_schema_version": 1,
+    "max_json_bytes": 65536,
+    "cli_json_schema_version": 2
+  },
+  "tested_source_commit": "10e4b17b370458843b2d928153380fafcc56f09c",
+  "experiment_source_commit": "63a083a2bb2eb9223fdc8a3f15aab041469c6ea1",
+  "experiment_binary_sha256": "8c51e6dd530544a64bb96dd681e810b8e90c32edaa1e20a7501ef9c8e24ea177",
+  "host": {
+    "platform": "darwin",
+    "release": "27.0.0",
+    "cpu": "Apple M3",
+    "rust": "rustc 1.88.0 (6b00bc388 2025-06-23)",
+    "node": "v24.15.0",
+    "browser": "151.0.7922.34",
+    "playwright": "1.62.1"
+  },
+  "checks": {
+    "default_rust_tests_passed": 61,
+    "snapshot_notifications_rust_tests_passed": 67,
+    "experiment_rust_tests_passed": 3,
+    "node_network_browser_checks_passed": 12,
+    "native_hidden_tab_check_enabled": true,
+    "clippy_warnings_denied": [
+      "default",
+      "snapshot-notifications",
+      "web-transport experiment"
+    ],
+    "macos_test_socket_fix": "Accepted test sockets explicitly enter blocking mode before deadline reads; a local probe observed inherited nonblocking reads return WouldBlock immediately.",
+    "remote_ci_run": false
+  },
+  "benchmark_envelope_schema": 2,
+  "replay_smoke": {
+    "config": {
+      "hz": [
+        10
+      ],
+      "clients": [
+        1
+      ],
+      "profiles": [
+        "representative",
+        "large-counters"
+      ],
+      "pairs": 1,
+      "seconds": 0.5,
+      "warmup": 0.2
+    },
+    "runs": [
+      {
+        "profile": "representative",
+        "transport": "sse",
+        "payload_bytes": 1419,
+        "published": 6,
+        "shutdown_ms": 2.9308330000001206
+      },
+      {
+        "profile": "representative",
+        "transport": "websocket",
+        "payload_bytes": 1419,
+        "published": 6,
+        "shutdown_ms": 0.6231659999998556
+      },
+      {
+        "profile": "large-counters",
+        "transport": "sse",
+        "payload_bytes": 2572,
+        "published": 6,
+        "shutdown_ms": 0.7826669999999467
+      },
+      {
+        "profile": "large-counters",
+        "transport": "websocket",
+        "payload_bytes": 2572,
+        "published": 6,
+        "shutdown_ms": 1.0206660000003467
+      }
+    ]
+  },
+  "pipeline_smoke": {
+    "publication_mode": "notifications",
+    "markers_per_scenario": 5,
+    "final_counts_exact": true,
+    "scenarios": [
+      {
+        "source": "stdin",
+        "load": "idle",
+        "transport": "sse",
+        "samples": 5,
+        "produced": 5,
+        "shutdown_ms": 60.12066700000014
+      },
+      {
+        "source": "stdin",
+        "load": "idle",
+        "transport": "websocket",
+        "samples": 5,
+        "produced": 5,
+        "shutdown_ms": 63.97541700000011
+      },
+      {
+        "source": "stdin",
+        "load": "paced",
+        "transport": "sse",
+        "samples": 5,
+        "produced": 10005,
+        "shutdown_ms": 77.36612499999956
+      },
+      {
+        "source": "stdin",
+        "load": "paced",
+        "transport": "websocket",
+        "samples": 5,
+        "produced": 11005,
+        "shutdown_ms": 78.16720799999985
+      },
+      {
+        "source": "file",
+        "load": "idle",
+        "transport": "sse",
+        "samples": 5,
+        "produced": 5,
+        "shutdown_ms": 13.257792000000336
+      },
+      {
+        "source": "file",
+        "load": "idle",
+        "transport": "websocket",
+        "samples": 5,
+        "produced": 5,
+        "shutdown_ms": 17.914707999999337
+      },
+      {
+        "source": "file",
+        "load": "paced",
+        "transport": "sse",
+        "samples": 5,
+        "produced": 12005,
+        "shutdown_ms": 21.60279199999968
+      },
+      {
+        "source": "file",
+        "load": "paced",
+        "transport": "websocket",
+        "samples": 5,
+        "produced": 12005,
+        "shutdown_ms": 28.52570900000137
+      }
+    ]
+  },
+  "limits": [
+    "Short correctness smoke runs, not a new SSE versus WebSocket comparison.",
+    "No production listener or dashboard was implemented in this milestone.",
+    "No maximum-ingestion overhead or long-duration resource claims.",
+    "Validation is local macOS/Chromium; Linux CI and other browsers have not run in this session.",
+    "Historical benchmark schema 1 evidence remains unchanged."
+  ]
+}
