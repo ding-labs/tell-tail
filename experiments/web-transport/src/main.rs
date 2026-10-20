@@ -150,11 +150,12 @@ async fn clock_route(State(app): State<App>) -> Json<serde_json::Value> {
 
 async fn status(State(app): State<App>) -> Json<serde_json::Value> {
     let frame = app.frames.borrow().clone();
+    let envelope: serde_json::Value = serde_json::from_str(frame.json.as_str()).unwrap();
     Json(json!({
         "sequence": frame.sequence, "payload_bytes": frame.json.len(),
         "active_clients": 4 - app.clients.available_permits(),
         "monotonic_us": app.clock.elapsed().as_micros() as u64,
-        "frame": serde_json::from_str::<serde_json::Value>(frame.json.as_str()).unwrap(),
+        "frame": envelope["frame"],
     }))
 }
 
@@ -223,6 +224,7 @@ async fn main() -> io::Result<()> {
     println!(
         "{}",
         json!({"url": format!("http://{host}"), "pid": std::process::id(), "hz": config.hz,
+            "benchmark_schema": 2, "web_schema_version": tell_tail::web_frame::WEB_SCHEMA_VERSION,
             "publication_mode": publication_mode})
     );
     let shutdown = async {

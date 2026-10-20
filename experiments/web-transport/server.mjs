@@ -13,7 +13,13 @@ export async function startServer(args = [], binary = defaultBinary) {
     const timer = setTimeout(() => { child.kill('SIGKILL'); reject(new Error('server startup timed out')); }, 10_000);
     lines.once('line', line => {
       clearTimeout(timer);
-      try { resolve(JSON.parse(line)); } catch (error) { child.kill(); reject(error); }
+      try {
+        const ready = JSON.parse(line);
+        if (ready.benchmark_schema !== 2 || ready.web_schema_version !== 1) {
+          throw new Error('rebuild the experiment with production web frames');
+        }
+        resolve(ready);
+      } catch (error) { child.kill(); reject(error); }
     });
     child.once('error', error => { clearTimeout(timer); reject(error); });
     child.once('exit', code => { clearTimeout(timer); reject(new Error(`server exited ${code}: ${stderr}`)); });

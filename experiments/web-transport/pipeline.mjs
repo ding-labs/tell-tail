@@ -80,7 +80,8 @@ try {
       results.push(result);
       console.error(`${source} ${load} ${transport}: write-to-DOM p95 ${result.write_to_dom_ms.p95.toFixed(2)} ms, ${produced} exact records`);
       await mkdir(dirname(resolve(values.output)), { recursive: true });
-      await writeFile(values.output, JSON.stringify({ schema_version: 1, publication_mode: 'notifications', browser: browser.version(), results }, null, 2) + '\n');
+      await writeFile(values.output, JSON.stringify({ schema_version: 1, benchmark_schema: 2, web_schema_version: 1,
+        publication_mode: 'notifications', browser: browser.version(), results }, null, 2) + '\n');
     } finally {
       clearInterval(timer);
       if (fd !== null) closeSync(fd);

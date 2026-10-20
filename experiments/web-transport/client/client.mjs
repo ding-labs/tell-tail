@@ -2,7 +2,7 @@
 const elements = Object.fromEntries(['records', 'rate', 'sequence', 'history', 'transport']
   .map(id => [id, document.getElementById(id)]));
 const sampleLimit = 50_000;
-let connection, transport, pending, scheduled = false, frozen = false, lastSequence = 0n;
+let connection, transport, pending, scheduled = false, frozen = false, lastSequence, lastSession;
 let samples = [], received = 0, rendered = 0, missed = 0, overflow = 0, errors = 0;
 let calibration;
 
@@ -29,13 +29,23 @@ function schedule() {
 
 function receive(event) {
   const began = performance.now();
-  const frame = JSON.parse(event.data);
+  const envelope = JSON.parse(event.data);
   const decoded = performance.now();
+  const frame = envelope.frame;
+  if (envelope.benchmark_schema !== 2 || frame?.web_schema_version !== 1) {
+    errors++;
+    return;
+  }
   const sequence = BigInt(frame.sequence);
-  if (sequence <= lastSequence) return;
-  if (lastSequence !== 0n) missed += Number(sequence - lastSequence - 1n);
+  if (frame.metrics.session_id !== lastSession) {
+    lastSession = frame.metrics.session_id;
+    lastSequence = undefined;
+    pending = undefined;
+  }
+  if (lastSequence !== undefined && sequence <= lastSequence) return;
+  if (lastSequence !== undefined) missed += Number(sequence - lastSequence - 1n);
   lastSequence = sequence;
-  const sample = { received_ms: began, published_us: frame.published_us, decode_ms: decoded - began };
+  const sample = { received_ms: began, published_us: envelope.published_us, decode_ms: decoded - began };
   received++;
   if (samples.length < sampleLimit) samples.push(sample); else overflow++;
   pending = { frame, sample };

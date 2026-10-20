@@ -27,7 +27,7 @@ const config = {
   seconds: numeric(values.seconds, .1, 120, false), warmup: numeric(values.warmup, 0, 30, false),
 };
 if (config.profiles.some(p => !['representative', 'large-counters'].includes(p))) throw new Error('invalid profile');
-const report = { schema_version: 1, config, host: {
+const report = { schema_version: 1, benchmark_schema: 2, web_schema_version: 1, config, host: {
   platform: platform(), release: release(), cpu: cpus()[0].model, logical_cpus: availableParallelism(),
   load_at_start: loadavg(), node: process.version, browser: null,
   commit: (await exec('git', ['rev-parse', 'HEAD'])).stdout.trim(),

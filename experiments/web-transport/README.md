@@ -67,7 +67,8 @@ are not pooled-message percentiles. Clock uncertainty and offset drift remain
 visible, and negative calibrated timings are not clamped. DOM timings end after
 DOM/SVG writes, not physical paint. Received/rendered totals distinguish browser
 render coalescing from publication gaps. The publication timestamp is taken before
-JSON encoding, after cloning/converting metrics. `ps` samples process-tree CPU/RSS about once
+production frame encoding and wrapping, after obtaining the owned snapshot.
+`ps` samples process-tree CPU/RSS about once
 per second; CPU totals have OS rounding and exclude exited children whose final
 accounting is unavailable. Browser heap snapshots include benchmark sample storage.
 The protocol-only replay campaign does not establish ingestion overhead, input
@@ -89,5 +90,22 @@ Frames use actual engine statistics with 60 completed history buckets. The
 `large-counters` profile deliberately widens cumulative counters/history to u64
 limits; it is a payload-width stress case, not a consistent ingestion ledger.
 Counter strings avoid losing integer precision in the browser. Both transports
-share the same JSON bytes, serialized once per publication. This experiment's
-envelope is separate from the future production web contract and CLI schema 2.
+share the same JSON bytes, serialized once per publication using the
+[production web frame encoder](../../docs/WEB-FRAMES.md). Native sequence numbers
+are publication generations, including zero; the renderer accepts a new session
+even when its sequence is lower than the previous session's.
+
+Benchmark envelope version 2 wraps the unchanged production payload:
+
+```json
+{"benchmark_schema":2,"published_us":123,"stress_padding":"","frame":{"web_schema_version":1,"sequence":"0","metrics":{}}}
+```
+
+The example abbreviates `metrics`. Timing and synthetic padding belong only to
+the outer experiment envelope; they are absent from production web schema 1 and
+CLI schema 2. Both the production JSON and the complete benchmark envelope have a
+64 KiB byte cap. Encoding errors fail the publisher and server. Startup metadata
+identifies both schema versions, so tooling rejects an outdated binary. `/status`
+returns the inner production `frame` and the complete envelope's `payload_bytes`.
+Earlier recorded results used benchmark schema 1; their payload sizes and timing
+boundaries describe that historical encoder and should not be relabeled.

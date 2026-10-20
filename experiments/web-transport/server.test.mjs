@@ -19,7 +19,7 @@ test('SSE and WebSocket deliver identical frames, current-state reconnect, and r
     const sse = new Map();
     const websocket = new Map();
     ws = new WebSocket(server.url.replace('http:', 'ws:') + '/ws');
-    ws.onmessage = event => websocket.set(JSON.parse(event.data).sequence, event.data);
+    ws.onmessage = event => websocket.set(JSON.parse(event.data).frame.sequence, event.data);
     let buffer = '';
     const deadline = performance.now() + 3000;
     while (![...sse.keys()].some(key => websocket.has(key))) {
@@ -32,7 +32,12 @@ test('SSE and WebSocket deliver identical frames, current-state reconnect, and r
         const event = buffer.slice(0, boundary);
         buffer = buffer.slice(boundary + 2);
         const data = event.split('\n').find(line => line.startsWith('data: ')).slice(6);
-        sse.set(JSON.parse(data).sequence, data);
+        const envelope = JSON.parse(data);
+        assert.equal(envelope.benchmark_schema, 2);
+        assert.equal(envelope.frame.web_schema_version, 1);
+        const frame = envelope.frame;
+        assert.ok(event.includes(`id: ${frame.metrics.session_id}:${frame.sequence}\n`));
+        sse.set(frame.sequence, data);
       }
     }
     const matched = [...sse.keys()].find(key => websocket.has(key));
@@ -42,7 +47,7 @@ test('SSE and WebSocket deliver identical frames, current-state reconnect, and r
     await delay(250);
     const reconnect = await fetch(`${server.url}/events`, { signal: AbortSignal.timeout(1000) });
     const resumed = await reconnect.body.pipeThrough(new TextDecoderStream()).getReader().read();
-    assert.ok(Number(resumed.value.match(/id: (\d+)/)[1]) > Number(matched));
+    assert.ok(BigInt(resumed.value.match(/id: transport-benchmark:(\d+)/)[1]) > BigInt(matched));
     // Timeout also releases this second stream even if the reader owns its lock.
   } finally {
     abort.abort();
@@ -134,7 +139,7 @@ test('native EOF bypasses the replay timer and retains a quiet final stream', as
       while ((boundary = buffer.indexOf('\n\n')) !== -1) {
         const event = buffer.slice(0, boundary);
         buffer = buffer.slice(boundary + 2);
-        const data = JSON.parse(event.split('\n').find(line => line.startsWith('data: ')).slice(6));
+        const data = JSON.parse(event.split('\n').find(line => line.startsWith('data: ')).slice(6)).frame;
         if (data.metrics.state === 'complete') final = data;
       }
     }

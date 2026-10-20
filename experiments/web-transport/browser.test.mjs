@@ -36,6 +36,39 @@ test('both browser clients preserve exact counters, freeze, and resume current s
   } finally { await browser.close(); await server.stop(); }
 });
 
+test('web frames accept generation zero, ignore duplicates, and reset for a new session', { timeout: 20_000 }, async () => {
+  const server = await startServer();
+  const browser = await chromium.launch(launchOptions);
+  try {
+    const page = await browser.newPage();
+    const base = (await server.status()).frame;
+    let body;
+    await page.route('**/events', route => route.fulfill({ contentType: 'text/event-stream', body }));
+    await page.goto(server.url);
+    const send = async (session, sequence, records) => {
+      const frame = structuredClone(base);
+      frame.metrics.session_id = session;
+      frame.metrics.totals.records = records;
+      frame.sequence = sequence;
+      body = `event: snapshot\ndata: ${JSON.stringify({ benchmark_schema: 2, published_us: 0, frame })}\n\n`;
+      await page.evaluate(() => window.bench.connect('sse'));
+    };
+    await send('first', '0', '1');
+    await page.waitForFunction(() => document.getElementById('records').textContent === '1');
+    assert.equal(await page.locator('#sequence').textContent(), '0');
+    await send('first', '9007199254740993', '2');
+    await page.waitForFunction(() => document.getElementById('records').textContent === '2');
+    await send('first', '9007199254740993', '999');
+    await delay(100);
+    assert.equal(await page.locator('#records').textContent(), '2');
+    assert.equal((await page.evaluate(() => window.bench.result())).received, 2);
+    await send('second', '0', '3');
+    await page.waitForFunction(() => document.getElementById('records').textContent === '3');
+    assert.equal(await page.locator('#sequence').textContent(), '0');
+    await page.evaluate(() => window.bench.disconnect());
+  } finally { await browser.close(); await server.stop(); }
+});
+
 test('a genuinely hidden desktop tab closes its stream and resumes current state', {
   timeout: 20_000, skip: process.env.RUN_HEADED_TESTS !== '1',
 }, async () => {
