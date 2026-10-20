@@ -250,3 +250,102 @@ fn bind_failure_precedes_input_start_and_invalid_web_arguments_exit_two() {
         assert_eq!(output.status.code(), Some(2));
     }
 }
+
+#[test]
+fn followed_file_updates_and_input_failure_publish_a_failed_final_frame() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("app.log");
+    std::fs::write(&path, b"INFO first\n").unwrap();
+    let mut monitor = Monitor::start(&[path.to_str().unwrap(), "--from", "start"]);
+    monitor.until(|frame| frame["metrics"]["totals"]["records"] == "1");
+    std::fs::OpenOptions::new()
+        .append(true)
+        .open(&path)
+        .unwrap()
+        .write_all(b"WARN appended\n")
+        .unwrap();
+    monitor.until(|frame| frame["metrics"]["totals"]["records"] == "2");
+    let mut events = monitor.connect("/api/events", "");
+    event(&mut events);
+    std::fs::remove_file(&path).unwrap();
+    std::fs::create_dir(&path).unwrap();
+    loop {
+        let (_, frame) = event(&mut events);
+        if frame["metrics"]["state"] == "failed" {
+            assert_eq!(frame["metrics"]["kind"], "final");
+            assert_eq!(frame["metrics"]["totals"]["records"], "2");
+            break;
+        }
+    }
+    let began = Instant::now();
+    loop {
+        if let Some(status) = monitor.child.try_wait().unwrap() {
+            assert_eq!(status.code(), Some(1));
+            break;
+        }
+        assert!(began.elapsed() < Duration::from_secs(1));
+        std::thread::sleep(Duration::from_millis(5));
+    }
+}
+
+#[test]
+fn webhook_alerts_continue_to_observe_native_publications_in_web_mode() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    listener.set_nonblocking(true).unwrap();
+    let endpoint = format!("http://{}/alert", listener.local_addr().unwrap());
+    let mut monitor = Monitor::start(&[
+        "--alert-webhook",
+        &endpoint,
+        "--alert-error-percent",
+        "25",
+        "--alert-min-records",
+        "4",
+    ]);
+    monitor
+        .child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(b"INFO one\nFATAL two\nWARN three\nunknown\n")
+        .unwrap();
+    let began = Instant::now();
+    let stream = loop {
+        if let Ok((stream, _)) = listener.accept() {
+            break stream;
+        }
+        assert!(
+            began.elapsed() < Duration::from_secs(2),
+            "no webhook received"
+        );
+        std::thread::sleep(Duration::from_millis(5));
+    };
+    stream.set_nonblocking(false).unwrap();
+    stream
+        .set_read_timeout(Some(Duration::from_secs(2)))
+        .unwrap();
+    let mut reader = BufReader::new(stream);
+    let mut length = None;
+    loop {
+        let mut line = String::new();
+        assert!(reader.read_line(&mut line).unwrap() > 0);
+        if line == "\r\n" {
+            break;
+        }
+        if let Some(value) = line.to_ascii_lowercase().strip_prefix("content-length:") {
+            length = Some(value.trim().parse::<usize>().unwrap());
+        }
+    }
+    let length = length.unwrap();
+    assert!(length < 4096);
+    let mut bytes = vec![0; length];
+    reader.read_exact(&mut bytes).unwrap();
+    let alert: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(alert["records"], 4);
+    assert_eq!(alert["error_records"], 1);
+    reader
+        .get_mut()
+        .write_all(b"HTTP/1.1 204 No Content\r\nContent-Length: 0\r\n\r\n")
+        .unwrap();
+    monitor.until(|frame| frame["metrics"]["state"] == "complete");
+    monitor.signal("-TERM", 143);
+}

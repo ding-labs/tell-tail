@@ -352,6 +352,35 @@ async fn an_undrained_partially_sent_event_expires_without_blocking_other_client
     publisher.abort();
 }
 
+#[tokio::test(flavor = "current_thread")]
+async fn idle_heartbeats_keep_the_stream_open_without_republishing_metrics() {
+    let harness = Harness::new("stdin".into());
+    let (header, mut reader) = harness.events(false).await;
+    assert!(header.contains("cache-control: no-store\r\n"));
+    let initial = next_data(&mut reader).await;
+    assert_eq!(initial["sequence"], "0");
+    timeout(HEARTBEAT + Duration::from_secs(1), async {
+        loop {
+            let mut line = String::new();
+            assert!(reader.read_line(&mut line).await.unwrap() > 0);
+            assert!(
+                !line.starts_with("data: "),
+                "idle metrics were serialized again"
+            );
+            if line == ": heartbeat\n" {
+                break;
+            }
+        }
+    })
+    .await
+    .unwrap();
+    let response = harness.get("/api/snapshot").await;
+    let current: serde_json::Value =
+        serde_json::from_str(response.split_once("\r\n\r\n").unwrap().1).unwrap();
+    assert_eq!(current, initial);
+    harness.finish().await.unwrap();
+}
+
 #[test]
 fn serves_current_frames_and_checks_local_requests() {
     tokio::runtime::Builder::new_current_thread()
