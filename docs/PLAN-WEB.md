@@ -89,7 +89,8 @@ The interactive dashboard and `--open` are implemented in increment 5.
   browser without a shell; opener failure leaves a usable printed URL.
 - `--web-port` accepts 0 through 65535 and requires web output. An occupied
   requested port fails clearly; bind before starting ingestion.
-- Web output serves one file follower or stdin and emits no periodic stdout.
+- Web output serves one file follower, stdin, or the macOS
+  [native unified log source](APPLE-UNIFIED.md) and emits no periodic stdout.
   Existing `--interval-ms` retains its current output-specific meaning; web
   publication starts at 100 ms without a new rate setting.
 - Reject `--once --output web` in this first milestone: `--once` promises exit
@@ -118,7 +119,7 @@ independent of color are part of the first usable dashboard.
 ## Implementation architecture
 
 ```text
-file / stdin
+file / stdin / owned macOS unified log stream
     -> existing ingestion thread and Stats
     -> latest Snapshot + publication generation
     -> coalescing notification to one web publisher

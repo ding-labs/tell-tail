@@ -5,6 +5,7 @@ Implemented October 20, 2026. The dashboard uses the production
 
 ```sh
 tell-tail app.log --from start --output web --open
+tell-tail --apple-unified --output web --open  # macOS system activity
 my-app 2>&1 | tell-tail --output web
 ```
 
@@ -12,6 +13,8 @@ The printed `http://127.0.0.1:<port>/` URL works in a browser without Node, an
 internet connection, or a frontend server. `--web-port 8765` selects a fixed port;
 the default lets the OS choose. Normal stdin EOF retains final metrics until
 Ctrl+C. Browser closure never stops ingestion. Raw logs are not captured or shown.
+The [Apple unified source](APPLE-UNIFIED.md) starts and owns native live capture;
+it does not need piped stdin or `jq`.
 
 ## Display
 

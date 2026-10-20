@@ -5,6 +5,14 @@ contents after classification. Restarting starts a new session; it does not resu
 from a checkpoint or recover prior counters. Use a log store independently when
 retention is required.
 
+## Apple unified log input
+
+On macOS, `tell-tail --apple-unified --output web --open` starts native live
+capture without a shell pipeline or `jq`. Tell-Tail owns and reaps the capture
+process on normal shutdown; a capture exit is a runtime failure. Saved NDJSON
+captures use `--format apple-unified` on macOS or Linux. See the
+[source and parsing contract](APPLE-UNIFIED.md).
+
 ## Linux service example
 
 [examples/tell-tail.service](../examples/tell-tail.service) follows a single file
@@ -31,6 +39,8 @@ journal for runtime errors and the metric timestamp for freshness.
 | Symptom | Check |
 | --- | --- |
 | High unknown count | Check `--format` and `--level-field`. JSON severity must be a top-level string. ANSI prefixes, logfmt, multiline grouping, nested fields, and numeric levels are unsupported. Unknowns remain in ratio denominators. |
+| Apple Default/Fault messages show as unknown | Use `--apple-unified` for native capture or `--format apple-unified` for saved NDJSON. Generic JSON parsing does not apply Apple's level mapping. |
+| Apple capture ends unexpectedly | Check the bounded stderr diagnostic from `/usr/bin/log`. Capture runs with your account's permissions and is not silently restarted or reported as normal completion. |
 | Parse failures | Malformed JSON, invalid UTF-8 in JSON, duplicate severity fields, or unpaired Unicode escapes are counted once as unknown plus a parse failure. Plain unrecognized text is unknown without a parse failure. |
 | Oversized records | Check `--max-record-bytes` (default 1 MiB, maximum 16 MiB). An oversized physical line is drained and counted once as unknown; increasing the limit increases retained-buffer capacity. |
 | Old metrics timestamp | Check the process, destination permissions, collector path, and `--interval-ms`. A stale file can outlive a crashed process; do not rely only on its last `running` value. |

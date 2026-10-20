@@ -65,6 +65,8 @@ impl Classifier {
     pub fn new(format: Format, field: String) -> Self {
         Self { format, field }
     }
+    /// Classify one record. Use classify_record when source metadata should be
+    /// omitted; this compatibility API represents such metadata as unknown.
     pub fn classify(&self, line: &[u8]) -> Classification {
         if self.format == Format::AppleUnified {
             return self

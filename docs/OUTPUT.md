@@ -14,6 +14,11 @@ acknowledging it. Only one chunk is in flight. The parent buffers at most 64 KiB
 and the helper has at most two bounded chunks plus fixed kernel pipe buffers.
 No queue of snapshots or raw logs is introduced.
 
+The optional [Apple unified source](APPLE-UNIFIED.md) owns a separate native
+`/usr/bin/log` process, independent of output mode. Its stdout/stderr use private
+nonblocking pipes; at most 4 KiB of stderr is retained. Include that process's CPU
+and RSS when measuring native capture. File/stdin input starts no capture process.
+
 A complete report ends at `flush`. One absolute two-second deadline covers all
 chunks since the preceding flush. Cancellation allows up to 250 ms for ready
 output to finish, then reports an output failure. The parent kills and reaps the

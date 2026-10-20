@@ -11,6 +11,7 @@ default browser.
 tell-tail app.log --from start --output web
 my-app 2>&1 | tell-tail --output web
 tell-tail app.log --output web --web-port 8765
+tell-tail --apple-unified --output web --open
 ```
 
 Tell-Tail prints `http://127.0.0.1:<port>/` through its bounded stderr diagnostic

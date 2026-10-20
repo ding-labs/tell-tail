@@ -98,23 +98,26 @@ stdout snapshots. Normal stdin EOF keeps final metrics available until Ctrl+C;
 tabs show a capacity message and a retry button. JSON and SSE are also available
 at `/api/snapshot` and `/api/events`.
 
-On macOS, stream real system activity into the dashboard (requires `jq`):
+On macOS, stream real system activity directly into the dashboard:
 
 ```sh
-/usr/bin/log stream --style ndjson --level info --type log |
-  jq --unbuffered -Rc '
-    fromjson? | select(.messageType != null) |
-    .level = ({"Default":"info", "Info":"info", "Debug":"debug",
-               "Error":"error", "Fault":"fatal"}[.messageType] // "unknown")
-  ' |
-  tell-tail --format json --output web --open
+tell-tail --apple-unified --output web --open
 ```
 
-This streams live events without saving a log file. The filter skips status lines
-and maps Apple's Default/Fault levels to info/fatal. Traffic follows actual
-system activity; add `--level debug` in place of `--level info` for more detail.
-Press Ctrl+C in the terminal to stop the pipeline and server. To try a predictable
-continuous demo instead, run
+Tell-Tail starts `/usr/bin/log stream` at info level, maps Apple's message types,
+and skips stream metadata. No pipe, `jq`, or saved log file is required. Ctrl+C
+stops the capture process and dashboard. Omit `--output web --open` for the
+terminal dashboard, or use `--output json` for metrics snapshots.
+
+For an existing Apple NDJSON capture, select its format explicitly:
+
+```sh
+tell-tail capture.ndjson --format apple-unified --once
+```
+
+Saved NDJSON parsing works on macOS and Linux; live `--apple-unified` capture is
+macOS-only. See [Apple unified log input](docs/APPLE-UNIFIED.md) for levels, metadata,
+byte accounting, and capture lifecycle. To try a predictable continuous demo, run
 `python3 scripts/demo.py --rate 1000 | tell-tail --output web --open`
 from this repository.
 

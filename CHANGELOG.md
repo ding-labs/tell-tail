@@ -4,6 +4,9 @@
 
 ### Added
 
+- `--apple-unified` streams macOS unified logs directly, without a shell pipeline
+  or `jq`. `--format apple-unified` parses saved NDJSON captures on macOS/Linux,
+  maps Apple's message types, and excludes stream metadata from entry counts.
 - `--output web` serves an embedded local metrics dashboard over SSE, with exact
   counters, rolling rates, severity counts, completed-second history, diagnostics,
   freeze/resume, and connection status. `--open` launches the default browser;
