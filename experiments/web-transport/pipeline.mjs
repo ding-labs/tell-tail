@@ -7,13 +7,14 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { parseArgs } from 'node:util';
+import { fileURLToPath } from 'node:url';
 import { chromium, launchOptions } from './playwright.mjs';
 import { startServer } from './server.mjs';
 import { distribution } from './measurements.mjs';
 
 const { values } = parseArgs({ options: {
   samples: { type: 'string', default: '25' },
-  output: { type: 'string', default: 'experiments/web-transport/results/pipeline.json' },
+  output: { type: 'string', default: fileURLToPath(new URL('./results/pipeline.json', import.meta.url)) },
 } });
 const count = Number(values.samples);
 assert.ok(Number.isInteger(count) && count >= 5 && count <= 100);

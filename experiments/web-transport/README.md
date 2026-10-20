@@ -58,6 +58,8 @@ throttling disabled; it is a foreground stress case, not four ordinary focused
 desktop tabs. Warmup and clock calibration precede measured intervals.
 
 The full JSON contains raw per-message browser samples and per-run resources.
+Default reports go to this experiment's ignored `results/` directory regardless
+of the working directory, including when using `npm run benchmark`.
 A separate `-summary.json` reports distributions of client/run percentiles; those
 are not pooled-message percentiles. Clock uncertainty and offset drift remain
 visible, and negative calibrated timings are not clamped. DOM timings end after

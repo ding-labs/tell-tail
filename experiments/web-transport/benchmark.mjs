@@ -4,6 +4,7 @@ import { availableParallelism, cpus, loadavg, platform, release } from 'node:os'
 import { resolve, dirname } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { parseArgs, promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
 import { chromium, launchOptions } from './playwright.mjs';
 import { startServer } from './server.mjs';
 import { analyze, distribution, parseProcesses, processTree, resources } from './measurements.mjs';
@@ -13,7 +14,7 @@ const { values } = parseArgs({ options: {
   hz: { type: 'string', default: '10,100' }, clients: { type: 'string', default: '0,1,4' },
   profiles: { type: 'string', default: 'representative,large-counters' },
   pairs: { type: 'string', default: '5' }, seconds: { type: 'string', default: '10' },
-  warmup: { type: 'string', default: '1' }, output: { type: 'string', default: 'experiments/web-transport/results/benchmark.json' },
+  warmup: { type: 'string', default: '1' }, output: { type: 'string', default: fileURLToPath(new URL('./results/benchmark.json', import.meta.url)) },
 } });
 const numeric = (text, min, max, integer = true) => {
   const n = Number(text);
