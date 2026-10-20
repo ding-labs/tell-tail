@@ -1,12 +1,14 @@
 # Local web UI plan
 
-Status: production loopback server and lifecycle implemented, October 20, 2026. The
+Status: embedded dashboard implemented, October 20, 2026. The
 [local transport measurements](WEB-TRANSPORT.md) support SSE, and the
 [subscription and freshness results](SNAPSHOTS.md) cover direct publication.
 The [web frame contract](WEB-FRAMES.md) provides bounded version 1 encoding.
 The [production server](WEB-SERVER.md) supplies bounded HTTP/SSE and CLI lifecycle.
-The dashboard remains planned; this does not change the
-0.2 release gates.
+The [dashboard](WEB-DASHBOARD.md) renders production frames with freeze/resume,
+freshness and connection status, visibility recovery, and optional browser opening.
+Production performance gates and the browser soak remain open; this does not
+change the 0.2 release gates.
 The first UI covers live aggregate metrics, as agreed. Raw log viewing and search
 are outside this milestone.
 
@@ -75,12 +77,12 @@ bottleneck before adding them.
 Available server commands:
 
 ```sh
-tell-tail app.log --output web
+tell-tail app.log --output web --open
 my-app 2>&1 | tell-tail --output web
 tell-tail app.log --output web --web-port 8765
 ```
 
-The interactive dashboard and `--open` remain planned in increment 5.
+The interactive dashboard and `--open` are implemented in increment 5.
 
 - Bind `127.0.0.1` with an OS-selected port by default. Print the URL using the
   existing bounded diagnostic path. `--open` optionally launches the system
@@ -280,11 +282,13 @@ change. Split the following milestones into smaller commits where appropriate.
    JSON and SSE with admission/header/buffer limits and bounded teardown. Tests
    cover reconnect, EOF, signals, input/encoder failure, invalid hosts/origins,
    occupied ports, malformed/slow requests, and actual undrained socket writes.
-   See `docs/WEB-SERVER.md`; the root page is informational until increment 5.
-5. **Usable embedded dashboard.** Build against real frames, then add responsive
-   layout, freeze/resume, freshness/final/capacity states, and browser opening.
-   Verify keyboard use, null/large values, and safe source rendering. Use browser
-   tests for actual interactions and reconnect/visibility transitions.
+   See `docs/WEB-SERVER.md`.
+5. **Usable embedded dashboard — complete.** Embedded HTML/CSS/modules render
+   production frames with a responsive layout, freeze/resume, freshness, final and
+   capacity states, and optional browser opening. Browser checks cover keyboard
+   use, null/large values, safe source rendering, generation/session handling,
+   coalesced paints, actual disconnect/reconnect and native hidden-tab transitions.
+   See `docs/WEB-DASHBOARD.md`.
 6. **Validation and packaging.** Run the performance gates and browser soak;
    check Chrome, Firefox, and Safari where available, macOS/Linux lifecycle,
    default/CLI-only Cargo builds, and an extracted source package offline.

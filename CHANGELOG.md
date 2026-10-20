@@ -4,6 +4,12 @@
 
 ### Added
 
+- `--output web` serves an embedded local metrics dashboard over SSE, with exact
+  counters, rolling rates, severity counts, completed-second history, diagnostics,
+  freeze/resume, and connection status. `--open` launches the default browser;
+  `--web-port` optionally selects a fixed loopback port. EOF retains final stdin
+  metrics until Ctrl+C. Web support is default-enabled and can be omitted with
+  `--no-default-features`; CLI JSON schema 2 is unchanged.
 - Optional `--alert-error-percent` and `--alert-webhook` send a fixed JSON payload
   with a custom message when the rolling error percentage meets a threshold.
   Minimum samples, breach suppression, and cooldown limit noise. HTTP(S) delivery

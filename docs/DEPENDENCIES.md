@@ -68,6 +68,14 @@ The screen-observation script uses pyte 0.8.2 (LGPLv3 package classifier) and wc
 Rust binary or included in the source package. Their only role is interpreting
 terminal output during validation.
 
+Dashboard assets are plain HTML, CSS, JavaScript modules, and SVG, embedded with
+`include_str!`; there are no frontend runtime dependencies, external fonts, or
+build tools. Development browser tests in `browser-tests/` pin Playwright and
+playwright-core 1.62.1 (Apache-2.0), with optional fsevents 2.3.2 (MIT), in their
+own npm lockfile. They require Node 22 or later and a development browser download;
+none is linked into the binary or included in the Cargo source package. `--open`
+uses the system `open` (macOS) or `xdg-open` (Linux) command without a shell.
+
 Webhook delivery uses [ureq 3.4.2](https://docs.rs/ureq/3.4.2/ureq/) with default
 features disabled and only the `rustls` feature enabled. Its Rust 1.85 minimum
 fits the existing 1.88 toolchain. Requests run in a supervised helper process;

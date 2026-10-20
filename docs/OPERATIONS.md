@@ -40,6 +40,10 @@ journal for runtime errors and the metric timestamp for freshness.
 | Counts differ after rotation | Use rename-based rotation with completed lines. Late writes after handoff and truncate/regrow cycles between observations can be missed. Partial records at observed generation boundaries are discarded and counted separately. |
 | Web process stays running after stdin EOF | This is intentional: final metrics remain available until Ctrl+C. `--once --output web` is rejected. |
 | Web stream receives 429 | Four SSE streams are already active. Close another stream; current metrics remain available through `/api/snapshot`. |
+| Dashboard shows stream capacity | Close another live tab or SSE client, then use Retry connection. Capacity does not automatically retry. |
+| Dashboard shows stale/reconnecting | Last values remain visible, including when frozen. Check that the local monitor is running; retries back off to eight seconds. A disconnect alone does not indicate completion. |
+| Dashboard display does not advance | Check Freeze display / Resume display. Hidden tabs disconnect deliberately and reconnect when shown; freezing the display does not pause ingestion or alerts. |
+| `--open` cannot launch a browser | Use the printed loopback URL manually. The desktop opener is optional and never owns server shutdown; no Node runtime is needed. |
 | Web page receives 403 | Use the exact printed `127.0.0.1` URL and port; foreign Host and Origin values are rejected. |
 | Web stream disconnects while ingestion continues | A socket with no write progress for two seconds is closed independently. Drain the stream or reconnect for current state. |
 | Ratios differ from request failure rates | Ratios describe physical log lines, including unknowns. Error ratio combines error and fatal. A request can emit many lines or none. |

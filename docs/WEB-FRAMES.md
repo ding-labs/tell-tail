@@ -4,8 +4,7 @@ Implemented October 20, 2026 in [`web_frame.rs`](../src/web_frame.rs). The libra
 encodes production frames without HTTP, Tokio, or new dependencies. The
 [transport experiment](../experiments/web-transport/README.md) now uses this
 encoder. The [production loopback server and CLI web mode](WEB-SERVER.md) are
-implemented; the dashboard remains the next
-[delivery increment](PLAN-WEB.md#delivery-increments).
+implemented, along with the [embedded dashboard](WEB-DASHBOARD.md).
 
 ## API and ownership
 

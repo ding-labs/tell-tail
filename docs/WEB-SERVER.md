@@ -1,9 +1,9 @@
 # Production loopback server and lifecycle
 
 Implemented October 20, 2026. `--output web` serves the production
-[web frame contract](WEB-FRAMES.md) over loopback HTTP and SSE. The root page is
-an informational page linking to current metrics. The embedded dashboard and
-`--open` remain the next [delivery increment](PLAN-WEB.md#delivery-increments).
+[web frame contract](WEB-FRAMES.md) over loopback HTTP and SSE. The root page serves
+the [embedded dashboard](WEB-DASHBOARD.md); `--open` optionally launches it in the
+default browser.
 
 ## Run
 
@@ -34,7 +34,8 @@ exit at EOF. Alerts continue observing native snapshots in web mode.
 
 | Request | Result |
 | --- | --- |
-| `GET /` | Static informational page |
+| `GET /` | Embedded dashboard HTML |
+| `GET /dashboard.css`, `/dashboard.mjs`, `/frame.mjs`, `/render.mjs`, `/favicon.svg` | Fixed embedded assets, with explicit content types |
 | `GET /api/snapshot` | Current complete web schema 1 frame as JSON |
 | `GET /api/events` | Current frame immediately, followed by newer complete frames |
 | Unknown path | 404 |
@@ -73,8 +74,9 @@ then its SSE response ends. Consumers must close EventSource on final state to
 avoid its automatic reconnect. A new connection after normal EOF immediately gets
 the retained final frame. A 15-second `: heartbeat` comment keeps a quiet live
 stream open without changing sequence numbers or metric timestamps. The 500 ms
-retry hint is sent; actual browser retry/freshness measurement belongs to the
-dashboard validation milestone.
+retry hint is sent. The dashboard owns retries instead: it closes EventSource on
+error, checks one snapshot for capacity/finality, then backs off from 500 ms to
+8 seconds. Capacity requires a manual retry; see the dashboard guide.
 
 An ingestion error produces a normal final frame with state `failed`. If encoding
 or server failure makes such a frame unavailable, existing SSE consumers get a
@@ -143,8 +145,9 @@ dependency.
 
 ## Verification
 
-On macOS / Rust 1.88.0, all 82 default, 61 CLI-only, and 67 notification-only Rust
-tests pass, with Clippy warnings denied in all three modes. Tests exercise live
+At the server milestone on macOS / Rust 1.88.0, all 82 default, 61 CLI-only, and
+67 notification-only Rust tests pass, with Clippy warnings denied in all three
+modes. Tests exercise live
 stdin/file input, EOF retention/reconnect, SIGINT/SIGTERM, occupied ports, input
 failure, alerts, Host/Origin/body rejection, malformed/oversized/slow headers,
 connection/stream capacity and release, quiet heartbeats, encoder failure, and
@@ -161,5 +164,6 @@ passes CLI JSON and production web smoke checks, including final state retained
 after EOF and signal exit 143. CI is configured to run all three modes on macOS
 and Linux; remote CI has not been run here. See the
 [validation record](validation/web-server-2026-10-20.json) and
-[dependency review](DEPENDENCIES.md). Browser UI, one-hour resource validation, and
+[dependency review](DEPENDENCIES.md). Current dashboard checks are recorded in the
+[dashboard guide](WEB-DASHBOARD.md). One-hour resource validation and
 maximum-ingestion overhead gates remain later milestones.

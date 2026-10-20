@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-20",
+  "tested_source_commit": "9541811dd0bff0f58b74b12c729ca683fcdc9ae0",
+  "host": {
+    "platform": "Darwin",
+    "release": "27.0.0",
+    "machine": "arm64",
+    "rust": "rustc 1.88.0 (6b00bc388 2025-06-23)",
+    "node": "v24.15.0"
+  },
+  "default_release_binary_sha256": "127ec212c25b99fb2a10a761973346a7e19a624a5b6d0638522cfbf7b817a30b",
+  "asset_bytes": {
+    "dashboard.css": 7293,
+    "dashboard.mjs": 6135,
+    "favicon.svg": 208,
+    "frame.mjs": 4637,
+    "index.html": 6090,
+    "render.mjs": 4453
+  },
+  "checks": {
+    "rust_tests_passed": {
+      "default": 84,
+      "cli": 61,
+      "notifications": 67
+    },
+    "clippy_warnings_denied": [
+      "default",
+      "no-default-features",
+      "no-default-features + snapshot-notifications"
+    ],
+    "cargo_fmt": "passed",
+    "javascript_and_browser_tests_passed": 12,
+    "native_visibility_test_run": true,
+    "debug_and_release_browser_tests": "passed",
+    "playwright": "1.62.1",
+    "chromium": "151.0.7922.34",
+    "viewport_widths_checked_pixels": [
+      320,
+      390,
+      768,
+      1440
+    ],
+    "remote_ci_run": false,
+    "release_gate_python_checks": "passed",
+    "release_artifact_python_checks": "passed",
+    "render_formula_python_checks": "passed",
+    "existing_output_compatibility": "passed",
+    "npm_ci_ignore_scripts": "passed"
+  },
+  "browser_cases": [
+    "real SSE metrics and final EOF retention/reload",
+    "keyboard Tab/Enter/Space freeze and resume",
+    "one DOM metrics update for 100 synchronous frames",
+    "generation zero and exact u64 sequence comparisons",
+    "duplicate and older generations ignored",
+    "new-session history replacement",
+    "u64::MAX counters and chart table",
+    "null ratios and unavailable backlog distinct from zero",
+    "untrusted HTML source rendered as text",
+    "four stream clients plus fifth-tab capacity without automatic retries",
+    "manual retry after a stream slot becomes available",
+    "stale values retained and stream replaced",
+    "actual server loss while frozen with bounded retries",
+    "unsupported schema and publisher failure while frozen",
+    "native hidden tab releases actual server permit",
+    "native visible return while frozen receives current metrics",
+    "normal EOF while hidden resumes with final state"
+  ],
+  "browser_opener_cases": [
+    "literal bound URL argument",
+    "success",
+    "missing command",
+    "nonzero exit",
+    "long-running handoff leaves server available",
+    "signal shutdown under one second",
+    "opener does not inherit stdout"
+  ],
+  "package_validation": {
+    "package": "tell-tail-0.2.0",
+    "files": 102,
+    "bytes": 183960,
+    "sha256": "3763f178dcdd656ed7755aa4f397ec28b00eca638b6d26b909f92e180a63da05",
+    "allow_dirty": true,
+    "clean_install_smoke": "passed",
+    "offline_install": true,
+    "installed_web_smoke": "passed",
+    "installed_dashboard_assets": "passed"
+  },
+  "remaining_validation": [
+    "remote Linux/macOS CI",
+    "Firefox and Safari compatibility",
+    "one-hour browser resource soak",
+    "production ingestion overhead and end-to-end freshness performance gates"
+  ]
+}

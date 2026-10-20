@@ -1,9 +1,9 @@
 # Tell-Tail
 
-A Rust terminal dashboard for log throughput and severity. Logs pass through;
-Tell-Tail keeps counters and bounded rolling statistics. It follows one file or
-reads stdin, and supports plain text, NDJSON, Prometheus, and a local HTTP/SSE
-metrics API.
+A Rust log throughput and severity monitor with terminal and local web dashboards.
+Logs pass through; Tell-Tail keeps counters and bounded rolling statistics. It
+follows one file or reads stdin, and supports plain text, NDJSON, Prometheus, and
+a local HTTP/SSE metrics API.
 
 ## Try it
 
@@ -78,22 +78,29 @@ mode 0644; existing permissions are preserved. The snapshot timestamp detects a
 stale file, and `tell_tail_running` is zero on orderly termination. Counters reset
 on process restart. An HTTP scrape endpoint is a later increment.
 
-## Local web server
+## Local web dashboard
 
 ```sh
-tell-tail app.log --from start --output web
+tell-tail app.log --from start --output web --open
 my-app 2>&1 | tell-tail --output web
 ```
 
-Web mode prints a loopback URL to stderr and serves `/api/snapshot` and
-`/api/events` (SSE), with bounded connections and socket timeouts. Use
+Web mode serves an embedded live dashboard and prints its loopback URL to stderr.
+It shows rolling rates and ratios, exact session totals, a 60-second throughput
+chart, severity counts, and ingestion diagnostics. Freeze/resume affects only
+the display; connection and failure status stay live. Hidden tabs release their
+stream and reconnect when shown. The binary works offline without Node or a CDN.
+
+`--open` optionally launches the default browser. Use
 `--web-port 8765` for a fixed port; otherwise the OS selects one. It writes no
 stdout snapshots. Normal stdin EOF keeps final metrics available until Ctrl+C;
-`--once --output web` is rejected. The root page links to metrics; the interactive
-web dashboard and browser opening remain planned.
+`--once --output web` is rejected. Four live streams are supported; additional
+tabs show a capacity message and a retry button. JSON and SSE are also available
+at `/api/snapshot` and `/api/events`.
 
 Web support is included by default. Build with `--no-default-features` for the
-CLI-only binary. See [server behavior and limits](docs/WEB-SERVER.md) and the
+CLI-only binary. See the [dashboard guide](docs/WEB-DASHBOARD.md),
+[server behavior and limits](docs/WEB-SERVER.md), and the
 [web JSON contract](docs/WEB-FRAMES.md); CLI JSON schema 2 is unchanged.
 
 ## Webhook alerts
