@@ -16,6 +16,8 @@ pub mod platform;
 
 pub mod runtime;
 
+pub mod snapshots;
+
 pub mod prometheus;
 
 pub mod tui;
