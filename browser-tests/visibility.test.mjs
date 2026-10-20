@@ -15,6 +15,7 @@ test('a native hidden tab releases its stream and resumes with the current snaps
   await page.goto(server.url);
   server.child.stdin.write('INFO first\n');
   await page.waitForFunction(() => document.getElementById('total-records').textContent === '1');
+  await page.locator('#freeze').click();
   const away = await context.newPage();
   await away.bringToFront();
   await page.waitForFunction(() => document.hidden, null, { polling: 100 });
@@ -28,6 +29,15 @@ test('a native hidden tab releases its stream and resumes with the current snaps
   assert.equal(available, '4', 'the hidden page releases its actual server permit');
   server.child.stdin.write('WARN background\nERROR background\n');
   await page.bringToFront();
-  await page.waitForFunction(() => !document.hidden && document.getElementById('total-records').textContent === '3');
+  await page.waitForFunction(() => !document.hidden && document.getElementById('connection').textContent.startsWith('Live'));
+  assert.equal(await page.locator('#total-records').textContent(), '1');
+  await page.locator('#freeze').click();
+  await page.waitForFunction(() => document.getElementById('total-records').textContent === '3');
   assert.match(await page.locator('#connection').textContent(), /Live/);
+  await away.bringToFront();
+  await page.waitForFunction(() => document.hidden, null, { polling: 100 });
+  server.child.stdin.end('INFO final while hidden\n');
+  await page.bringToFront();
+  await page.waitForFunction(() => document.getElementById('connection').textContent.startsWith('Complete'));
+  assert.equal(await page.locator('#total-records').textContent(), '4');
 });

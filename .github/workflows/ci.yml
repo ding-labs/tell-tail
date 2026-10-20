@@ -55,6 +55,24 @@ jobs:
           name: checks-${{ matrix.os }}
           path: work/*.json
           retention-days: 14
+  dashboard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - run: rustup toolchain install 1.88.0 --profile minimal
+      - run: cargo build --locked
+      - run: npm ci --ignore-scripts
+        working-directory: browser-tests
+      - run: npx --no-install playwright install --with-deps chromium
+        working-directory: browser-tests
+      - run: xvfb-run -a env RUN_HEADED_TESTS=1 npm test
+        working-directory: browser-tests
   audit:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

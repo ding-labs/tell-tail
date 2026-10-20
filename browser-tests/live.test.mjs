@@ -43,7 +43,9 @@ test('real SSE freezes only display, resumes by keyboard and retains final state
   page.on('request', r => { if (r.url().endsWith('/api/events')) requests.push(r.url()); });
   server.child.stdin.write('INFO first\n');
   await page.waitForFunction(() => document.getElementById('total-records').textContent === '1');
-  await page.locator('#freeze').focus();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
+  assert.equal(await page.locator('#freeze').evaluate(el => el === document.activeElement), true);
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => document.getElementById('freeze').getAttribute('aria-pressed') === 'true');
   server.child.stdin.write('WARN second\nERROR third\n');

@@ -59,6 +59,25 @@ def check_web_install(binary, directory):
         assert frame['metrics']['totals']['records'] == '2'
         assert frame['metrics']['totals']['levels']['warn'] == '1'
         assert 'schema_version' not in frame['metrics']
+        for path, mime, marker in [
+            ('/', 'text/html', b'Live metrics'),
+            ('/dashboard.css', 'text/css', b'.metrics-grid'),
+            ('/dashboard.mjs', 'text/javascript', b'new EventSource'),
+            ('/frame.mjs', 'text/javascript', b'parseFrame'),
+            ('/render.mjs', 'text/javascript', b'textContent'),
+            ('/favicon.svg', 'image/svg+xml', b'<svg'),
+        ]:
+            connection = http.client.HTTPConnection(location.hostname, location.port, timeout=1)
+            try:
+                connection.request('GET', path)
+                response = connection.getresponse()
+                assert response.status == 200, path
+                assert response.getheader('Content-Type').startswith(mime), path
+                assert response.getheader('Cache-Control') == 'no-store', path
+                assert "script-src 'self'" in response.getheader('Content-Security-Policy'), path
+                assert marker in response.read(), path
+            finally:
+                connection.close()
         assert child.poll() is None, 'web output exited at normal EOF'
         child.send_signal(signal.SIGTERM)
         assert child.wait(timeout=1) == 143
@@ -89,9 +108,12 @@ with tempfile.TemporaryDirectory(prefix='tell-tail-package-') as directory:
         assert all(name.startswith(package_name + '/') and '..' not in pathlib.PurePosixPath(name).parts
                    for name in names), 'unexpected archive paths'
         assert all(member.isfile() or member.isdir() for member in tar.getmembers()), 'unexpected archive links'
-        assert not any('/work/' in name or '/fuzz/' in name or '/experiments/' in name or '__pycache__' in name for name in names)
+        assert not any('/work/' in name or '/fuzz/' in name or '/experiments/' in name
+                       or '/browser-tests/' in name or '__pycache__' in name for name in names)
         assert package_name + '/src/web/mod.rs' in names
         assert package_name + '/tests/fixtures/output/empty-web-v1.json' in names
+        for asset in ['index.html', 'dashboard.css', 'dashboard.mjs', 'frame.mjs', 'render.mjs', 'favicon.svg']:
+            assert package_name + '/web/' + asset in names
         # Copy only the validated regular files/directories. This also supports
         # Python 3.11 builds without tarfile's newer extraction-filter API.
         for member in tar.getmembers():
@@ -121,4 +143,5 @@ with tempfile.TemporaryDirectory(prefix='tell-tail-package-') as directory:
 print(json.dumps({'package': package_name, 'files': len(names), 'bytes': archive.stat().st_size,
                   'sha256': hashlib.sha256(archive.read_bytes()).hexdigest(),
                   'allow_dirty': args.allow_dirty, 'clean_install_smoke': 'passed',
-                  'offline_install': True, 'installed_web_smoke': 'passed'}))
+                  'offline_install': True, 'installed_web_smoke': 'passed',
+                  'installed_dashboard_assets': 'passed'}))
