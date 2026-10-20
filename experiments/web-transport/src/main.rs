@@ -222,7 +222,16 @@ async fn main() -> io::Result<()> {
     let router = Router::new()
         .route(
             "/",
-            get(|| async { Html("<h1>Tell-Tail transport experiment</h1>") }),
+            get(|| async { Html(include_str!("../client/index.html")) }),
+        )
+        .route(
+            "/client.mjs",
+            get(|| async {
+                (
+                    [("content-type", "text/javascript")],
+                    include_str!("../client/client.mjs"),
+                )
+            }),
         )
         .route("/events", get(sse))
         .route("/ws", get(websocket))

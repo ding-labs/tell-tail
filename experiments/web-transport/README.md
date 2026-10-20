@@ -24,6 +24,18 @@ at its existing cadence; sampling it at 100 Hz does not produce 100 new snapshot
 `--padding-bytes` is exclusively for forcing socket backpressure in stress checks.
 The server caps active streams at four and exits on SIGINT/SIGTERM.
 
+The embedded benchmark page exposes `window.bench.connect('sse'|'websocket')`,
+`calibrate()`, `reset()`, `freeze(true|false)`, and `result()` for browser automation.
+Receipt and JSON-decoding timings are distinct from DOM-update timings; none are
+presented as physical screen paint. One pending frame is rendered at the next
+animation frame. Sample storage is capped, with overflow reported as invalid data.
+Calibration maps the browser monotonic clock to the server epoch using the fastest
+of 12 local round trips; report at least half its RTT as timing uncertainty.
+
+Browser checks need Playwright 1.62.1 and its Chromium. Either install these as
+development tools or point `PLAYWRIGHT_MODULE_DIR` at an existing `playwright`
+package directory, then run `node --test experiments/web-transport/browser.test.mjs`.
+
 Frames use actual engine statistics with 60 completed history buckets. The
 `large-counters` profile deliberately widens cumulative counters/history to u64
 limits; it is a payload-width stress case, not a consistent ingestion ledger.

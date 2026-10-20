@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>Tell-Tail transport experiment</title>
+<style>
+  :root { color-scheme: dark; font: 16px system-ui; background: #10171e; color: #d7e1eb; }
+  body { max-width: 800px; margin: 4rem auto; padding: 0 2rem; }
+  h1 { font-size: 1.5rem; } p { color: #a7b5c2; } output { color: #5dd8cb; }
+  dl { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-variant-numeric: tabular-nums; }
+  dd { margin: 0; overflow-wrap: anywhere; } svg { width: 100%; height: 100px; }
+</style>
+<h1>Tell-Tail transport experiment</h1>
+<p>Development benchmark: identical metrics and rendering for SSE and WebSocket.</p>
+<p>Transport: <output id="transport">disconnected</output></p>
+<dl>
+  <dt>Session records</dt><dd id="records">—</dd>
+  <dt>Entries / second</dt><dd id="rate">—</dd>
+  <dt>Displayed publication</dt><dd id="sequence">—</dd>
+</dl>
+<svg viewBox="0 0 600 100" role="img" aria-label="Throughput over 60 completed seconds">
+  <polyline id="history" fill="none" stroke="#5dd8cb" stroke-width="2" />
+</svg>
+<script type="module" src="/client.mjs"></script>
+</html>
