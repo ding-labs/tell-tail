@@ -74,8 +74,16 @@ struct Delivery {
 
 impl Delivery {
     fn encode(publication: PublishedSnapshot) -> io::Result<Self> {
-        let frame = WebFrame::encode(publication.generation, &publication.snapshot)
-            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+        let frame =
+            WebFrame::encode(publication.generation, &publication.snapshot).map_err(|error| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!(
+                        "web frame sequence {} at {:.3}s: {error}",
+                        publication.generation, publication.snapshot.elapsed_seconds
+                    ),
+                )
+            })?;
         Ok(Self {
             event: Bytes::from(format!(
                 "retry: 500\nevent: snapshot\nid: {}\ndata: {}\n\n",
@@ -247,7 +255,12 @@ pub struct Server {
 
 impl Server {
     pub fn bind(port: u16) -> io::Result<Self> {
-        let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, port))?;
+        let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, port)).map_err(|error| {
+            io::Error::new(
+                error.kind(),
+                format!("cannot bind web listener at 127.0.0.1:{port}: {error}"),
+            )
+        })?;
         listener.set_nonblocking(true)?;
         Ok(Self {
             listener,

@@ -20,7 +20,9 @@ messages go to **stderr**, separate from stdout metrics. For a web session, capt
 them with `tell-tail --apple-unified --output web --open 2>tell-tail.stderr.log`.
 There is no persistent internal log file or configurable log level. Runtime stderr
 writes have a 250 ms budget so blocked diagnostic output cannot hold up shutdown.
-Argument validation errors go directly to stderr before startup.
+Argument validation errors go directly to stderr before startup. Web bind errors
+identify the loopback address and port; frame encoding errors identify the
+publication sequence and elapsed seconds alongside the cause.
 
 The dashboard writes `[tell-tail]` diagnostics to the browser developer console:
 validation and publisher/input failures are errors; disconnections, stale streams,

@@ -354,7 +354,13 @@ async fn fatal_publications_and_worker_closure_attempt_final_failure_delivery() 
             .await
             .unwrap()
             .unwrap();
-        assert!(result.is_err());
+        let error = result.unwrap_err();
+        if mode == "oversize" {
+            assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+            assert!(error.to_string().contains("web frame sequence 1 at"));
+            assert!(error.to_string().contains("exceeds 65536 JSON bytes"));
+            assert!(!error.to_string().contains(&"x".repeat(100)));
+        }
         assert_eq!(harness.stop.load(Ordering::Relaxed), 1);
     }
 }
