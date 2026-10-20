@@ -16,6 +16,13 @@ pub mod platform;
 
 pub mod runtime;
 
+pub mod snapshots;
+
+pub mod web_frame;
+
+#[cfg(feature = "web")]
+pub mod web;
+
 pub mod prometheus;
 
 pub mod tui;

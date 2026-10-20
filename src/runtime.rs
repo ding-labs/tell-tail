@@ -3,12 +3,13 @@ use crate::{
     cli::Args,
     engine::Engine,
     input::{Event, Input},
+    snapshots::{CloseSnapshots, SnapshotReader, SnapshotSlot},
     stats::{Snapshot, State},
 };
 use std::{
     io,
     sync::{
-        Arc, Mutex,
+        Arc,
         atomic::{AtomicUsize, Ordering},
     },
     thread::{self, JoinHandle},
@@ -45,7 +46,7 @@ impl Drop for Signals {
 }
 
 pub struct Running {
-    latest: Arc<Mutex<Snapshot>>,
+    latest: Arc<SnapshotSlot>,
     stop: Arc<AtomicUsize>,
     worker: Option<JoinHandle<io::Result<()>>>,
 }
@@ -53,7 +54,7 @@ impl Running {
     pub fn start(args: &Args, stop: Arc<AtomicUsize>) -> io::Result<Self> {
         let input = Input::open(args)?;
         let mut engine = Engine::new(args);
-        let latest = Arc::new(Mutex::new(engine.snapshot(
+        let latest = Arc::new(SnapshotSlot::new(engine.snapshot(
             Duration::ZERO,
             State::Reading,
             input.backlog(),
@@ -63,7 +64,10 @@ impl Running {
         let alerts = Alerts::start(args)?;
         let worker = thread::Builder::new()
             .name("tell-tail-reader".into())
-            .spawn(move || drive(input, engine, slot, cancel, alerts))?;
+            .spawn(move || {
+                let _close = CloseSnapshots(slot.clone());
+                drive(input, engine, slot, cancel, alerts)
+            })?;
         Ok(Self {
             latest,
             stop,
@@ -71,10 +75,13 @@ impl Running {
         })
     }
     pub fn snapshot(&self) -> Snapshot {
-        self.latest
-            .lock()
-            .unwrap_or_else(|p| p.into_inner())
-            .clone()
+        self.snapshot_reader().latest().snapshot
+    }
+    /// Read current publications without owning or controlling ingestion.
+    pub fn snapshot_reader(&self) -> SnapshotReader {
+        SnapshotReader {
+            slot: self.latest.clone(),
+        }
     }
     pub fn is_finished(&self) -> bool {
         self.worker.as_ref().is_none_or(|w| w.is_finished())
@@ -99,17 +106,17 @@ impl Drop for Running {
         let _ = self.join();
     }
 }
-fn publish(slot: &Mutex<Snapshot>, snapshot: Snapshot, alerts: &mut Option<Alerts>) {
+fn publish(slot: &SnapshotSlot, snapshot: Snapshot, alerts: &mut Option<Alerts>) {
     if let Some(alerts) = alerts {
         alerts.observe(&snapshot);
     }
     // The reader only contends with a small snapshot clone, never output I/O.
-    *slot.lock().unwrap_or_else(|p| p.into_inner()) = snapshot;
+    slot.publish(snapshot);
 }
 fn drive(
     mut input: Input,
     mut engine: Engine,
-    slot: Arc<Mutex<Snapshot>>,
+    slot: Arc<SnapshotSlot>,
     stop: Arc<AtomicUsize>,
     mut alerts: Option<Alerts>,
 ) -> io::Result<()> {

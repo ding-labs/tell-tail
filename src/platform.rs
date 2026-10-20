@@ -73,7 +73,7 @@ mod unix {
             self.file.read(bytes)
         }
     }
-    fn readable(file: &File) -> io::Result<bool> {
+    pub(crate) fn readable(file: &impl std::os::fd::AsFd) -> io::Result<bool> {
         let mut fds = [PollFd::new(file, PollFlags::IN)];
         match poll(
             &mut fds,

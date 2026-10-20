@@ -177,3 +177,116 @@ fn observed_truncation_and_reappearance_never_join_partial_generations() {
     }
     assert_eq!(report["totals"]["records"], 3);
 }
+
+#[cfg(target_os = "macos")]
+fn apple_child(parent: u32) -> u32 {
+    let output = Command::new("pgrep")
+        .args(["-P", &parent.to_string()])
+        .output()
+        .unwrap();
+    for pid in String::from_utf8(output.stdout).unwrap().split_whitespace() {
+        let command = Command::new("ps")
+            .args(["-o", "comm=", "-p", pid])
+            .output()
+            .unwrap();
+        if String::from_utf8_lossy(&command.stdout).trim() == "/usr/bin/log" {
+            return pid.parse().unwrap();
+        }
+    }
+    panic!("native log child not found");
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn native_apple_capture_maps_real_events_ignores_stdin_eof_and_reaps_on_signals() {
+    for (signal, code) in [("-TERM", 143), ("-INT", 130)] {
+        let dir = tempfile::tempdir().unwrap();
+        let reports = dir.path().join("reports.ndjson");
+        let mut child = Process(
+            Command::new(env!("CARGO_BIN_EXE_tell-tail"))
+                .args([
+                    "--apple-unified",
+                    "--output",
+                    "json",
+                    "--interval-ms",
+                    "100",
+                ])
+                .stdin(Stdio::null())
+                .stdout(File::create(&reports).unwrap())
+                .spawn()
+                .unwrap(),
+        );
+        let frame = wait_report(&reports, |s| s["totals"]["records"].as_u64().unwrap() > 0);
+        assert_eq!(frame["source"], "macOS unified log");
+        assert_eq!(frame["state"], "reading");
+        assert_eq!(frame["totals"]["parse_failures"], 0);
+        let logger = apple_child(child.0.id());
+        stop(&mut child.0, signal, code);
+        assert_eq!(
+            wait_report(&reports, |s| s["kind"] == "final")["state"],
+            "stopped"
+        );
+        assert!(
+            !Command::new("kill")
+                .args(["-0", &logger.to_string()])
+                .output()
+                .unwrap()
+                .status
+                .success()
+        );
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn native_apple_capture_failure_is_reported_instead_of_completion() {
+    use std::io::Read;
+    let dir = tempfile::tempdir().unwrap();
+    let reports = dir.path().join("reports.ndjson");
+    let mut child = Process(
+        Command::new(env!("CARGO_BIN_EXE_tell-tail"))
+            .args([
+                "--apple-unified",
+                "--output",
+                "json",
+                "--interval-ms",
+                "100",
+            ])
+            .stdin(Stdio::null())
+            .stdout(File::create(&reports).unwrap())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap(),
+    );
+    wait_report(&reports, |s| s["totals"]["records"].as_u64().unwrap() > 0);
+    let logger = apple_child(child.0.id());
+    assert!(
+        Command::new("kill")
+            .args(["-TERM", &logger.to_string()])
+            .status()
+            .unwrap()
+            .success()
+    );
+    let began = Instant::now();
+    loop {
+        if let Some(status) = child.0.try_wait().unwrap() {
+            assert_eq!(status.code(), Some(1));
+            break;
+        }
+        assert!(began.elapsed() < Duration::from_secs(3));
+        thread::sleep(Duration::from_millis(5));
+    }
+    assert_eq!(
+        wait_report(&reports, |s| s["kind"] == "final")["state"],
+        "failed"
+    );
+    let mut diagnostic = String::new();
+    child
+        .0
+        .stderr
+        .as_mut()
+        .unwrap()
+        .read_to_string(&mut diagnostic)
+        .unwrap();
+    assert!(diagnostic.contains("Apple unified log stream ended unexpectedly"));
+}

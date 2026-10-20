@@ -15,7 +15,7 @@ use tell_tail::{
 };
 
 fn run(args: &Args) -> io::Result<i32> {
-    if args.path().is_none() && io::stdin().is_terminal() {
+    if !args.apple_unified && args.path().is_none() && io::stdin().is_terminal() {
         Args::command().print_help()?;
         return Ok(0);
     }
@@ -32,6 +32,10 @@ fn run(args: &Args) -> io::Result<i32> {
         .map(|p| MetricsFile::new(p.clone(), args.path().map(|p| p.to_owned())))
         .transpose()?;
     let signals = Signals::install()?;
+    #[cfg(feature = "web")]
+    if args.output == Output::Web {
+        return tell_tail::web::run(args, &signals);
+    }
     let mut running = Running::start(args, signals.requested.clone())?;
     if use_tui {
         let writer = StdoutWriter::new(signals.requested.clone())?;

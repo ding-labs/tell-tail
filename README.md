@@ -1,8 +1,9 @@
 # Tell-Tail
 
-A Rust terminal dashboard for log throughput and severity. Logs pass through;
-Tell-Tail keeps counters and bounded rolling statistics. It follows one file or
-reads stdin, and supports plain text, NDJSON, and Prometheus output.
+A Rust log throughput and severity monitor with terminal and local web dashboards.
+Logs pass through; Tell-Tail keeps counters and bounded rolling statistics. It
+follows one file or reads stdin, and supports plain text, NDJSON, Prometheus, and
+a local HTTP/SSE metrics API.
 
 ## Try it
 
@@ -76,6 +77,54 @@ appended, and can be read by Node Exporter's textfile collector. New files have
 mode 0644; existing permissions are preserved. The snapshot timestamp detects a
 stale file, and `tell_tail_running` is zero on orderly termination. Counters reset
 on process restart. An HTTP scrape endpoint is a later increment.
+
+## Local web dashboard
+
+```sh
+tell-tail app.log --from start --output web --open
+my-app 2>&1 | tell-tail --output web
+```
+
+Web mode serves an embedded live dashboard and prints its loopback URL to stderr.
+It shows rolling rates and ratios, exact session totals, a 60-second throughput
+chart, severity counts, and ingestion diagnostics. Freeze/resume affects only
+the display; connection and failure status stay live. Hidden tabs release their
+stream and reconnect when shown. The binary works offline without Node or a CDN.
+
+`--open` optionally launches the default browser. Use
+`--web-port 8765` for a fixed port; otherwise the OS selects one. It writes no
+stdout snapshots. Normal stdin EOF keeps final metrics available until Ctrl+C;
+`--once --output web` is rejected. Four live streams are supported; additional
+tabs show a capacity message and a retry button. JSON and SSE are also available
+at `/api/snapshot` and `/api/events`.
+
+On macOS, stream real system activity directly into the dashboard:
+
+```sh
+tell-tail --apple-unified --output web --open
+```
+
+Tell-Tail starts `/usr/bin/log stream` at info level, maps Apple's message types,
+and skips stream metadata. No pipe, `jq`, or saved log file is required. Ctrl+C
+stops the capture process and dashboard. Omit `--output web --open` for the
+terminal dashboard, or use `--output json` for metrics snapshots.
+
+For an existing Apple NDJSON capture, select its format explicitly:
+
+```sh
+tell-tail capture.ndjson --format apple-unified --once
+```
+
+Saved NDJSON parsing works on macOS and Linux; live `--apple-unified` capture is
+macOS-only. See [Apple unified log input](docs/APPLE-UNIFIED.md) for levels, metadata,
+byte accounting, and capture lifecycle. To try a predictable continuous demo, run
+`python3 scripts/demo.py --rate 1000 | tell-tail --output web --open`
+from this repository.
+
+Web support is included by default. Build with `--no-default-features` for the
+CLI-only binary. See the [dashboard guide](docs/WEB-DASHBOARD.md),
+[server behavior and limits](docs/WEB-SERVER.md), and the
+[web JSON contract](docs/WEB-FRAMES.md); CLI JSON schema 2 is unchanged.
 
 ## Webhook alerts
 

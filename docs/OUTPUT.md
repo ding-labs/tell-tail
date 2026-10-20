@@ -1,8 +1,11 @@
 # Output isolation
 
-Tell-Tail uses one helper process for stdout. The helper inherits stdout without
+Tell-Tail's terminal, text, JSON, and Prometheus-stdout outputs use one helper
+process for stdout. The helper inherits stdout without
 changing its status flags. Only newly created private control pipes are made
-nonblocking. Metrics-file output creates no helper. Input descriptors duplicated
+nonblocking. Metrics-file and web output create no persistent stdout helper;
+runtime diagnostics still use the bounded diagnostic path. See the
+[web connection and lifecycle bounds](WEB-SERVER.md). Input descriptors duplicated
 by Tell-Tail are close-on-exec so the helper cannot retain the log stream.
 
 The parent sends a length-prefixed chunk of at most 64 KiB and waits for an errno
@@ -10,6 +13,11 @@ acknowledgment on the helper's stderr. The helper writes the complete chunk befo
 acknowledging it. Only one chunk is in flight. The parent buffers at most 64 KiB,
 and the helper has at most two bounded chunks plus fixed kernel pipe buffers.
 No queue of snapshots or raw logs is introduced.
+
+The optional [Apple unified source](APPLE-UNIFIED.md) owns a separate native
+`/usr/bin/log` process, independent of output mode. Its stdout/stderr use private
+nonblocking pipes; at most 4 KiB of stderr is retained. Include that process's CPU
+and RSS when measuring native capture. File/stdin input starts no capture process.
 
 A complete report ends at `flush`. One absolute two-second deadline covers all
 chunks since the preceding flush. Cancellation allows up to 250 ms for ready

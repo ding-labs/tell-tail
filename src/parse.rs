@@ -65,7 +65,14 @@ impl Classifier {
     pub fn new(format: Format, field: String) -> Self {
         Self { format, field }
     }
+    /// Classify one record. Use classify_record when source metadata should be
+    /// omitted; this compatibility API represents such metadata as unknown.
     pub fn classify(&self, line: &[u8]) -> Classification {
+        if self.format == Format::AppleUnified {
+            return self
+                .classify_record(line)
+                .unwrap_or_else(Classification::unknown);
+        }
         let line = trim_start(line);
         if self.format == Format::Json
             || (self.format == Format::Auto && line.first() == Some(&b'{'))
@@ -76,9 +83,9 @@ impl Classifier {
                     parse_failure: true,
                 };
             }
-            match json_level(line, &self.field) {
+            match json_level(line, &self.field, false) {
                 Ok(level) => Classification {
-                    level,
+                    level: level.unwrap_or(Level::Unknown),
                     parse_failure: false,
                 },
                 Err(_) => Classification {
@@ -91,6 +98,32 @@ impl Classifier {
                 level: text_level(line),
                 parse_failure: false,
             }
+        }
+    }
+    /// Source-aware classification. None denotes Apple stream metadata, which
+    /// ingestion excludes from entry counts and accounts for as skipped bytes.
+    pub fn classify_record(&self, line: &[u8]) -> Option<Classification> {
+        if self.format != Format::AppleUnified {
+            return Some(self.classify(line));
+        }
+        let line = trim_start(line);
+        // The native tool writes a text banner alongside its NDJSON records.
+        if line.first() != Some(&b'{') {
+            return None;
+        }
+        let bad = Classification {
+            level: Level::Unknown,
+            parse_failure: true,
+        };
+        if std::str::from_utf8(line).is_err() || !valid_unicode_escapes(line) {
+            return Some(bad);
+        }
+        match json_level(line, "messageType", true) {
+            Ok(level) => level.map(|level| Classification {
+                level,
+                parse_failure: false,
+            }),
+            Err(_) => Some(bad),
         }
     }
 }
@@ -175,44 +208,75 @@ fn iso_timestamp(bytes: &[u8]) -> bool {
             .iter()
             .all(|b| b.is_ascii_digit() || b".Zz+-:".contains(b))
 }
-struct LevelSeed<'a>(&'a str);
+struct LevelSeed<'a> {
+    field: &'a str,
+    apple: bool,
+}
 impl<'de> DeserializeSeed<'de> for LevelSeed<'_> {
-    type Value = Level;
-    fn deserialize<D: de::Deserializer<'de>>(self, deserializer: D) -> Result<Level, D::Error> {
+    type Value = Option<Level>;
+    fn deserialize<D: de::Deserializer<'de>>(
+        self,
+        deserializer: D,
+    ) -> Result<Self::Value, D::Error> {
         deserializer.deserialize_map(self)
     }
 }
 impl<'de> Visitor<'de> for LevelSeed<'_> {
-    type Value = Level;
+    type Value = Option<Level>;
     fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str("a JSON log object")
     }
-    fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Level, M::Error> {
+    fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Self::Value, M::Error> {
         let mut found = None;
         while let Some(key) = map.next_key::<Cow<'de, str>>()? {
-            if key == self.0 {
+            if key == self.field {
                 if found.is_some() {
                     return Err(de::Error::custom("duplicate severity field"));
                 }
                 let raw: &RawValue = map.next_value()?;
-                let level = if let Ok(s) = serde_json::from_str::<&str>(raw.get()) {
-                    Level::from_bytes(s.as_bytes())
-                } else if let Ok(s) = serde_json::from_str::<String>(raw.get()) {
-                    Level::from_bytes(s.as_bytes())
+                let value = if self.apple && raw.get() == "null" {
+                    None
                 } else {
-                    Level::Unknown
+                    let decode = |s: &str| {
+                        if self.apple {
+                            apple_level(s.as_bytes())
+                        } else {
+                            Level::from_bytes(s.as_bytes())
+                        }
+                    };
+                    Some(if let Ok(s) = serde_json::from_str::<&str>(raw.get()) {
+                        decode(s)
+                    } else if let Ok(s) = serde_json::from_str::<String>(raw.get()) {
+                        decode(&s)
+                    } else {
+                        Level::Unknown
+                    })
                 };
-                found = Some(level);
+                found = Some(value);
             } else {
                 map.next_value::<IgnoredAny>()?;
             }
         }
-        Ok(found.unwrap_or(Level::Unknown))
+        Ok(found.flatten())
     }
 }
-fn json_level(line: &[u8], field: &str) -> Result<Level, serde_json::Error> {
+fn apple_level(value: &[u8]) -> Level {
+    for (name, level) in [
+        (b"Default".as_slice(), Level::Info),
+        (b"Info", Level::Info),
+        (b"Debug", Level::Debug),
+        (b"Error", Level::Error),
+        (b"Fault", Level::Fatal),
+    ] {
+        if value.eq_ignore_ascii_case(name) {
+            return level;
+        }
+    }
+    Level::Unknown
+}
+fn json_level(line: &[u8], field: &str, apple: bool) -> Result<Option<Level>, serde_json::Error> {
     let mut de = serde_json::Deserializer::from_slice(line);
-    let level = LevelSeed(field).deserialize(&mut de)?;
+    let level = LevelSeed { field, apple }.deserialize(&mut de)?;
     de.end()?;
     Ok(level)
 }

@@ -19,12 +19,16 @@ impl Engine {
         Self {
             stats: Stats::new(
                 args.window,
-                args.path()
-                    .map(|p| p.display().to_string())
-                    .unwrap_or_else(|| "stdin".into()),
+                if args.apple_unified {
+                    "macOS unified log".into()
+                } else {
+                    args.path()
+                        .map(|p| p.display().to_string())
+                        .unwrap_or_else(|| "stdin".into())
+                },
             ),
             framer: Framer::new(args.max_record_bytes as usize),
-            classifier: Classifier::new(args.format, args.level_field.clone()),
+            classifier: Classifier::new(args.input_format(), args.level_field.clone()),
         }
     }
     pub fn feed(&mut self, bytes: &[u8], at: Duration) {
@@ -34,13 +38,17 @@ impl Engine {
             framer,
             classifier,
         } = self;
-        framer.feed(bytes, |line, oversized| {
+        framer.feed_counted(bytes, |line, oversized, consumed| {
             let class = if oversized {
-                Classification::unknown()
+                Some(Classification::unknown())
             } else {
-                classifier.classify(line)
+                classifier.classify_record(line)
             };
-            stats.record_current(class, oversized);
+            if let Some(class) = class {
+                stats.record_current(class, oversized);
+            } else {
+                stats.skipped_bytes += consumed;
+            }
         });
     }
     pub fn finish(&mut self, at: Duration) {
@@ -50,13 +58,17 @@ impl Engine {
             framer,
             classifier,
         } = self;
-        framer.finish(|line, oversized| {
+        framer.finish_counted(|line, oversized, consumed| {
             let class = if oversized {
-                Classification::unknown()
+                Some(Classification::unknown())
             } else {
-                classifier.classify(line)
+                classifier.classify_record(line)
             };
-            stats.record_current(class, oversized);
+            if let Some(class) = class {
+                stats.record_current(class, oversized);
+            } else {
+                stats.skipped_bytes += consumed;
+            }
         });
     }
     pub fn discard_partial(&mut self) {

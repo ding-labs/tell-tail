@@ -39,6 +39,8 @@ fn accept(listener: &TcpListener) -> TcpStream {
     let start = Instant::now();
     loop {
         if let Ok((stream, _)) = listener.accept() {
+            // macOS can inherit the listener's nonblocking mode at accept.
+            stream.set_nonblocking(false).unwrap();
             stream
                 .set_read_timeout(Some(Duration::from_secs(2)))
                 .unwrap();

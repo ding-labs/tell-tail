@@ -6,6 +6,8 @@ pub enum Format {
     Auto,
     Text,
     Json,
+    /// Apple unified log NDJSON; maps messageType and skips stream metadata.
+    AppleUnified,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 pub enum Output {
@@ -14,6 +16,9 @@ pub enum Output {
     Text,
     Json,
     Prometheus,
+    /// Serve local metrics; stdin EOF keeps the server available until Ctrl+C.
+    #[cfg(feature = "web")]
+    Web,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 pub enum From {
@@ -27,6 +32,9 @@ pub enum From {
 pub struct Args {
     /// File to follow; omit or use - to read stdin.
     pub file: Option<PathBuf>,
+    /// Stream macOS unified logs at info level; no pipe or jq required.
+    #[arg(long, conflicts_with_all = ["file", "once", "from"])]
+    pub apple_unified: bool,
     /// Read a file from the beginning and exit at EOF.
     #[arg(long)]
     pub once: bool,
@@ -43,6 +51,14 @@ pub struct Args {
     pub window: u32,
     #[arg(long, value_enum, default_value = "auto")]
     pub output: Output,
+    /// Local web port (0 selects an available port); requires --output web.
+    #[cfg(feature = "web")]
+    #[arg(long)]
+    pub web_port: Option<u16>,
+    /// Open the local dashboard in the default browser; requires --output web.
+    #[cfg(feature = "web")]
+    #[arg(long)]
+    pub open: bool,
     /// Atomically publish Prometheus snapshots to this file.
     #[arg(long)]
     pub metrics_file: Option<PathBuf>,
@@ -69,12 +85,48 @@ pub struct Args {
     pub alert_cooldown: u32,
 }
 impl Args {
+    pub fn input_format(&self) -> Format {
+        if self.apple_unified {
+            Format::AppleUnified
+        } else {
+            self.format
+        }
+    }
     pub fn path(&self) -> Option<&std::path::Path> {
         self.file
             .as_deref()
             .filter(|p| *p != std::path::Path::new("-"))
     }
     pub fn validate(&self) -> Result<(), &'static str> {
+        if self.apple_unified {
+            if !cfg!(target_os = "macos") {
+                return Err(
+                    "--apple-unified live capture requires macOS; use --format apple-unified for saved NDJSON",
+                );
+            }
+            if !matches!(self.format, Format::Auto | Format::AppleUnified) {
+                return Err("--apple-unified selects the apple-unified format; omit --format");
+            }
+        }
+        if self.input_format() == Format::AppleUnified
+            && !matches!(self.level_field.as_str(), "level" | "messageType")
+        {
+            return Err("--format apple-unified uses messageType; omit --level-field");
+        }
+        #[cfg(feature = "web")]
+        {
+            if self.web_port.is_some() && self.output != Output::Web {
+                return Err("--web-port requires --output web");
+            }
+            if self.open && self.output != Output::Web {
+                return Err("--open requires --output web");
+            }
+            if self.once && self.output == Output::Web {
+                return Err(
+                    "--once cannot be combined with --output web; web serves final stdin metrics until Ctrl+C",
+                );
+            }
+        }
         if self
             .alert_error_percent
             .is_some_and(|p| !p.is_finite() || !(0.0..=100.0).contains(&p))
@@ -113,6 +165,50 @@ impl Args {
 mod tests {
     use super::*;
     #[test]
+    fn apple_source_and_capture_format_have_explicit_contracts() {
+        let args = Args::parse_from(["tell-tail", "--apple-unified"]);
+        assert_eq!(args.input_format(), Format::AppleUnified);
+        assert_eq!(args.validate().is_ok(), cfg!(target_os = "macos"));
+        for extra in [
+            vec!["capture.ndjson"],
+            vec!["-"],
+            vec!["--once"],
+            vec!["--from", "start"],
+        ] {
+            assert!(
+                Args::try_parse_from([vec!["tell-tail", "--apple-unified"], extra].concat())
+                    .is_err()
+            );
+        }
+        assert!(
+            Args::parse_from(["tell-tail", "--apple-unified", "--format", "text"])
+                .validate()
+                .is_err()
+        );
+        assert!(
+            Args::parse_from([
+                "tell-tail",
+                "--format",
+                "apple-unified",
+                "--level-field",
+                "severity"
+            ])
+            .validate()
+            .is_err()
+        );
+        assert!(
+            Args::parse_from([
+                "tell-tail",
+                "capture.ndjson",
+                "--once",
+                "--format",
+                "apple-unified"
+            ])
+            .validate()
+            .is_ok()
+        );
+    }
+    #[test]
     fn rejects_invalid_combinations() {
         for argv in [
             vec!["tell-tail", "--once"],
@@ -134,6 +230,46 @@ mod tests {
         ] {
             assert!(Args::try_parse_from(argv).unwrap().validate().is_ok());
         }
+    }
+
+    #[cfg(feature = "web")]
+    #[test]
+    fn web_arguments_keep_eof_and_port_contracts_explicit() {
+        assert!(
+            Args::try_parse_from(["tell-tail", "--output", "web", "--open"])
+                .unwrap()
+                .validate()
+                .is_ok()
+        );
+        assert!(
+            Args::try_parse_from(["tell-tail", "--open"])
+                .unwrap()
+                .validate()
+                .is_err()
+        );
+        for port in ["0", "8765", "65535"] {
+            assert!(
+                Args::try_parse_from(["tell-tail", "--output", "web", "--web-port", port])
+                    .unwrap()
+                    .validate()
+                    .is_ok()
+            );
+        }
+        assert!(
+            Args::try_parse_from(["tell-tail", "--output", "web", "--web-port", "65536"]).is_err()
+        );
+        assert!(
+            Args::try_parse_from(["tell-tail", "--web-port", "0"])
+                .unwrap()
+                .validate()
+                .is_err()
+        );
+        assert!(
+            Args::try_parse_from(["tell-tail", "input.log", "--output", "web", "--once"])
+                .unwrap()
+                .validate()
+                .is_err()
+        );
     }
 
     #[test]

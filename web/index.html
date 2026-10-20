@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Tell-Tail · Live metrics</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/dashboard.css">
+  <script type="module" src="/dashboard.mjs"></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="masthead">
+      <a class="brand" href="/" aria-label="Tell-Tail dashboard"><span class="brand-mark" aria-hidden="true">t&gt;</span> tell-tail</a>
+      <span class="local-label">LOCAL METRICS <span aria-hidden="true">/</span> V1</span>
+    </header>
+    <main>
+      <div class="heading">
+        <div><p class="eyebrow">LOG MONITOR</p><h1>Live metrics</h1></div>
+        <div class="controls">
+          <button id="freeze" type="button" aria-pressed="false" disabled>Freeze display</button>
+          <button id="retry" type="button" hidden>Retry connection</button>
+        </div>
+      </div>
+      <div class="connection" id="connection" data-tone="neutral" role="status" aria-live="polite" aria-atomic="true">Connecting to local monitor…</div>
+      <p class="display-note" id="display-note">Waiting for the first snapshot.</p>
+      <section class="source-panel" aria-label="Input and session">
+        <div class="source"><span class="label">SOURCE</span><span id="source">—</span></div>
+        <dl class="session-meta">
+          <div><dt>Input state</dt><dd id="input-state">—</dd></div>
+          <div><dt>Elapsed</dt><dd id="elapsed">—</dd></div>
+          <div><dt>Session entries</dt><dd id="total-records">—</dd></div>
+          <div><dt>Session bytes</dt><dd id="total-bytes">—</dd></div>
+        </dl>
+      </section>
+      <section aria-labelledby="rolling-title">
+        <div class="section-heading"><h2 id="rolling-title">Rolling window</h2><p id="window-note">—</p></div>
+        <div class="metrics-grid">
+          <article class="metric"><h3>Entries / second</h3><p class="metric-value accent" id="record-rate">—</p><p>All severity levels</p></article>
+          <article class="metric"><h3>MiB / second</h3><p class="metric-value" id="byte-rate">—</p><p>Bytes read from input</p></article>
+          <article class="metric"><h3>Warning ratio</h3><p class="metric-value" id="warning-ratio">—</p><p>Warn / all entries</p></article>
+          <article class="metric"><h3>Error + fatal ratio</h3><p class="metric-value" id="error-ratio">—</p><p>(Error + fatal) / all entries</p></article>
+        </div>
+      </section>
+      <div class="detail-grid">
+        <section class="panel chart-panel" aria-labelledby="throughput-title">
+          <div class="section-heading"><h2 id="throughput-title">Throughput</h2><span class="label">ENTRIES / SECOND</span></div>
+          <p class="subtle">Last 60 completed seconds · session elapsed time</p>
+          <figure>
+            <svg id="chart" viewBox="0 0 760 224" role="img" aria-labelledby="chart-title chart-description">
+              <title id="chart-title">Entries in each completed second</title>
+              <desc id="chart-description">Waiting for completed seconds.</desc>
+              <g class="chart-grid"><path d="M60 20H748 M60 99H748 M60 178H748"/></g>
+              <g class="chart-labels"><text id="chart-max" x="50" y="24" text-anchor="end">0</text><text x="50" y="182" text-anchor="end">0</text><text id="chart-start" x="60" y="210">—</text><text id="chart-end" x="748" y="210" text-anchor="end">—</text></g>
+              <path class="chart-area" id="chart-area"/>
+              <polyline class="chart-line" id="chart-line"/>
+              <g id="chart-dots" class="chart-dots"></g>
+              <text class="chart-empty" id="chart-empty" x="404" y="99" text-anchor="middle">Waiting for the first completed second</text>
+            </svg>
+            <figcaption id="chart-caption">No completed seconds yet.</figcaption>
+          </figure>
+          <details class="chart-data"><summary>View exact chart values</summary><div class="table-scroll"><table><thead><tr><th scope="col">Elapsed interval</th><th scope="col">Entries</th></tr></thead><tbody id="chart-values"></tbody></table></div></details>
+        </section>
+        <section class="panel severity-panel" aria-labelledby="severity-title">
+          <div class="section-heading"><h2 id="severity-title">Severity</h2><span class="label">SESSION TOTALS</span></div>
+          <p class="subtle">Distribution across all entries</p>
+          <table class="severity-table"><thead><tr><th scope="col">Level</th><th scope="col">Entries</th><th scope="col">Share</th></tr></thead><tbody id="severity"></tbody></table>
+          <p class="subtle" id="session-ratios">Warning — · Error + fatal —</p>
+        </section>
+      </div>
+      <details class="panel diagnostics">
+        <summary>Ingestion diagnostics <span>Session totals and current buffers</span></summary>
+        <dl class="diagnostic-grid">
+          <div><dt>Parse failures</dt><dd id="parse-failures">—</dd></div>
+          <div><dt>Oversized records</dt><dd id="oversized">—</dd></div>
+          <div><dt>Skipped bytes</dt><dd id="skipped">—</dd></div>
+          <div><dt>Discarded partial records</dt><dd id="discarded">—</dd></div>
+          <div><dt>Pending bytes</dt><dd id="pending">—</dd></div>
+          <div><dt>File backlog bytes</dt><dd id="backlog">—</dd></div>
+          <div><dt>Rolling entries</dt><dd id="window-records">—</dd></div>
+          <div><dt>Rolling bytes</dt><dd id="window-bytes">—</dd></div>
+        </dl>
+        <p class="subtle">Unavailable values appear as —. Counters are exact; chart positions are approximate.</p>
+      </details>
+    </main>
+    <footer><span>Aggregate metrics · no raw log capture</span><span>Close this tab freely. Stop the monitor with Ctrl+C.</span></footer>
+    <noscript>This dashboard requires JavaScript. Current metrics are available at <a href="/api/snapshot">/api/snapshot</a>.</noscript>
+  </div>
+</body>
+</html>
