@@ -21,8 +21,15 @@ zero warnings across 156 locked packages, using RustSec database commit
 `b19b2c83c2493961ccb12f9fc4699a00fb2c6c44`. The opt-in
 `snapshot-notifications` feature adds Tokio 1.52.3 (MIT, Rust 1.71 minimum),
 with only `sync` enabled, and pin-project-lite 0.2.17 (Apache-2.0 OR MIT).
-Default builds exclude both from their active dependency graph. The library
+At that review, default builds excluded both from their active dependency graph. The library
 starts no async runtime; an enabled consumer supplies its own executor.
+
+A later October 20 audit picked up RUSTSEC-2026-0382 and RUSTSEC-2026-0381 in
+the existing webhook TLS dependencies. All three lockfiles now pin the patched
+`rustls-webpki` 0.103.16 and `webpki-roots` 1.0.10. The updated application graph
+has zero vulnerabilities and warnings across 176 packages with RustSec database
+commit `e6f94f3760d5e6c54c1b05f204002263bc025524` (1,348 advisories). Webhook and
+alert tests pass on Rust 1.88.0. No advisories are ignored.
 
 Declared direct dependency licenses from `cargo metadata --locked`:
 
