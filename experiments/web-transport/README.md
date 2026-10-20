@@ -62,6 +62,16 @@ accounting is unavailable. Browser heap snapshots include benchmark sample stora
 The protocol-only replay campaign does not establish ingestion overhead, input
 freshness, hidden-tab behavior, or a long-run memory plateau.
 
+`node experiments/web-transport/pipeline.mjs` separately measures 25 marker trials
+per transport with real stdin/file following, idle and nominally paced 20K
+records/second. All injected records must be accounted for exactly. Timing uses
+one host monotonic clock from producer write through Playwright's observation of
+the DOM; automation round-trip cost is reported, not subtracted. The benchmark
+samples `Running::snapshot()` at 10 Hz, adding a possible sampling interval on top
+of engine publication; the planned notification subscription is not implemented
+by this experiment. Paced input is a correctness/freshness workload and does not
+measure maximum ingestion capacity or establish the 5% overhead target.
+
 Frames use actual engine statistics with 60 completed history buckets. The
 `large-counters` profile deliberately widens cumulative counters/history to u64
 limits; it is a payload-width stress case, not a consistent ingestion ledger.
