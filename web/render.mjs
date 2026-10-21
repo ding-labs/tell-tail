@@ -9,6 +9,8 @@ let chartEnd = 0;
 let chartVertices = [];
 let chartTarget = [];
 let chartAnimation = 0;
+let chartTransform = null;
+const chartMotion = byId('chart-motion');
 // A small monitoring chart does not need to redraw at the display refresh rate.
 // Keep the full-second transition, but bound SVG geometry updates to 20 Hz.
 const chartFrameMs = 1000 / 20;
@@ -49,9 +51,22 @@ function drawChart(vertices) {
   }
 }
 
-export function stopChartAnimation() {
+function cancelChartAnimation() {
   cancelAnimationFrame(chartAnimation);
   chartAnimation = 0;
+  chartTransform?.cancel();
+  chartTransform = null;
+}
+
+function visibleVertices() {
+  if (!chartTransform) return chartVertices;
+  const width = byId('chart').getBoundingClientRect().width;
+  const shift = width ? new DOMMatrixReadOnly(getComputedStyle(chartMotion).transform).m41 * 760 / width : 0;
+  return chartVertices.map(p => ({ ...p, x: p.x + shift }));
+}
+
+export function stopChartAnimation() {
+  cancelChartAnimation();
   drawChart(chartTarget);
 }
 reducedMotion.addEventListener('change', () => { if (reducedMotion.matches) stopChartAnimation(); });
@@ -82,9 +97,8 @@ function chart(m) {
   const end = Math.floor(m.elapsed_seconds);
   const animate = chartSession === m.session_id && end === chartEnd + 1 && chartVertices.length
     && vertices.length && !reducedMotion.matches && !document.hidden && !finalStates.has(m.state);
-  cancelAnimationFrame(chartAnimation);
-  chartAnimation = 0;
-  const previous = chartVertices;
+  const previous = visibleVertices();
+  cancelChartAnimation();
   chartTarget = vertices;
   chartSession = m.session_id;
   chartEnd = end;
@@ -113,35 +127,59 @@ function chart(m) {
   byId('chart-values').replaceChildren(rows);
   if (animate) {
     const step = 688 / 59;
-    const from = vertices.map(p => previous.find(old => old.second === p.second)
+    const previousBySecond = new Map(previous.map(p => [p.second, p]));
+    const from = vertices.map(p => previousBySecond.get(p.second)
       ?? { ...p, x: p.x + step, y: previous.at(-1).y });
     // Keep the outgoing point until it crosses the clipped left edge.
     const outgoing = previous.filter(p => p.second < vertices[0].second);
-    const start = performance.now();
-    let lastPaint = start;
-    // Reuse interpolation objects instead of allocating a new graph every frame.
-    const moving = [...outgoing, ...vertices].map(p => ({ ...p }));
-    const tick = now => {
-      const progress = Math.min(1, (now - start) / 1000);
-      if (progress === 1) {
-        chartAnimation = 0;
-        drawChart(vertices);
-        return;
-      }
-      if (now - lastPaint >= chartFrameMs) {
-        lastPaint = now;
-        for (let i = 0; i < outgoing.length; i++) moving[i].x = outgoing[i].x - step * progress;
-        for (let i = 0; i < vertices.length; i++) {
-          const p = moving[outgoing.length + i];
-          p.x = from[i].x + (vertices[i].x - from[i].x) * progress;
-          p.y = from[i].y + (vertices[i].y - from[i].y) * progress;
+    const retained = vertices.filter(p => previousBySecond.has(p.second));
+    const shift = retained.length ? previousBySecond.get(retained[0].second).x - retained[0].x : 0;
+    const canTranslate = shift > 0 && shift <= step * 2 && retained.every(p => {
+      const old = previousBySecond.get(p.second);
+      return Math.abs(old.y - p.y) < 1e-6 && Math.abs(old.x - p.x - shift) < 1e-6;
+    });
+    if (canTranslate) {
+      // Retained counts and scale are unchanged: rasterize once and let the
+      // browser scroll a composited layer, without per-frame SVG/DOM writes.
+      drawChart([...outgoing.map(p => ({ ...p, x: p.x - shift })), ...vertices]);
+      const animation = chartMotion.animate([
+        { transform: `translateX(${shift / 760 * 100}%)` },
+        { transform: 'translateX(0%)' },
+      ], { duration: 1000, easing: 'linear' });
+      chartTransform = animation;
+      animation.onfinish = () => {
+        if (chartTransform !== animation) return;
+        chartTransform = null;
+        drawChart(chartTarget);
+      };
+    } else {
+      // Rescaling or revised historical values still interpolate actual geometry.
+      const start = performance.now();
+      let lastPaint = start;
+      // Reuse interpolation objects instead of allocating a new graph every frame.
+      const moving = [...outgoing, ...vertices].map(p => ({ ...p }));
+      const tick = now => {
+        const progress = Math.min(1, (now - start) / 1000);
+        if (progress === 1) {
+          chartAnimation = 0;
+          drawChart(vertices);
+          return;
         }
-        drawChart(moving);
-      }
+        if (now - lastPaint >= chartFrameMs) {
+          lastPaint = now;
+          for (let i = 0; i < outgoing.length; i++) moving[i].x = outgoing[i].x - step * progress;
+          for (let i = 0; i < vertices.length; i++) {
+            const p = moving[outgoing.length + i];
+            p.x = from[i].x + (vertices[i].x - from[i].x) * progress;
+            p.y = from[i].y + (vertices[i].y - from[i].y) * progress;
+          }
+          drawChart(moving);
+        }
+        chartAnimation = requestAnimationFrame(tick);
+      };
+      drawChart([...outgoing, ...from]);
       chartAnimation = requestAnimationFrame(tick);
-    };
-    drawChart([...outgoing, ...from]);
-    chartAnimation = requestAnimationFrame(tick);
+    }
   } else drawChart(vertices);
   byId('chart-empty').setAttribute('visibility', points.length ? 'hidden' : 'visible');
   text('chart-max', points.length ? (max >= 1e6 ? max.toExponential(1) : rate(max)) : '0');

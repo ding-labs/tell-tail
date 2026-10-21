@@ -48,19 +48,24 @@
           <div class="section-heading"><h2 id="throughput-title">Throughput</h2><span class="label">ENTRIES / SECOND</span></div>
           <p class="subtle">Last 60 completed seconds · session elapsed time</p>
           <figure>
+            <div class="chart-surface">
             <svg id="chart" viewBox="0 0 760 224" role="img" aria-labelledby="chart-title chart-description">
               <title id="chart-title">Entries in each completed second</title>
               <desc id="chart-description">Waiting for completed seconds.</desc>
               <g class="chart-grid"><path d="M60 20H748 M60 99H748 M60 178H748"/></g>
               <g class="chart-labels"><text id="chart-max" x="50" y="24" text-anchor="end">0</text><text x="50" y="182" text-anchor="end">0</text><text id="chart-start" x="60" y="210">—</text><text id="chart-end" x="748" y="210" text-anchor="end">—</text></g>
-              <defs><clipPath id="chart-clip"><rect x="59" y="18" width="690" height="163"/></clipPath></defs>
-              <g clip-path="url(#chart-clip)">
+              <text class="chart-empty" id="chart-empty" x="404" y="99" text-anchor="middle">Waiting for the first completed second</text>
+            </svg>
+            <div class="chart-viewport">
+              <div id="chart-motion">
+              <svg viewBox="0 0 760 224" aria-hidden="true" focusable="false">
               <path class="chart-area" id="chart-area"/>
               <path class="chart-line" id="chart-line"/>
               <g id="chart-dots" class="chart-dots"></g>
-              </g>
-              <text class="chart-empty" id="chart-empty" x="404" y="99" text-anchor="middle">Waiting for the first completed second</text>
-            </svg>
+              </svg>
+              </div>
+            </div>
+            </div>
             <figcaption id="chart-caption">No completed seconds yet.</figcaption>
           </figure>
           <details class="chart-data"><summary>View exact chart values</summary><div class="table-scroll"><table><thead><tr><th scope="col">Elapsed interval</th><th scope="col">Entries</th></tr></thead><tbody id="chart-values"></tbody></table></div></details>
