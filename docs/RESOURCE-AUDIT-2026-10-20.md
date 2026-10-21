@@ -96,5 +96,54 @@ Reduced-motion settings already disable interpolation, but their CPU savings
 were not measured here. No runtime code was changed during this audit.
 
 Local diagnostic artifacts (ignored by Git) are under `work/resource-audit/`:
-`profile.mjs`, `measurements.json`, `progress.txt`, `rust-tests.txt`,
+`profile.mjs`, `measurements-before.json`, `progress-before.txt`, `rust-tests.txt`,
 `frame-tests.txt`, `leaks-warmup.txt`, and `descriptors-before-churn.txt`.
+
+## Chart optimization and repeat measurement
+
+Repeated October 20, 18:48–18:52 America/Los_Angeles, with the same hardware,
+Chrome version, viewport, capture arguments, phase durations and profiling script.
+Source: `c803a59` (clean workspace); release binary SHA-256:
+`fb62516b184f9d433036a2032b1059829442add34db99cbda859a8cd5750158a`.
+
+The chart retains full-second transitions and monotone cubic curves, but limits
+SVG redraws to 20 Hz. Animation uses cached path elements, a bounded map of dots
+instead of a linear search for each dot, and reusable interpolation objects.
+The browser still schedules animation callbacks at the display refresh rate;
+expensive geometry and DOM updates run only when the paint interval is due.
+The final target is always drawn when the transition completes or is stopped.
+
+| Chrome phase | Before CPU | After CPU | Before median RSS MiB | After median RSS MiB |
+| --- | ---: | ---: | ---: | ---: |
+| Blank page | 2.37% | 2.38% | 957 | 979 |
+| Dashboard warmup | 35.10% | 17.64% | 1,139 | 1,107 |
+| Dashboard steady, 120 seconds | 34.72% | 16.33% | 1,016 | 1,109 |
+| Frozen dashboard | 3.63% | 3.35% | 1,004 | 1,105 |
+| Live after 40 reloads | 38.85% | 19.99% | 1,047 | 1,178 |
+
+Steady browser CPU decreased **53%**, with similar live input rates: 277 versus
+275 records/s and approximately 0.28 MiB/s in both phases. This is one before/after
+run per version under real system activity, not repeated controlled trials.
+Browser RSS varies with process caches and allocation; the repeat does not show
+a memory reduction. These are whole-browser summed RSS values, as above.
+
+Tell-Tail's repeat steady-phase CPU was 0.88%, with RSS exactly 4.188 MiB
+throughout the phase. Apple capture used 2.17% CPU and a median 6.109 MiB RSS.
+The session processed 74,742 records in approximately 251 seconds.
+
+After forced garbage collection, used JS heap was 1,546,152 bytes after warmup,
+1,695,960 after the steady phase, and 1,765,492 after reload churn. The last two
+observations both had one document, 869 DOM nodes and 22 JS event listeners;
+all observations had 480 elements, 60 dots and 60 history rows. The warmup DOM
+counter was temporarily higher (1,377 nodes), then returned to 869. No uncaught
+page errors occurred. The final monitor descriptor count was 10; `leaks` again
+reported zero leaked bytes with the same macOS inspection restriction. The monitor
+and capture process were absent after shutdown. This remains short-run evidence.
+
+Validation: the release build, all 10 Rust web tests, and 17 default browser tests
+passed. The chart regression test checks bounded SVG writes over a complete
+transition, continued motion between samples, curve bounds, freeze, reduced
+motion, session resets and final metrics. The opt-in native hidden-tab test was
+also passed separately. Local repeat artifacts are `measurements-after.json`,
+`progress-after.txt`, `browser-tests-after.txt`, `web-tests-after.txt`, and
+`visibility-after.txt` under `work/resource-audit/`.
