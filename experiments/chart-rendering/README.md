@@ -1,7 +1,7 @@
 # Browser chart comparison
 
-Benchmark-only Chart.js 4.5.1 adapter and repeatable workload. Production assets
-and Rust dependencies are unchanged. The adapter preserves the dashboard, SVG
+Benchmark-only Chart.js 4.5.1 adapter and repeatable workload. Chart.js is not a
+production dependency. The adapter preserves the dashboard, SVG
 grid/labels and exact-value table while replacing the plot with a Canvas layer.
 This is not a complete replacement: production resizing, accessibility, tooltip,
 visibility/reconnect and bundling integration would need separate validation.
@@ -84,6 +84,8 @@ existing renderer directly; no native log capture, SSE parsing or reconnection
 logic is involved. Absolute CPU therefore differs from a live capture audit.
 
 - `svg20`: unmodified production chart with a 20 Hz paint ceiling.
+- `svg-motion`: current workspace SVG with native transform scrolling when the
+  retained values and scale are unchanged. Scale changes use geometry interpolation.
 - `svg60`: production chart with that ceiling removed (actual refresh rate varies).
 - `chartjs`: native Chart.js animation at browser refresh rate; parsing disabled,
   sorted/normalized data, explicit scale bounds, no legend/tooltip/event handling.
