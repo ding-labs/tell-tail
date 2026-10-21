@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import { rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -13,6 +14,15 @@ const seconds = Number(process.env.CHART_BENCH_SECONDS || 30);
 const warmup = Number(process.env.CHART_BENCH_WARMUP || 5);
 assert.ok(seconds >= 1 && warmup >= 0);
 await mkdir(output, { recursive: true });
+await mkdir(`${root}work`, { recursive: true });
+const lock = `${root}work/.chart-rendering-benchmark-lock`;
+try { await mkdir(lock); }
+catch (error) {
+  if (error.code !== 'EEXIST') throw error;
+  throw new Error(`Another chart benchmark owns ${lock}. Check its pid file before removing a stale lock.`);
+}
+process.once('exit',()=>rmSync(lock,{recursive:true,force:true}));
+await writeFile(`${lock}/pid`,String(process.pid));
 const original = await readFile(`${root}web/render.mjs`, 'utf8');
 const adapter = await readFile(new URL('./chartjs.mjs', import.meta.url), 'utf8');
 const driver = await readFile(new URL('./driver.mjs', import.meta.url), 'utf8');

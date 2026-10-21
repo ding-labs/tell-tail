@@ -28,6 +28,11 @@ An unstable browser process tree invalidates the trial and triggers up to two
 fresh-browser retries. `CHART_BENCH_RESUME=1` appends trials to an existing report;
 specify the remaining variants with `CHART_BENCH_ORDER` when resuming.
 The existing `PLAYWRIGHT_MODULE_DIR` override can select a Playwright installation.
+A workspace lock under `work/.chart-rendering-benchmark-lock/` prevents overlapping
+benchmark processes, including runs with different output directories. If a forced
+kill leaves a stale lock, verify that its recorded PID is no longer running before
+removing the lock directory. Playwright can handle SIGTERM without terminating
+the harness; confirm process exit before starting a replacement run.
 
 For four longer pairs, alternating which renderer runs first:
 
