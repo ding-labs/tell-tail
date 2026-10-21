@@ -52,6 +52,18 @@ seconds or an animation stall of one second invalidates the run instead of
 counting suspended time as evidence. Only process-tree changes trigger automatic
 retries; other failures require inspecting the cause before resuming.
 
+Once that paired run completes, produce a summary with:
+
+```sh
+node experiments/chart-rendering/analyze-pairs.mjs work/chart-benchmark-long/results.json
+```
+
+The analysis keeps each adjacent SVG/Chart.js pair together and reports every
+pair's relative CPU change and paint-cadence ratio. A lower overall mean alone
+does not establish consistency; inspect how many individual pairs favor Chart.js
+and the size of their differences. Four pairs on one machine are still a small
+sample, not a general claim about all browsers or devices.
+
 All variants show the same deterministic 60-point history, monotone curves, dots,
 fill, axes and exact labels. Dashboard metrics update every 100 ms; the history
 advances once per second. Animation duration is always 1,000 ms. The viewport is
