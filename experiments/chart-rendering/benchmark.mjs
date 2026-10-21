@@ -3,6 +3,8 @@ import { createServer } from 'node:http';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
+import { platform, release, arch, cpus } from 'node:os';
 import { chromium } from '../../browser-tests/helpers.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -71,6 +73,9 @@ const report = process.env.CHART_BENCH_RESUME === '1'
   ? JSON.parse(await readFile(`${output}/results.json`, 'utf8'))
   : { started: new Date().toISOString(), seconds, warmup, platform: process.platform,
   source: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding:'utf8' }).trim(),
+  host: { platform:platform(), release:release(), arch:arch(), cpu:cpus()[0]?.model },
+  inputs: Object.fromEntries([['render',original],['adapter',adapter],['driver',driver],['chartjs',chartjs]]
+    .map(([key,value])=>[key,createHash('sha256').update(value).digest('hex')])),
   chartjsVersion: JSON.parse(await readFile(new URL('./node_modules/chart.js/package.json', import.meta.url))).version,
   trials: [] };
 assert.equal(report.seconds, seconds);
@@ -88,12 +93,33 @@ async function trial(variant, index) {
     await sleep(warmup*1000);
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Performance.enable');
+    await cdp.send('HeapProfiler.collectGarbage');
+    const heapBefore = await cdp.send('Runtime.getHeapUsage');
     const metricsBefore = await cdp.send('Performance.getMetrics');
     const first = resources(launcher.process().pid);
     await page.evaluate(() => window.benchStartRecording());
     const start = performance.now();
     const samples = [];
-    while (performance.now()-start < seconds*1000) { await sleep(1000); samples.push(resources(launcher.process().pid)); }
+    let previousWall = Date.now();
+    let nextProgress = 60;
+    let maxObservationGap = 0;
+    while (performance.now()-start < seconds*1000) {
+      await sleep(1000);
+      const sample = resources(launcher.process().pid);
+      sample.seconds = (performance.now()-start)/1000;
+      const wall = Date.now();
+      maxObservationGap = Math.max(maxObservationGap,(wall-previousWall)/1000);
+      assert.ok(wall-previousWall < 5000, 'benchmark observation gap exceeded five seconds');
+      previousWall = wall;
+      assert.deepEqual(sample.pids, first.pids, 'CPU accounting requires a stable browser process tree');
+      assert.equal(await page.evaluate(()=>document.hidden),false,'benchmark page became hidden');
+      samples.push(sample);
+      if (sample.seconds >= nextProgress) {
+        console.log(JSON.stringify({progress:true,variant,index,seconds:sample.seconds,
+          cpu_percent:100*(sample.cpu-first.cpu)/sample.seconds,rss_mib:sample.rss}));
+        nextProgress += 60;
+      }
+    }
     const elapsed = (performance.now()-start)/1000;
     const paints = await page.evaluate(() => window.benchStopRecording());
     const last = samples.at(-1);
@@ -102,6 +128,7 @@ async function trial(variant, index) {
     const metricsAfter = await cdp.send('Performance.getMetrics');
     const metric = (metrics, name) => metrics.metrics.find(m=>m.name===name).value;
     const gaps = paints.slice(1).map((time,i)=>time-paints[i]);
+    assert.ok(gaps.length > 0 && Math.max(...gaps) < 1000, 'benchmark animation stalled for a second');
     await cdp.send('HeapProfiler.collectGarbage');
     const heap = await cdp.send('Runtime.getHeapUsage');
     const dom = await cdp.send('Memory.getDOMCounters');
@@ -125,6 +152,8 @@ async function trial(variant, index) {
     const trial = {variant,index,elapsed,cpu_percent:100*(last.cpu-first.cpu)/elapsed,
       rss_mib_median:percentile(samples.map(s=>s.rss),.5),rss_mib_max:Math.max(...samples.map(s=>s.rss)),
       js_heap_bytes:heap.usedSize,dom,paint_hz:paints.length/elapsed,
+      js_heap_before_bytes:heapBefore.usedSize,max_observation_gap_seconds:maxObservationGap,
+      paint_gap_ms_max:Math.max(...gaps),
       paint_gap_ms_median:percentile(gaps,.5),paint_gap_ms_p95:percentile(gaps,.95),
       renderer_task_cpu_percent:100*(metric(metricsAfter,'TaskDuration')-metric(metricsBefore,'TaskDuration'))/elapsed,
       positions, samples};

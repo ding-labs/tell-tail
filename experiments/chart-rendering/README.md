@@ -29,6 +29,24 @@ fresh-browser retries. `CHART_BENCH_RESUME=1` appends trials to an existing repo
 specify the remaining variants with `CHART_BENCH_ORDER` when resuming.
 The existing `PLAYWRIGHT_MODULE_DIR` override can select a Playwright installation.
 
+For four longer pairs, alternating which renderer runs first:
+
+```sh
+CHART_BENCH_SECONDS=120 CHART_BENCH_WARMUP=30 \
+CHART_BENCH_ORDER=svg20,chartjs,chartjs,svg20,svg20,chartjs,chartjs,svg20 \
+CHART_BENCH_OUTPUT="$PWD/work/chart-benchmark-long" \
+caffeinate -i node experiments/chart-rendering/benchmark.mjs
+```
+
+`caffeinate -i` on macOS prevents idle system sleep while the command runs.
+On other systems, run Node directly. This plan measures eight trials for about
+20 minutes including warmup. It records input hashes, host information, per-second
+CPU/RSS samples, pre/post-GC heap sizes, maximum paint gaps, and minute progress.
+Every sample checks process IDs and page visibility; an observation gap of five
+seconds or an animation stall of one second invalidates the run instead of
+counting suspended time as evidence. Only process-tree changes trigger automatic
+retries; other failures require inspecting the cause before resuming.
+
 All variants show the same deterministic 60-point history, monotone curves, dots,
 fill, axes and exact labels. Dashboard metrics update every 100 ms; the history
 advances once per second. Animation duration is always 1,000 ms. The viewport is
