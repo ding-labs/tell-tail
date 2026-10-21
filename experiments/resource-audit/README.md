@@ -58,3 +58,57 @@ confirm actual process exit before launching a replacement.
 A long soak can reveal sustained growth, but real log rates and system load
 vary. Compare measured phases within their workload context. A 15-minute clean
 run cannot exclude small, infrequent or workload-specific leaks.
+
+## Investigating Chrome growth
+
+`chrome-memory.mjs` separates natural RSS growth from heavyweight profiling. It
+keeps real Apple capture running and records each Chrome PID and process role.
+The live phases use OS RSS samples every five seconds and lightweight GC/DOM/heap
+checks only at phase boundaries. No tracing or heap snapshots run during those
+natural-growth and memory-pressure controls.
+
+```sh
+TELL_TAIL_BIN=target/release/tell-tail \
+MEMORY_CONTROL=30 MEMORY_RECOVERY=180 \
+MEMORY_OUTPUT="$PWD/work/chrome-memory" \
+caffeinate -di node experiments/resource-audit/chrome-memory.mjs
+node experiments/resource-audit/summarize-chrome-memory.mjs work/chrome-memory/results.json
+node experiments/resource-audit/inspect-heap.mjs \
+  work/chrome-memory/profile-before.heapsnapshot \
+  work/chrome-memory/profile-after.heapsnapshot \
+  work/chrome-memory/blank.heapsnapshot
+node experiments/resource-audit/inspect-native.mjs work/chrome-memory/profile-after.memory.json
+```
+
+These settings take about 26 minutes: two-minute warmup, 30-second settling,
+three five-minute live blocks, memory pressure with 30 seconds live, three-minute
+recovery, 30 seconds frozen, and 30 seconds resumed. Heavy profiling then records
+a heap/native baseline, runs another two minutes live, takes comparison snapshots,
+and tests navigation to a blank page, page closure, closed-page pressure, and
+reopening. Each final control settles for 30 seconds. `MEMORY_WARMUP`,
+`MEMORY_BLOCK`, `MEMORY_BLOCKS`, `MEMORY_RECOVERY`, `MEMORY_CONTROL`, and
+`MEMORY_PROFILE` configure the durations. For a plumbing check, set every value
+to 1 or 2 and use a separate output directory; it is not performance evidence.
+
+`Memory.simulatePressureNotification` sends critical pressure to this isolated
+Chrome instance; it does not impose system-wide memory pressure. Reclamation
+while the live chart retains its expected state supports discardable-cache or
+allocator retention as an explanation. Reclamation only at navigation/closure
+is weaker evidence: a page-lifetime leak can also disappear on teardown.
+Persistent growth in reachable objects or detached DOM nodes warrants tracing
+retainers rather than labeling all RSS growth a cache.
+
+Heavy profiling has material overhead. A preflight observed hundreds of MiB of
+additional RSS, a new tracing-service process, and renderer snapshot workspaces.
+Every checkpoint records RSS immediately before/after diagnostics, and the
+summary labels heavy checkpoints. Never combine those with natural-growth RSS.
+Allocator paths in native memory dumps overlap; `inspect-native.mjs` reports them
+individually without adding parent and child byte counts. The heap inspector
+reports shallow object bytes/counts and preserved snapshot IDs, not dominator
+retained sizes. It decodes the low detachedness bits using DevTools DOMLinkState
+and reports explicitly detached seeds. An empty seed list alone is not a complete
+leak proof.
+
+Relevant primary references: [Chrome memory diagnosis](https://developer.chrome.com/docs/devtools/memory-problems),
+[CDP Memory](https://chromedevtools.github.io/devtools-protocol/tot/Memory/), and
+[CDP Tracing](https://chromedevtools.github.io/devtools-protocol/tot/Tracing/).
