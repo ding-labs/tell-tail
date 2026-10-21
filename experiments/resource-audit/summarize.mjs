@@ -12,8 +12,10 @@ const result={source:report.source,browser:report.browserVersion,host:report.hos
 for(const group of ['monitor','capture','browser']) {
   const valid=live.filter(p=>p.groups[group].cpu_percent!==null);
   const samples=live.flatMap(p=>p.samples.map(s=>({time:(Date.parse(p.started)-Date.parse(live[0].started))/60000+s.seconds/60,rss:s[group].rss})));
-  const bins=new Map();for(const s of samples){const bin=Math.floor(s.time);if(!bins.has(bin))bins.set(bin,[]);bins.get(bin).push(s.rss);}
-  const minuteMedians=[...bins].map(([minute,values])=>[minute,median(values)]);
+  const bins=new Map();for(const s of samples){const bin=Math.floor(s.time);if(!bins.has(bin))bins.set(bin,[]);bins.get(bin).push(s);}
+  // Exclude short trailing bins so a single observation cannot stand in for a minute.
+  const minuteMedians=[...bins].filter(([,values])=>values.at(-1).time-values[0].time>=.75)
+    .map(([minute,values])=>[minute,median(values.map(s=>s.rss))]);
   result.groups[group]={cpu_percent:valid.reduce((s,p)=>s+p.groups[group].cpu_percent*p.seconds,0)/valid.reduce((s,p)=>s+p.seconds,0),cpu_valid_seconds:valid.reduce((s,p)=>s+p.seconds,0),rss_mib_median:median(samples.map(s=>s.rss)),rss_mib_range:[Math.min(...samples.map(s=>s.rss)),Math.max(...samples.map(s=>s.rss))],first_minute_median_mib:minuteMedians[0]?.[1],last_minute_median_mib:minuteMedians.at(-1)?.[1],rss_slope_mib_per_minute:slope(minuteMedians),minute_medians:minuteMedians};
 }
 result.heap_change_bytes=heaps.at(-1)?.usedSize-heaps[0]?.usedSize;
