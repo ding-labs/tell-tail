@@ -9,6 +9,7 @@ let chartEnd = 0;
 let chartVertices = [];
 let chartTarget = [];
 let chartAnimation = 0;
+let chartInterpolationEnd = 0;
 let chartTransform = null;
 const chartMotion = byId('chart-motion');
 // A small monitoring chart does not need to redraw at the display refresh rate.
@@ -59,6 +60,9 @@ function cancelChartAnimation() {
 }
 
 function visibleVertices() {
+  // Publication can beat the last rAF of the preceding second. Finish within
+  // one fallback paint interval instead of carrying tiny y-errors forever.
+  if (chartAnimation && performance.now() >= chartInterpolationEnd - chartFrameMs) return chartTarget;
   if (!chartTransform) return chartVertices;
   const width = byId('chart').getBoundingClientRect().width;
   const shift = width ? new DOMMatrixReadOnly(getComputedStyle(chartMotion).transform).m41 * 760 / width : 0;
@@ -155,6 +159,7 @@ function chart(m) {
     } else {
       // Rescaling or revised historical values still interpolate actual geometry.
       const start = performance.now();
+      chartInterpolationEnd = start + 1000;
       let lastPaint = start;
       // Reuse interpolation objects instead of allocating a new graph every frame.
       const moving = [...outgoing, ...vertices].map(p => ({ ...p }));
