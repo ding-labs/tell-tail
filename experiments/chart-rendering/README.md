@@ -84,6 +84,16 @@ logic is involved. Absolute CPU therefore differs from a live capture audit.
   below 1,000/30. Other variants' scheduling rules are unchanged. Pass `chartjs30`
   as a second argument to `analyze-pairs.mjs` for pairs using this variant.
 
+The two-pair 30 Hz follow-up uses:
+
+```sh
+CHART_BENCH_SECONDS=120 CHART_BENCH_WARMUP=30 \
+CHART_BENCH_ORDER=chartjs30,svg20,svg20,chartjs30 \
+CHART_BENCH_OUTPUT="$PWD/work/chart-benchmark-long-30hz" \
+caffeinate -di node experiments/chart-rendering/benchmark.mjs
+node experiments/chart-rendering/analyze-pairs.mjs work/chart-benchmark-long-30hz/results.json chartjs30
+```
+
 CPU is the delta in cumulative CPU time for the entire isolated browser process
 tree, sampled with `ps`; 100% is one core. A process-tree stability assertion
 guards against losing CPU time from exiting children. RSS sums the whole browser

@@ -64,3 +64,52 @@ Reproduction commands and method are in [README.md](README.md). Run
 `analyze-pairs.mjs` against the final raw report to reproduce the paired table.
 Local artifacts are `work/chart-benchmark-long/results.json`, `paired-summary.json`,
 fixed-history screenshots in that directory, and `work/chart-benchmark-long-run.txt`.
+
+## Explicit 30 Hz follow-up
+
+Measured October 21, 11:33–11:43 America/Los_Angeles, with the same host,
+browser, workload, geometry, 30-second warmup and 120-second measurement periods.
+Source `ac7f693` adds only a benchmark variant and analysis support; production
+rendering remains unchanged. Two adjacent pairs reversed the renderer order.
+
+This variant uses Chart.js native full-second interpolation but caps Canvas
+paints at 30 Hz. A 0.5 ms scheduling tolerance accommodates 33.3 ms callbacks on
+the 60 Hz display. Native animation calculations still run at browser refresh
+rate, so this evaluates a paint cap rather than a redesigned animation scheduler.
+
+| Pair | Order | SVG CPU % | Chart.js CPU % | Chart.js CPU increase | SVG / Chart.js paints per second |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 1 | Chart.js 30 Hz, SVG | 16.86 | 18.82 | 11.6% | 18.82 / 29.18 |
+| 2 | SVG, Chart.js 30 Hz | 17.21 | 24.07 | 39.8% | 18.71 / 28.66 |
+
+Duration-weighted CPU was **17.04% for SVG and 21.44% for capped Chart.js**,
+an approximately 26% increase. Actual paint cadence was 18.76 versus 28.92 Hz,
+respectively: Chart.js produced about 1.54 times as many paints. Its median paint
+gap was 33.3–33.4 ms and p95 was 49.2–49.8 ms, compared with SVG's approximately
+50.1 ms median and 66.9–67.0 ms p95. The higher cadence remained, but neither
+pair showed a total-browser CPU saving.
+
+Mean renderer task CPU was 5.94% for SVG and 5.80% for Chart.js. That small
+main-thread difference did not translate into lower CPU across the whole browser.
+Mean post-GC JS heap grew from 1.44 to 1.55 MiB for SVG and from 2.92 to 3.12 MiB
+for Chart.js over the measured phases. These observations do not establish leaks.
+
+All four follow-up trials passed the same process, visibility, sampling-gap,
+paint-gap, coordinate, scrolling and freeze checks. The largest observation gap
+was 1.136 seconds. No trial was rejected. The workspace lock prevented overlapping
+benchmark processes; all recorded benchmark browser PIDs were gone after both
+campaigns, and neither the benchmark harness nor its lock remained active.
+The machine was observed on battery power with Low Power Mode disabled; CPU
+frequency and other desktop activity were not controlled.
+
+In total, **all six paired comparisons used more CPU with Chart.js**. The combined
+campaigns contain approximately 24 minutes of accepted measurement, plus warmup.
+The 30 Hz follow-up has only two pairs, so it is less extensive than the four-pair
+native study, but it also does not support a CPU-driven migration. A higher paint
+cadence is a possible product benefit; lower CPU is not demonstrated by either
+configuration. Keep the current production renderer for the present CPU goal.
+
+Follow-up artifacts are under `work/chart-benchmark-long-30hz/`, including
+`results.json`, `paired-summary.json`, screenshots and power observations. The
+progress log is `work/chart-benchmark-long-30hz-run.txt`. Reproduce the summary
+with `analyze-pairs.mjs work/chart-benchmark-long-30hz/results.json chartjs30`.
