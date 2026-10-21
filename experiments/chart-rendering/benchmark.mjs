@@ -24,16 +24,24 @@ catch (error) {
 process.once('exit',()=>rmSync(lock,{recursive:true,force:true}));
 await writeFile(`${lock}/pid`,String(process.pid));
 const original = await readFile(`${root}web/render.mjs`, 'utf8');
+const baselineRef = process.env.CHART_BENCH_BASE_REF || 'cca36ad82271f7827953d5519514c1825dd67255';
+const asset = async path => baselineRef
+  ? execFileSync('git',['show',`${baselineRef}:web/${path}`],{cwd:root})
+  : readFile(`${root}web/${path}`);
+const baseline = (await asset('render.mjs')).toString();
+const currentHtml = await readFile(`${root}web/index.html`, 'utf8');
+const currentCss = await readFile(`${root}web/dashboard.css`);
 const adapter = await readFile(new URL('./chartjs.mjs', import.meta.url), 'utf8');
 const driver = await readFile(new URL('./driver.mjs', import.meta.url), 'utf8');
 const chartjs = await readFile(new URL('./node_modules/chart.js/dist/chart.umd.min.js', import.meta.url));
-const html = await readFile(`${root}web/index.html`, 'utf8');
+const html = (await asset('index.html')).toString();
 const fixture = await readFile(`${root}tests/fixtures/output/empty-web-v1.json`);
 function variantSource(variant) {
-  if (variant === 'svg20') return original;
-  if (variant === 'svg60') return original.replace('const chartFrameMs = 1000 / 20;', 'const chartFrameMs = 0;');
+  if (variant === 'svg-motion') return original;
+  if (variant === 'svg20') return baseline;
+  if (variant === 'svg60') return baseline.replace('const chartFrameMs = 1000 / 20;', 'const chartFrameMs = 0;');
   assert.ok(['chartjs', 'chartjs20', 'chartjs30'].includes(variant));
-  let source = original;
+  let source = baseline;
   const drawStart = source.indexOf('function drawChart(vertices) {');
   const drawEnd = source.indexOf('\nexport function stopChartAnimation()', drawStart);
   assert.ok(drawStart > 0 && drawEnd > drawStart);
@@ -47,15 +55,16 @@ function variantSource(variant) {
 const routes = new Map([
   ['/driver.mjs', driver], ['/chartjs.mjs', adapter], ['/chart.umd.min.js', chartjs],
   ['/fixture.json', fixture], ['/frame.mjs', await readFile(`${root}web/frame.mjs`)],
-  ['/dashboard.css', await readFile(`${root}web/dashboard.css`)], ['/favicon.svg', await readFile(`${root}web/favicon.svg`)],
+  ['/dashboard.css', await asset('dashboard.css')], ['/favicon.svg', await readFile(`${root}web/favicon.svg`)],
 ]);
 const server = createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
   const variant = url.searchParams.get('variant') || req.headers.referer && new URL(req.headers.referer).searchParams.get('variant') || 'svg20';
   let body;
-  if (url.pathname === '/') body = html.replace('<script type="module" src="/dashboard.mjs"></script>',
+  if (url.pathname === '/') body = (variant==='svg-motion'?currentHtml:html).replace('<script type="module" src="/dashboard.mjs"></script>',
     `${variant.startsWith('chartjs') ? '<script src="/chart.umd.min.js"></script>' : ''}<script type="module" src="/driver.mjs"></script>`);
   else if (url.pathname === '/render.mjs') body = variantSource(variant);
+  else if (url.pathname === '/dashboard.css' && variant==='svg-motion') body = currentCss;
   else body = routes.get(url.pathname);
   if (body === undefined) { res.writeHead(404).end(); return; }
   const type = url.pathname.endsWith('.mjs') || url.pathname.endsWith('.js') ? 'text/javascript' : url.pathname.endsWith('.css') ? 'text/css' : url.pathname.endsWith('.json') ? 'application/json' : url.pathname.endsWith('.svg') ? 'image/svg+xml' : 'text/html';
@@ -84,7 +93,8 @@ const report = process.env.CHART_BENCH_RESUME === '1'
   : { started: new Date().toISOString(), seconds, warmup, platform: process.platform,
   source: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding:'utf8' }).trim(),
   host: { platform:platform(), release:release(), arch:arch(), cpu:cpus()[0]?.model },
-  inputs: Object.fromEntries([['render',original],['adapter',adapter],['driver',driver],['chartjs',chartjs]]
+  baselineRef,
+  inputs: Object.fromEntries([['render',original],['baseline',baseline],['html',currentHtml],['css',currentCss],['adapter',adapter],['driver',driver],['chartjs',chartjs]]
     .map(([key,value])=>[key,createHash('sha256').update(value).digest('hex')])),
   chartjsVersion: JSON.parse(await readFile(new URL('./node_modules/chart.js/package.json', import.meta.url))).version,
   trials: [] };
@@ -107,6 +117,7 @@ async function trial(variant, index) {
     const heapBefore = await cdp.send('Runtime.getHeapUsage');
     const metricsBefore = await cdp.send('Performance.getMetrics');
     const first = resources(launcher.process().pid);
+    if (process.env.CHART_BENCH_PROFILE==='1') { await cdp.send('Profiler.enable'); await cdp.send('Profiler.start'); }
     const paintRecordingStart = await page.evaluate(() => { window.benchStartRecording(); return performance.now(); });
     const start = performance.now();
     const samples = [];
@@ -136,18 +147,44 @@ async function trial(variant, index) {
     assert.deepEqual(last.pids, first.pids, 'CPU accounting requires a stable browser process tree');
     assert.deepEqual(errors, []);
     const metricsAfter = await cdp.send('Performance.getMetrics');
+    if (process.env.CHART_BENCH_PROFILE==='1') {
+      const profile = await cdp.send('Profiler.stop');
+      await writeFile(`${output}/${variant}-${index}.cpuprofile`,JSON.stringify(profile.profile));
+    }
     const metric = (metrics, name) => metrics.metrics.find(m=>m.name===name).value;
     const gaps = paints.slice(1).map((time,i)=>time-paints[i]);
-    assert.ok(gaps.length > 0 && Math.max(...gaps) < 1000, 'benchmark animation stalled for a second');
-    assert.ok(paints[0]-paintRecordingStart < 1000 && paintRecordingEnd-paints.at(-1) < 1000,
+    assert.ok(gaps.length > 0 && (variant==='svg-motion' || Math.max(...gaps) < 1000), 'benchmark animation stalled for a second');
+    assert.ok(variant==='svg-motion' || paints[0]-paintRecordingStart < 1000 && paintRecordingEnd-paints.at(-1) < 1000,
       'benchmark animation stalled at the recording boundary');
     await cdp.send('HeapProfiler.collectGarbage');
     const heap = await cdp.send('Runtime.getHeapUsage');
     const dom = await cdp.send('Memory.getDOMCounters');
+    // Probe visible motion separately, so per-frame geometry reads cannot inflate
+    // the CPU measurement or prevent compositor-only animation.
+    const motion = variant.startsWith('svg') ? await page.evaluate(async () => {
+      const dots=[...document.querySelectorAll('#chart-dots circle')];
+      const second=dots[Math.floor(dots.length/2)].dataset.second;
+      const times=[]; let lastX; const start=performance.now();
+      await new Promise(resolve=>{
+        const tick=now=>{
+          const dot=document.querySelector(`#chart-dots circle[data-second="${second}"]`);
+          const x=dot?.getBoundingClientRect().x;
+          if (x!==undefined && x!==lastX) {times.push(now);lastX=x;}
+          if(now-start<4000)requestAnimationFrame(tick);else resolve();
+        };requestAnimationFrame(tick);
+      });
+      return {times,seconds:(performance.now()-start)/1000};
+    }) : null;
+    const motionGaps=motion ? motion.times.slice(1).map((time,i)=>time-motion.times[i]) : [];
+    assert.ok(!motion || motionGaps.length>0 && Math.max(...motionGaps)<1000,'visible chart motion stalled');
     // Capture a stable reference and then verify sustained intermediate motion.
     await page.evaluate(() => { window.benchPause(); window.benchFrame(120); });
     await page.screenshot({ path:`${output}/${variant}-${index}.png` });
-    const coordinates = () => page.evaluate(() => window.benchCoordinates?.() ?? [...document.querySelectorAll('#chart-dots circle')].map(p=>({x:+p.getAttribute('cx'),y:+p.getAttribute('cy')})));
+    const coordinates = () => page.evaluate(() => window.benchCoordinates?.() ?? [...document.querySelectorAll('#chart-dots circle')].map(p=>{
+      if (!document.getElementById('chart-motion')) return {x:+p.getAttribute('cx'),y:+p.getAttribute('cy')};
+      const box=p.getBoundingClientRect(),svg=document.getElementById('chart').getBoundingClientRect();
+      return {x:(box.x+box.width/2-svg.x)*760/svg.width,y:(box.y+box.height/2-svg.y)*224/svg.height};
+    }));
     const stable = await coordinates();
     const rect = await page.locator('#chart').boundingBox();
     const scale = variant.startsWith('chartjs') ? rect.width/760 : 1;
@@ -164,6 +201,8 @@ async function trial(variant, index) {
     const trial = {variant,index,elapsed,cpu_percent:100*(last.cpu-first.cpu)/elapsed,
       rss_mib_median:percentile(samples.map(s=>s.rss),.5),rss_mib_max:Math.max(...samples.map(s=>s.rss)),
       js_heap_bytes:heap.usedSize,dom,paint_hz:paints.length/elapsed,
+      visible_motion_hz:motion ? motion.times.length/motion.seconds : undefined,
+      visible_motion_gap_ms_p95:motion ? percentile(motionGaps,.95) : undefined,
       js_heap_before_bytes:heapBefore.usedSize,max_observation_gap_seconds:maxObservationGap,
       paint_gap_ms_max:Math.max(...gaps),
       first_paint_delay_ms:paints[0]-paintRecordingStart,last_paint_age_ms:paintRecordingEnd-paints.at(-1),

@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 
 const path = process.argv[2];
 const comparison = process.argv[3] || 'chartjs';
-assert.ok(['chartjs','chartjs30','chartjs20'].includes(comparison));
+assert.ok(['chartjs','chartjs30','chartjs20','svg-motion'].includes(comparison));
 assert.ok(path, 'usage: node analyze-pairs.mjs /path/to/results.json [chartjs|chartjs30|chartjs20]');
 const report = JSON.parse(await readFile(path, 'utf8'));
 assert.ok(report.finished, 'benchmark must finish before paired analysis');
@@ -19,6 +19,9 @@ for (let i=0;i<report.trials.length;i+=2) {
   pairs.push({
     pair:pairs.length+1,order:trials.map(t=>t.variant),
     svg_cpu_percent:svg.cpu_percent,chartjs_cpu_percent:chart.cpu_percent,
+    comparison,comparison_cpu_percent:chart.cpu_percent,
+    svg_visible_motion_hz:svg.visible_motion_hz??svg.paint_hz,
+    comparison_visible_motion_hz:chart.visible_motion_hz??chart.paint_hz,
     cpu_reduction_points:svg.cpu_percent-chart.cpu_percent,
     cpu_reduction_percent:100*(1-chart.cpu_percent/svg.cpu_percent),
     svg_paint_hz:svg.paint_hz,chartjs_paint_hz:chart.paint_hz,
@@ -33,6 +36,7 @@ const variants = Object.fromEntries(['svg20',comparison].map(variant=>{
     cpu_percent:trials.reduce((sum,t)=>sum+t.cpu_percent*t.elapsed,0)/elapsed,
     cpu_percent_range:range(trials.map(t=>t.cpu_percent)),
     paint_hz:trials.reduce((sum,t)=>sum+t.paint_hz*t.elapsed,0)/elapsed,
+    visible_motion_hz:mean(trials.map(t=>t.visible_motion_hz??t.paint_hz)),
     paint_gap_ms_p95_range:range(trials.map(t=>t.paint_gap_ms_p95)),
     paint_gap_ms_max:Math.max(...trials.map(t=>t.paint_gap_ms_max)),
     renderer_task_cpu_percent:mean(trials.map(t=>t.renderer_task_cpu_percent)),
@@ -53,4 +57,5 @@ console.log(JSON.stringify({
   paired_cpu_reduction_percent_range:range(pairs.map(p=>p.cpu_reduction_percent)),
   consistent_observed_cpu_reduction:lowerCpuPairs===pairs.length,
   higher_paint_cadence_in_every_pair:pairs.every(p=>p.paint_cadence_ratio>1),
+  higher_visible_motion_in_every_pair:pairs.every(p=>p.comparison_visible_motion_hz>p.svg_visible_motion_hz),
 },null,2));

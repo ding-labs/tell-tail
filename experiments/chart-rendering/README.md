@@ -6,6 +6,18 @@ grid/labels and exact-value table while replacing the plot with a Canvas layer.
 This is not a complete replacement: production resizing, accessibility, tooltip,
 visibility/reconnect and bundling integration would need separate validation.
 
+The legacy variants now read their HTML, CSS and renderer from Git revision
+`cca36ad` by default, preserving the previous SVG baseline as production evolves.
+`CHART_BENCH_BASE_REF` overrides that revision. `svg-motion` reads current workspace
+assets for SVG optimization comparisons. Optional `CHART_BENCH_PROFILE=1` saves a
+V8 CPU profile for each trial; leave it off for reported performance comparisons.
+SVG trials also sample visible dot positions over a separate four-second pass
+after CPU measurement. This measures native transform motion even when SVG path
+attributes do not change, without adding per-frame reads to the measured CPU.
+`paint_hz` still means path attribute updates and must not be treated as motion
+cadence for `svg-motion`. Pass `svg-motion` to `analyze-pairs.mjs` to compare it
+with the legacy baseline, using `visible_motion_hz` for smoothness.
+
 From the repository root, with Node, browser-tests dependencies and Chrome installed:
 
 ```sh
