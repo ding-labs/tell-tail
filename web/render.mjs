@@ -9,6 +9,12 @@ let chartEnd = 0;
 let chartVertices = [];
 let chartTarget = [];
 let chartAnimation = 0;
+// A small monitoring chart does not need to redraw at the display refresh rate.
+// Keep the full-second transition, but bound SVG geometry updates to 20 Hz.
+const chartFrameMs = 1000 / 20;
+const chartLine = byId('chart-line');
+const chartArea = byId('chart-area');
+let chartDots = new Map();
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
 // Monotone cubic interpolation rounds the line without overshooting counts.
@@ -32,11 +38,11 @@ function curve(vertices) {
 function drawChart(vertices) {
   chartVertices = vertices;
   const path = curve(vertices);
-  byId('chart-line').setAttribute('d', path);
-  byId('chart-area').setAttribute('d', path ? `${path} L${vertices.at(-1).x},178 L${vertices[0].x},178 Z` : '');
-  for (const dot of byId('chart-dots').children) {
-    const p = vertices.find(p => p.second === Number(dot.dataset.second));
-    if (p) {
+  chartLine.setAttribute('d', path);
+  chartArea.setAttribute('d', path ? `${path} L${vertices.at(-1).x},178 L${vertices[0].x},178 Z` : '');
+  for (const p of vertices) {
+    const dot = chartDots.get(p.second);
+    if (dot) {
       dot.setAttribute('cx', p.x);
       dot.setAttribute('cy', p.y);
     }
@@ -83,12 +89,14 @@ function chart(m) {
   chartSession = m.session_id;
   chartEnd = end;
   const dots = document.createDocumentFragment();
+  chartDots = new Map();
   const rows = document.createDocumentFragment();
   for (const p of vertices) {
     const interval = `${elapsed(p.second)}–${elapsed(p.second + 1)}`;
     const dot = document.createElementNS(svgNS, 'circle');
     for (const [key, value] of Object.entries({ cx: p.x, cy: p.y, r: 2.5 })) dot.setAttribute(key, String(value));
     dot.dataset.second = String(p.second);
+    chartDots.set(p.second, dot);
     const title = document.createElementNS(svgNS, 'title');
     title.textContent = `${interval}: ${integer(p.count)} entries`;
     dot.append(title);
@@ -110,15 +118,27 @@ function chart(m) {
     // Keep the outgoing point until it crosses the clipped left edge.
     const outgoing = previous.filter(p => p.second < vertices[0].second);
     const start = performance.now();
+    let lastPaint = start;
+    // Reuse interpolation objects instead of allocating a new graph every frame.
+    const moving = [...outgoing, ...vertices].map(p => ({ ...p }));
     const tick = now => {
       const progress = Math.min(1, (now - start) / 1000);
-      const moving = vertices.map((p, i) => ({ ...p,
-        x: from[i].x + (p.x - from[i].x) * progress,
-        y: from[i].y + (p.y - from[i].y) * progress,
-      }));
-      drawChart([...outgoing.map(p => ({ ...p, x: p.x - step * progress })), ...moving]);
-      if (progress < 1) chartAnimation = requestAnimationFrame(tick);
-      else { chartAnimation = 0; drawChart(vertices); }
+      if (progress === 1) {
+        chartAnimation = 0;
+        drawChart(vertices);
+        return;
+      }
+      if (now - lastPaint >= chartFrameMs) {
+        lastPaint = now;
+        for (let i = 0; i < outgoing.length; i++) moving[i].x = outgoing[i].x - step * progress;
+        for (let i = 0; i < vertices.length; i++) {
+          const p = moving[outgoing.length + i];
+          p.x = from[i].x + (vertices[i].x - from[i].x) * progress;
+          p.y = from[i].y + (vertices[i].y - from[i].y) * progress;
+        }
+        drawChart(moving);
+      }
+      chartAnimation = requestAnimationFrame(tick);
     };
     drawChart([...outgoing, ...from]);
     chartAnimation = requestAnimationFrame(tick);

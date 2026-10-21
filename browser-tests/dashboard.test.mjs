@@ -88,6 +88,13 @@ test('chart curves stay bounded and animate between seconds with motion controls
     return [Math.min(...ys), Math.max(...ys)];
   });
   assert.ok(bounds[0] >= 19.99 && bounds[1] <= 178.01, 'curve never invents negative counts or overshoots peaks');
+  await page.evaluate(() => {
+    window.chartPaints = 0;
+    window.chartObserver = new MutationObserver(records => {
+      window.chartPaints += records.filter(record => record.attributeName === 'd').length;
+    });
+    window.chartObserver.observe(document.getElementById('chart-line'), { attributes: true });
+  });
   await update(61, Array.from({ length: 60 }, (_, i) => i % 2 ? '0' : '100'));
   const before = await path();
   await page.clock.runFor(250);
@@ -95,22 +102,30 @@ test('chart curves stay bounded and animate between seconds with motion controls
   await page.clock.runFor(250);
   assert.notEqual(await path(), during, 'motion continues between incoming samples');
   assert.notEqual(before, during);
+  await page.clock.runFor(550);
+  const paints = await page.evaluate(() => {
+    window.chartObserver.disconnect();
+    return window.chartPaints;
+  });
+  assert.ok(paints >= 10 && paints <= 22, `full-second animation has bounded SVG updates: ${paints}`);
   assert.equal(await page.locator('#chart-values tr').count(), 60);
+  await update(62, Array(60).fill('25'));
+  await page.clock.runFor(100);
   await page.locator('#freeze').click();
   const frozen = await path();
   await page.clock.runFor(1200);
   assert.equal(await path(), frozen, 'freeze cancels ongoing motion');
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await update(62, Array(60).fill('0'));
+  await update(63, Array(60).fill('0'));
   const reduced = await path();
   await page.clock.runFor(500);
   assert.equal(await path(), reduced, 'reduced motion renders immediately');
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await update(63, ['2', '8', '1'], 'new-session');
+  await update(64, ['2', '8', '1'], 'new-session');
   const reset = await path();
   await page.clock.runFor(500);
   assert.equal(await path(), reset, 'session resets do not interpolate unrelated history');
-  await update(64, ['8', '1', '4'], 'new-session', 'complete');
+  await update(65, ['8', '1', '4'], 'new-session', 'complete');
   const final = await path();
   await page.clock.runFor(1200);
   assert.equal(await path(), final, 'final metrics render immediately');
