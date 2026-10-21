@@ -53,9 +53,12 @@
               <desc id="chart-description">Waiting for completed seconds.</desc>
               <g class="chart-grid"><path d="M60 20H748 M60 99H748 M60 178H748"/></g>
               <g class="chart-labels"><text id="chart-max" x="50" y="24" text-anchor="end">0</text><text x="50" y="182" text-anchor="end">0</text><text id="chart-start" x="60" y="210">—</text><text id="chart-end" x="748" y="210" text-anchor="end">—</text></g>
+              <defs><clipPath id="chart-clip"><rect x="59" y="18" width="690" height="163"/></clipPath></defs>
+              <g clip-path="url(#chart-clip)">
               <path class="chart-area" id="chart-area"/>
-              <polyline class="chart-line" id="chart-line"/>
+              <path class="chart-line" id="chart-line"/>
               <g id="chart-dots" class="chart-dots"></g>
+              </g>
               <text class="chart-empty" id="chart-empty" x="404" y="99" text-anchor="middle">Waiting for the first completed second</text>
             </svg>
             <figcaption id="chart-caption">No completed seconds yet.</figcaption>

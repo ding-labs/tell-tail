@@ -1,5 +1,5 @@
 import { elapsed, finalStates, FrameError, parseFrame } from './frame.mjs';
-import { render } from './render.mjs';
+import { render, stopChartAnimation } from './render.mjs';
 
 const connection = document.getElementById('connection');
 const note = document.getElementById('display-note');
@@ -179,10 +179,11 @@ function connect() {
   stream.onerror = () => { if (source === stream) void recover(); };
 }
 
-freeze.addEventListener('click', () => { frozen = !frozen; paint(); });
+freeze.addEventListener('click', () => { frozen = !frozen; if (frozen) stopChartAnimation(); paint(); });
 retry.addEventListener('click', () => { attempts = 0; connect(); });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
+    stopChartAnimation();
     retire();
     cancelAnimationFrame(animation);
     animation = 0;
@@ -190,7 +191,7 @@ document.addEventListener('visibilitychange', () => {
   } else if (!['capacity', 'invalid', 'failure'].includes(phase)) connect();
   paint();
 });
-window.addEventListener('pagehide', retire);
+window.addEventListener('pagehide', () => { stopChartAnimation(); retire(); });
 window.addEventListener('pageshow', event => { if (event.persisted) connect(); });
 setInterval(() => {
   if (!document.hidden && source && !isFinal() && performance.now() - lastAdvance >= 1000) void recover(true);

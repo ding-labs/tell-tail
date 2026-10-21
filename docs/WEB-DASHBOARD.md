@@ -22,7 +22,9 @@ it does not need piped stdin or `jq`.
 - Rolling entries/s, MiB/s, warning ratio, and error-plus-fatal ratio. The observed
   window duration is shown alongside the configured duration during warmup.
 - Throughput for up to 60 completed process-elapsed seconds, including idle
-  seconds. Each snapshot replaces the chart history. Expand **View exact chart
+  seconds. A monotone cubic curve connects samples without overshooting them;
+  one-second transitions animate at the display refresh rate (typically 60 fps).
+  Each snapshot replaces the chart history. Expand **View exact chart
   values** for a table with exact counts and elapsed intervals.
 - Severity counts and distribution for the entire session. Session ratios are
   separate from the rolling ratios above.
@@ -45,9 +47,12 @@ final state and asks you to resume to view its metrics.
 ## Connection behavior
 
 The client opens one EventSource to `/api/events`. There is one latest pending
-frame, one displayed frame, and at most one scheduled animation-frame callback.
+frame, one displayed frame, and at most one scheduled metrics-paint callback.
 Synchronous bursts produce one metrics paint; there is no accumulating frame
-queue. The chart updates only when completed-second history or session changes.
+queue. A separate bounded chart animation interpolates between completed-second
+histories for up to one second; it does not add measured subsecond samples.
+Freeze, hidden tabs, and reduced-motion preferences stop chart animation. Final
+frames, session changes, and gaps in history render immediately.
 Generation zero is valid, duplicates/older generations are ignored within a
 session, and a new session resets comparison and chart history.
 
