@@ -3,7 +3,7 @@
 ## Native Chart.js animation
 
 Measured October 21, 2026, 11:12–11:32 America/Los_Angeles, on Apple M3,
-macOS / Darwin 26.0.0, Chrome 156.0.8078.47 and Chart.js 4.5.1.
+macOS / Darwin 27.0.0, Chrome 156.0.8078.47 and Chart.js 4.5.1.
 The exact host release, source revision `08b7754`, and SHA-256 hashes of the
 renderer, adapter, workload and Chart.js bundle are in the local raw report.
 
