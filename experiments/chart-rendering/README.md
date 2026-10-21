@@ -24,6 +24,9 @@ in mirrored order: SVG20, Chart.js20, Chart.js native, SVG uncapped, then revers
 Each trial warms up for five seconds with a full history and measures 30 seconds.
 `CHART_BENCH_SECONDS`, `CHART_BENCH_WARMUP`, `CHART_BENCH_ORDER`,
 `CHART_BENCH_OUTPUT` and `CHART_BENCH_CHANNEL` override these settings.
+An unstable browser process tree invalidates the trial and triggers up to two
+fresh-browser retries. `CHART_BENCH_RESUME=1` appends trials to an existing report;
+specify the remaining variants with `CHART_BENCH_ORDER` when resuming.
 The existing `PLAYWRIGHT_MODULE_DIR` override can select a Playwright installation.
 
 All variants show the same deterministic 60-point history, monotone curves, dots,

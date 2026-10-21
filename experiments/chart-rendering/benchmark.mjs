@@ -67,10 +67,14 @@ function resources(rootPid) {
   return { cpu: selected.reduce((sum,row) => sum+row.cpu,0), rss: selected.reduce((sum,row) => sum+row.rss,0), pids: selected.map(row=>row.pid).sort((a,b)=>a-b) };
 }
 const percentile = (values, p) => { const sorted = [...values].sort((a,b)=>a-b); return sorted[Math.min(sorted.length-1, Math.floor(sorted.length*p))]; };
-const report = { started: new Date().toISOString(), seconds, warmup, platform: process.platform,
+const report = process.env.CHART_BENCH_RESUME === '1'
+  ? JSON.parse(await readFile(`${output}/results.json`, 'utf8'))
+  : { started: new Date().toISOString(), seconds, warmup, platform: process.platform,
   source: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding:'utf8' }).trim(),
   chartjsVersion: JSON.parse(await readFile(new URL('./node_modules/chart.js/package.json', import.meta.url))).version,
   trials: [] };
+assert.equal(report.seconds, seconds);
+assert.equal(report.warmup, warmup);
 async function trial(variant, index) {
   const launcher = await chromium.launchServer({ channel: process.env.CHART_BENCH_CHANNEL || 'chrome', headless: false });
   const browser = await chromium.connect(launcher.wsEndpoint());
@@ -131,7 +135,18 @@ async function trial(variant, index) {
 }
 try {
   const variants = (process.env.CHART_BENCH_ORDER || 'svg20,chartjs20,chartjs,svg60,svg60,chartjs,chartjs20,svg20').split(',');
-  for (let index=0;index<variants.length;index++) await trial(variants[index],index);
+  const offset = report.trials.length;
+  for (let index=0;index<variants.length;index++) {
+    for (let attempt=0;attempt<3;attempt++) {
+      try { await trial(variants[index],offset+index); break; }
+      catch (error) {
+        if (!error.message.includes('CPU accounting requires a stable browser process tree') || attempt === 2) throw error;
+        (report.rejectedTrials ??= []).push({variant:variants[index],reason:'browser process tree changed',attempt});
+        await writeFile(`${output}/results.json`,JSON.stringify(report,null,2));
+        console.log(`Discarding ${variants[index]} trial: browser process tree changed; retrying with a fresh browser.`);
+      }
+    }
+  }
   report.finished = new Date().toISOString();
   await writeFile(`${output}/results.json`,JSON.stringify(report,null,2));
 } finally { await new Promise(resolve=>server.close(resolve)); }
