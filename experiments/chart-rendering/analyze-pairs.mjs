@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const path = process.argv[2];
-assert.ok(path, 'usage: node analyze-pairs.mjs /path/to/results.json');
+const comparison = process.argv[3] || 'chartjs';
+assert.ok(['chartjs','chartjs30','chartjs20'].includes(comparison));
+assert.ok(path, 'usage: node analyze-pairs.mjs /path/to/results.json [chartjs|chartjs30|chartjs20]');
 const report = JSON.parse(await readFile(path, 'utf8'));
 assert.ok(report.finished, 'benchmark must finish before paired analysis');
 assert.ok(report.trials.length > 0 && report.trials.length % 2 === 0, 'complete adjacent pairs required');
@@ -11,9 +13,9 @@ const range = values => [Math.min(...values),Math.max(...values)];
 const pairs = [];
 for (let i=0;i<report.trials.length;i+=2) {
   const trials = report.trials.slice(i,i+2);
-  assert.deepEqual(trials.map(t=>t.variant).sort(), ['chartjs','svg20']);
+  assert.deepEqual(trials.map(t=>t.variant).sort(), [comparison,'svg20']);
   const svg = trials.find(t=>t.variant==='svg20');
-  const chart = trials.find(t=>t.variant==='chartjs');
+  const chart = trials.find(t=>t.variant===comparison);
   pairs.push({
     pair:pairs.length+1,order:trials.map(t=>t.variant),
     svg_cpu_percent:svg.cpu_percent,chartjs_cpu_percent:chart.cpu_percent,
@@ -23,7 +25,7 @@ for (let i=0;i<report.trials.length;i+=2) {
     paint_cadence_ratio:chart.paint_hz/svg.paint_hz,
   });
 }
-const variants = Object.fromEntries(['svg20','chartjs'].map(variant=>{
+const variants = Object.fromEntries(['svg20',comparison].map(variant=>{
   const trials=report.trials.filter(t=>t.variant===variant);
   const elapsed=trials.reduce((sum,t)=>sum+t.elapsed,0);
   return [variant,{

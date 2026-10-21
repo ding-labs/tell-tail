@@ -4,7 +4,11 @@ let instance;
 let lastSecond;
 let lastPaint = -Infinity;
 let forcePaint = false;
-const paintInterval = location.search.includes('chartjs20') ? 50 : 0;
+const targetHz = location.search.includes('chartjs30') ? 30 : location.search.includes('chartjs20') ? 20 : 0;
+const paintInterval = targetHz ? 1000 / targetHz : 0;
+// A 60 Hz callback often arrives after 33.3 ms rather than exactly 33.333 ms.
+// Avoid accidentally dropping every second 30 Hz paint due to clock rounding.
+const paintTolerance = targetHz === 30 ? .5 : 0;
 
 export function updateCanvas(vertices, animate) {
   if (!vertices.length) return;
@@ -42,7 +46,7 @@ export function updateCanvas(vertices, animate) {
       },
       plugins: [{ id: 'benchmark-paints', beforeDraw() {
         const now = performance.now();
-        if (!forcePaint && now - lastPaint < paintInterval) return false;
+        if (!forcePaint && now - lastPaint + paintTolerance < paintInterval) return false;
         lastPaint = now;
       }, afterDraw() { window.benchPaint?.(); } }],
     });

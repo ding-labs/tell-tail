@@ -32,7 +32,7 @@ const fixture = await readFile(`${root}tests/fixtures/output/empty-web-v1.json`)
 function variantSource(variant) {
   if (variant === 'svg20') return original;
   if (variant === 'svg60') return original.replace('const chartFrameMs = 1000 / 20;', 'const chartFrameMs = 0;');
-  assert.ok(['chartjs', 'chartjs20'].includes(variant));
+  assert.ok(['chartjs', 'chartjs20', 'chartjs30'].includes(variant));
   let source = original;
   const drawStart = source.indexOf('function drawChart(vertices) {');
   const drawEnd = source.indexOf('\nexport function stopChartAnimation()', drawStart);

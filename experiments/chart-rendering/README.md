@@ -78,6 +78,11 @@ logic is involved. Absolute CPU therefore differs from a live capture audit.
 - `chartjs20`: the same native animation with a `beforeDraw` plugin limiting Canvas
   paints to 20 Hz. Animation calculations still run at browser refresh rate; this
   separates paint cost from scheduling. Completion and stop force a final paint.
+- `chartjs30`: the same native animation with a 30 Hz paint ceiling, to test the
+  earlier observed smoother cadence on a display now delivering 60 Hz. A 0.5 ms
+  scheduling tolerance avoids rejecting a 33.3 ms interval because it is just
+  below 1,000/30. Other variants' scheduling rules are unchanged. Pass `chartjs30`
+  as a second argument to `analyze-pairs.mjs` for pairs using this variant.
 
 CPU is the delta in cumulative CPU time for the entire isolated browser process
 tree, sampled with `ps`; 100% is one core. A process-tree stability assertion
