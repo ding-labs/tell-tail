@@ -112,3 +112,22 @@ leak proof.
 Relevant primary references: [Chrome memory diagnosis](https://developer.chrome.com/docs/devtools/memory-problems),
 [CDP Memory](https://chromedevtools.github.io/devtools-protocol/tot/Memory/), and
 [CDP Tracing](https://chromedevtools.github.io/devtools-protocol/tot/Tracing/).
+
+On macOS, `observe-footprint.mjs` can run alongside the Chrome diagnostic after
+its first baseline checkpoint exists:
+
+```sh
+node experiments/resource-audit/observe-footprint.mjs work/chrome-memory
+node experiments/resource-audit/inspect-footprints.mjs work/chrome-memory
+```
+
+It invokes `/usr/bin/footprint` every 30 seconds for only the owned Chrome process
+tree, storing kernel-accounted process footprints without enabling Chrome tracing.
+This complements RSS: Apple's footprint accounting includes dirty and compressed
+memory, whereas RSS can change as resident clean/shared pages are reclaimed.
+See [Apple's memory diagnosis guidance](https://developer.apple.com/videos/play/wwdc2021/10180/).
+The observer saves JSON warnings/errors and stops when the main report finishes.
+Its initially observed phase can lag a report flush, so the analyzer assigns
+phases using final timestamps. If collection starts partway through the live
+run, report that coverage explicitly; it cannot reconstruct an earlier footprint
+baseline. The optional `FOOTPRINT_ONCE=1` performs one plumbing check.
