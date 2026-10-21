@@ -57,3 +57,40 @@ test('invalid versions, states, numbers, counter encodings and sizes fail clearl
     assert.throws(() => parseFrame(malformed), /Unsupported or invalid/);
   }
 });
+
+// Stats retains the whole oldest 100 ms bucket, including its partial edge.
+test('quantized rolling windows remain valid after filling and wrapping', () => {
+  for (const seconds of [1, 60, 3600]) {
+    for (const observed of [seconds - 0.001, seconds, seconds + 0.001, seconds + 0.099999999]) {
+      const frame = JSON.parse(fixture);
+      frame.metrics.window.configured_seconds = seconds;
+      frame.metrics.window.observed_seconds = observed;
+      assert.equal(parseFrame(JSON.stringify(frame)).metrics.window.observed_seconds, observed);
+    }
+    for (const observed of [seconds + 0.1, seconds + 1]) {
+      const frame = JSON.parse(fixture);
+      frame.metrics.window.configured_seconds = seconds;
+      frame.metrics.window.observed_seconds = observed;
+      assert.throws(() => parseFrame(JSON.stringify(frame)), /Unsupported or invalid/);
+    }
+  }
+});
+
+test('validation errors identify fields without echoing untrusted payloads', () => {
+  for (const [mutate, field] of [
+    [f => f.metrics.window.observed_seconds = 61, 'metrics.window.observed_seconds'],
+    [f => f.metrics.totals.levels.info = 'private log content', 'metrics.totals.levels.info'],
+    [f => f.metrics.window = null, 'metrics.window'],
+    [f => f.metrics.history = ['secret'], 'metrics.history[]'],
+  ]) {
+    const f = JSON.parse(fixture);
+    mutate(f);
+    assert.throws(() => parseFrame(JSON.stringify(f)), error => {
+      assert.equal(error.name, 'FrameError');
+      assert.equal(error.field, field);
+      assert.doesNotMatch(error.message, /private|secret/);
+      return true;
+    });
+  }
+  assert.throws(() => parseFrame('{"secret'), /frame must be valid JSON/);
+});

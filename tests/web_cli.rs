@@ -249,6 +249,10 @@ fn bind_failure_precedes_input_start_and_invalid_web_arguments_exit_two() {
             .to_ascii_lowercase()
             .contains("address already in use")
     );
+    assert!(String::from_utf8_lossy(&output.stderr).contains(&format!(
+        "cannot bind web listener at {}",
+        listener.local_addr().unwrap()
+    )));
     for args in [
         vec!["--web-port", "0"],
         vec!["--output", "web", "--web-port", "65536"],

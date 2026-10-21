@@ -1,4 +1,4 @@
-import { elapsed, finalStates, parseFrame } from './frame.mjs';
+import { elapsed, finalStates, FrameError, parseFrame } from './frame.mjs';
 import { render } from './render.mjs';
 
 const connection = document.getElementById('connection');
@@ -18,6 +18,22 @@ let retryTimer = 0;
 let attempts = 0;
 let lastAdvance = performance.now();
 let phase = 'connecting';
+let failureDetail = '';
+const connectionWarnings = new Set();
+
+// Report once per connection outage, without retaining or logging raw frames.
+function warnConnection(reason, category = 'stream') {
+  if (connectionWarnings.has(category)) return;
+  connectionWarnings.add(category);
+  console.warn(`[tell-tail] ${reason}; reconnecting. Last metrics retained.`);
+}
+function reportError(reason, endpoint = '/api/events') {
+  console.error(`[tell-tail] ${reason}`, {
+    endpoint,
+    lastSequence: latest?.sequence ?? null,
+    elapsedSeconds: latest?.metrics.elapsed_seconds ?? null,
+  });
+}
 
 function setText(element, value) { if (element.textContent !== value) element.textContent = value; }
 function isFinal() { return latest && finalStates.has(latest.metrics.state); }
@@ -47,7 +63,7 @@ function paint() {
         stale: 'Stale · no new snapshot for at least 1 second. Reconnecting…',
         hidden: 'Updates paused while this tab is hidden',
         capacity: 'Stream capacity reached · four live tabs are already connected. Close one, then retry.',
-        invalid: 'Unsupported or invalid metrics frame · update the monitor, then retry.',
+        invalid: `${failureDetail} Last metrics retained. See browser console; retry after resolving the error.`,
         failure: 'Web output failed · last metrics retained',
       }[phase];
       if (phase === 'invalid' || phase === 'failure') tone = 'error';
@@ -80,17 +96,29 @@ function accept(frame, live) {
   if (newer) {
     latest = frame;
     lastAdvance = performance.now();
-    if (live) attempts = 0;
+    if (live) {
+      attempts = 0;
+      if (connectionWarnings.size) console.info('[tell-tail] Connection recovered; receiving new metrics.');
+      connectionWarnings.clear();
+    }
+    if (frame.metrics.state === 'failed') reportError('Input failed. Check the tell-tail terminal stderr for the cause.');
   }
   if (isFinal()) retire();
   else if (live) phase = performance.now() - lastAdvance < 1000 ? 'live' : 'stale';
   paint();
 }
 
-function invalid() { retire(); phase = 'invalid'; paint(); }
+function invalid(error, endpoint) {
+  failureDetail = error instanceof FrameError ? error.message : 'Unsupported or invalid metrics frame.';
+  reportError(`${endpoint}: ${failureDetail}`, endpoint);
+  retire();
+  phase = 'invalid';
+  paint();
+}
 
 async function recover(stale = false) {
   retire();
+  warnConnection(stale ? 'No new snapshot for at least 1 second' : 'Event stream disconnected');
   phase = stale ? 'stale' : 'reconnecting';
   paint();
   const ticket = epoch;
@@ -105,17 +133,21 @@ async function recover(stale = false) {
       if (ticket !== epoch) return;
       let frame;
       try { frame = parseFrame(json); }
-      catch { invalid(); return; }
+      catch (error) { invalid(error, '/api/snapshot'); return; }
       accept(frame, false);
       if (isFinal()) return;
       if (response.headers.get('X-Tell-Tail-Streams-Available') === '0') {
+        console.warn('[tell-tail] Stream capacity reached: four live tabs are connected. Close one and retry.');
         phase = 'capacity';
         paint();
         return;
       }
+    } else {
+      warnConnection(`Snapshot request returned HTTP ${response.status}`, 'snapshot');
     }
-  } catch { /* A missing server retains values and uses the same bounded backoff. */ }
-  finally {
+  } catch {
+    if (ticket === epoch) warnConnection('Snapshot request failed or exceeded its 2 second deadline', 'snapshot');
+  } finally {
     clearTimeout(timeout);
     if (request === controller) request = null;
   }
@@ -127,6 +159,7 @@ async function recover(stale = false) {
 function connect() {
   retire();
   if (document.hidden || isFinal()) { paint(); return; }
+  failureDetail = '';
   phase = latest ? 'reconnecting' : 'connecting';
   paint();
   const stream = new EventSource('/api/events');
@@ -134,10 +167,11 @@ function connect() {
   stream.addEventListener('snapshot', event => {
     if (source !== stream) return;
     try { accept(parseFrame(event.data), true); }
-    catch { invalid(); }
+    catch (error) { invalid(error, '/api/events'); }
   });
   stream.addEventListener('failure', () => {
     if (source !== stream) return;
+    reportError('Web publisher failed. Check the tell-tail terminal stderr for the cause.');
     retire();
     phase = 'failure';
     paint();

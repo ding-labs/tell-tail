@@ -63,6 +63,11 @@ an explicit approximation. Zero is a value; it must not replace `null` ratios or
 an unavailable backlog. The encoder preserves snapshot values rather than
 recalculating counters or ratios.
 
+Rolling windows retain the whole oldest 100 ms bucket. `window.observed_seconds`
+is nonnegative and strictly less than `configured_seconds + resolution_seconds`
+(with `resolution_seconds: 0.1`); it can exceed the configured duration by less
+than 100 ms after warmup. Rates use this observed duration.
+
 History contains counts for completed process-elapsed seconds, not rolling rates
 or wall-clock timestamps. With `end = floor(elapsed_seconds)` and `n = history.length`,
 point `i` covers `[end - n + i, end - n + i + 1)`. Startup history is empty until

@@ -13,6 +13,33 @@ process on normal shutdown; a capture exit is a runtime failure. Saved NDJSON
 captures use `--format apple-unified` on macOS or Linux. See the
 [source and parsing contract](APPLE-UNIFIED.md).
 
+## Tell-Tail's own diagnostics
+
+Runtime errors, capture failures, webhook delivery failures, and web startup/opening
+messages go to **stderr**, separate from stdout metrics. For a web session, capture
+them with `tell-tail --apple-unified --output web --open 2>tell-tail.stderr.log`.
+There is no persistent internal log file or configurable log level. Runtime stderr
+writes have a 250 ms budget so blocked diagnostic output cannot hold up shutdown.
+Argument validation errors go directly to stderr before startup. Web bind errors
+identify the loopback address and port; frame encoding errors identify the
+publication sequence and elapsed seconds alongside the cause.
+
+The dashboard writes `[tell-tail]` diagnostics to the browser developer console:
+validation and publisher/input failures are errors; disconnections, stale streams,
+snapshot HTTP/network failures, and stream capacity are warnings. Repeated stream
+and snapshot warnings are suppressed until new live metrics arrive; recovery is
+logged once. Error context includes the endpoint, last accepted sequence, and
+elapsed seconds. Invalid frames identify the failing field and constraint in both
+the console and status banner. Raw frames, source names, and log contents are not
+included in these diagnostics. Failed input and publisher errors point to terminal
+stderr for the underlying cause. No browser diagnostics are sent to a server.
+
+If the dashboard rejects a frame, save its field-specific console error and the
+terminal diagnostic output. The previous instruction to always update the monitor
+was misleading: validation failures can also indicate a dashboard bug. A prior
+bug rejected valid `window.observed_seconds` values just above 60 after the rolling
+window filled; the 100 ms bucket contract now permits that partial edge.
+
 ## Linux service example
 
 [examples/tell-tail.service](../examples/tell-tail.service) follows a single file

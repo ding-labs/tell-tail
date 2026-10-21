@@ -150,15 +150,78 @@ test('invalid contracts and publisher failures stop streams and preserve last va
   await send(page, [frame(1, 8)]);
   await page.waitForFunction(() => document.getElementById('total-records').textContent === '8');
   await page.locator('#freeze').click();
+  const errors = [];
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
   const bad = frame(2, 9);
   bad.web_schema_version = 2;
   await send(page, [bad]);
   await page.waitForFunction(() => document.getElementById('connection').textContent.startsWith('Unsupported'));
   assert.equal(await page.evaluate(() => window.streams.at(-1).closed), true);
   assert.equal(await page.locator('#total-records').textContent(), '8');
+  assert.match(errors[0], /tell-tail.*api\/events.*web_schema_version must be 1/);
+  assert.match(await page.locator('#connection').textContent(), /web_schema_version/);
   await page.locator('#retry').click();
   await page.evaluate(() => window.streams.at(-1).dispatchEvent(new MessageEvent('failure', { data: '{"message":"web output failed"}' })));
   await page.waitForFunction(() => document.getElementById('connection').textContent.startsWith('Web output failed'));
   assert.equal(await page.locator('#total-records').textContent(), '8');
+  assert.match(errors[1], /Web publisher failed.*stderr/);
+  assert.equal(errors.length, 2);
   assert.equal(await page.evaluate(() => window.streams.at(-1).closed), true);
+});
+
+test('dashboard stays live across the full rolling window and history ring', async t => {
+  const { page } = await setup(t, true);
+  const errors = [];
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+  for (const [index, seconds] of [59.999, 60, 60.001, 60.099, 60.1, 61.099, 120.099].entries()) {
+    const next = frame(index, index + 1);
+    next.metrics.elapsed_seconds = seconds;
+    next.metrics.window.observed_seconds = seconds < 60 ? seconds : 60 + (Math.round(seconds * 1000) % 100) / 1000;
+    next.metrics.history = Array(Math.min(60, Math.floor(seconds))).fill('1');
+    await send(page, [next]);
+    await page.waitForFunction(count => document.getElementById('total-records').textContent === String(count), index + 1);
+    assert.match(await page.locator('#connection').textContent(), /^Live/);
+    assert.equal(await page.evaluate(() => window.streams.at(-1).closed), false);
+  }
+  assert.deepEqual(errors, []);
+});
+
+test('snapshot validation reports its endpoint and retains the last good display', async t => {
+  const { page } = await setup(t, true);
+  const errors = [];
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+  await send(page, [frame(1, 7)]);
+  await page.waitForFunction(() => document.getElementById('total-records').textContent === '7');
+  const bad = frame(2, 8);
+  bad.metrics.window.observed_seconds = 61;
+  await page.route('**/api/snapshot', route => route.fulfill({ json: bad }));
+  await page.evaluate(() => window.streams.at(-1).onerror());
+  await page.waitForFunction(() => document.getElementById('connection').textContent.startsWith('Unsupported'));
+  assert.match(errors[0], /api\/snapshot.*metrics.window.observed_seconds/);
+  assert.equal(await page.locator('#total-records').textContent(), '7');
+});
+
+test('connection warnings are deduplicated until live recovery and input failures report stderr', async t => {
+  const { page } = await setup(t, true);
+  const messages = [];
+  page.on('console', message => messages.push({ type: message.type(), text: message.text() }));
+  await send(page, [frame(1, 7)]);
+  await page.waitForFunction(() => document.getElementById('total-records').textContent === '7');
+  await page.route('**/api/snapshot', route => route.fulfill({ status: 503, body: '' }));
+  await page.evaluate(() => window.streams.at(-1).onerror());
+  await page.waitForFunction(() => window.streams.length === 2);
+  await page.evaluate(() => window.streams.at(-1).onerror());
+  await page.waitForFunction(() => window.streams.length === 3);
+  const warnings = messages.filter(m => m.type === 'warning' && m.text.startsWith('[tell-tail]'));
+  assert.equal(warnings.length, 2);
+  assert.match(warnings[0].text, /Event stream disconnected/);
+  assert.match(warnings[1].text, /HTTP 503/);
+  await send(page, [frame(2, 8)]);
+  await page.waitForFunction(() => document.getElementById('total-records').textContent === '8');
+  assert.equal(messages.filter(m => /Connection recovered/.test(m.text)).length, 1);
+  const failed = frame(3, 9);
+  Object.assign(failed.metrics, { kind: 'final', state: 'failed' });
+  await send(page, [failed]);
+  await page.waitForFunction(() => document.getElementById('connection').textContent.startsWith('Input failed'));
+  assert.equal(messages.filter(m => m.type === 'error' && /Input failed.*stderr/.test(m.text)).length, 1);
 });
