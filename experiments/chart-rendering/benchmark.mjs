@@ -97,7 +97,7 @@ async function trial(variant, index) {
     const heapBefore = await cdp.send('Runtime.getHeapUsage');
     const metricsBefore = await cdp.send('Performance.getMetrics');
     const first = resources(launcher.process().pid);
-    await page.evaluate(() => window.benchStartRecording());
+    const paintRecordingStart = await page.evaluate(() => { window.benchStartRecording(); return performance.now(); });
     const start = performance.now();
     const samples = [];
     let previousWall = Date.now();
@@ -121,7 +121,7 @@ async function trial(variant, index) {
       }
     }
     const elapsed = (performance.now()-start)/1000;
-    const paints = await page.evaluate(() => window.benchStopRecording());
+    const {paints, paintRecordingEnd} = await page.evaluate(() => ({paints:window.benchStopRecording(),paintRecordingEnd:performance.now()}));
     const last = samples.at(-1);
     assert.deepEqual(last.pids, first.pids, 'CPU accounting requires a stable browser process tree');
     assert.deepEqual(errors, []);
@@ -129,6 +129,8 @@ async function trial(variant, index) {
     const metric = (metrics, name) => metrics.metrics.find(m=>m.name===name).value;
     const gaps = paints.slice(1).map((time,i)=>time-paints[i]);
     assert.ok(gaps.length > 0 && Math.max(...gaps) < 1000, 'benchmark animation stalled for a second');
+    assert.ok(paints[0]-paintRecordingStart < 1000 && paintRecordingEnd-paints.at(-1) < 1000,
+      'benchmark animation stalled at the recording boundary');
     await cdp.send('HeapProfiler.collectGarbage');
     const heap = await cdp.send('Runtime.getHeapUsage');
     const dom = await cdp.send('Memory.getDOMCounters');
@@ -154,6 +156,7 @@ async function trial(variant, index) {
       js_heap_bytes:heap.usedSize,dom,paint_hz:paints.length/elapsed,
       js_heap_before_bytes:heapBefore.usedSize,max_observation_gap_seconds:maxObservationGap,
       paint_gap_ms_max:Math.max(...gaps),
+      first_paint_delay_ms:paints[0]-paintRecordingStart,last_paint_age_ms:paintRecordingEnd-paints.at(-1),
       paint_gap_ms_median:percentile(gaps,.5),paint_gap_ms_p95:percentile(gaps,.95),
       renderer_task_cpu_percent:100*(metric(metricsAfter,'TaskDuration')-metric(metricsBefore,'TaskDuration'))/elapsed,
       positions, samples};

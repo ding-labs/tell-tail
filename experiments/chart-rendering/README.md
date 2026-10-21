@@ -35,10 +35,10 @@ For four longer pairs, alternating which renderer runs first:
 CHART_BENCH_SECONDS=120 CHART_BENCH_WARMUP=30 \
 CHART_BENCH_ORDER=svg20,chartjs,chartjs,svg20,svg20,chartjs,chartjs,svg20 \
 CHART_BENCH_OUTPUT="$PWD/work/chart-benchmark-long" \
-caffeinate -i node experiments/chart-rendering/benchmark.mjs
+caffeinate -di node experiments/chart-rendering/benchmark.mjs
 ```
 
-`caffeinate -i` on macOS prevents idle system sleep while the command runs.
+`caffeinate -di` on macOS prevents display and idle system sleep while the command runs.
 On other systems, run Node directly. This plan measures eight trials for about
 20 minutes including warmup. It records input hashes, host information, per-second
 CPU/RSS samples, pre/post-GC heap sizes, maximum paint gaps, and minute progress.
