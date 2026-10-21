@@ -117,3 +117,8 @@ Reproduction and measurement controls are in
 [experiments/resource-audit/README.md](../experiments/resource-audit/README.md).
 Local ignored artifacts are `work/live-browser-soak-2026-10-21/results.json`,
 `summary.json`, `dashboard.png`, and `work/live-browser-soak-2026-10-21-log.txt`.
+
+Follow-up: the [Chrome memory investigation](CHROME-MEMORY-INVESTIGATION-2026-10-21.md)
+found evidence favoring normal working-set/cache retention, with bounded retained
+page objects and reversible graphics footprints. It did not identify an
+application leak or assign every byte of this run's RSS increase to one cache.
