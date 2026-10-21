@@ -1,9 +1,54 @@
-import { elapsed, historyPoints, integer, levels, percent, rate } from './frame.mjs';
+import { elapsed, finalStates, historyPoints, integer, levels, percent, rate } from './frame.mjs';
 
 const byId = id => document.getElementById(id);
 function text(id, value) { const el = byId(id); if (el.textContent !== value) el.textContent = value; }
 const svgNS = 'http://www.w3.org/2000/svg';
 let chartKey = '';
+let chartSession = '';
+let chartEnd = 0;
+let chartVertices = [];
+let chartTarget = [];
+let chartAnimation = 0;
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+// Monotone cubic interpolation rounds the line without overshooting counts.
+function curve(vertices) {
+  if (!vertices.length) return '';
+  const slopes = vertices.slice(1).map((p, i) => (p.y - vertices[i].y) / (p.x - vertices[i].x));
+  const tangents = vertices.map((_, i) => {
+    if (!i) return slopes[0] ?? 0;
+    if (i === vertices.length - 1) return slopes[i - 1];
+    const a = slopes[i - 1], b = slopes[i];
+    return a * b <= 0 ? 0 : 2 * a * b / (a + b);
+  });
+  let path = `M${vertices[0].x},${vertices[0].y}`;
+  for (let i = 1; i < vertices.length; i++) {
+    const a = vertices[i - 1], b = vertices[i], dx = (b.x - a.x) / 3;
+    path += ` C${a.x + dx},${a.y + dx * tangents[i - 1]} ${b.x - dx},${b.y - dx * tangents[i]} ${b.x},${b.y}`;
+  }
+  return path;
+}
+
+function drawChart(vertices) {
+  chartVertices = vertices;
+  const path = curve(vertices);
+  byId('chart-line').setAttribute('d', path);
+  byId('chart-area').setAttribute('d', path ? `${path} L${vertices.at(-1).x},178 L${vertices[0].x},178 Z` : '');
+  for (const dot of byId('chart-dots').children) {
+    const p = vertices.find(p => p.second === Number(dot.dataset.second));
+    if (p) {
+      dot.setAttribute('cx', p.x);
+      dot.setAttribute('cy', p.y);
+    }
+  }
+}
+
+export function stopChartAnimation() {
+  cancelAnimationFrame(chartAnimation);
+  chartAnimation = 0;
+  drawChart(chartTarget);
+}
+reducedMotion.addEventListener('change', () => { if (reducedMotion.matches) stopChartAnimation(); });
 const severityRows = levels.map(level => {
   const row = document.createElement('tr');
   const name = document.createElement('th');
@@ -22,20 +67,28 @@ const severityRows = levels.map(level => {
 
 /** @param {import('./frame.mjs').Metrics} m */
 function chart(m) {
-  const key = `${m.session_id}:${Math.floor(m.elapsed_seconds)}:${m.history.join(',')}`;
+  const key = `${m.session_id}:${m.state}:${Math.floor(m.elapsed_seconds)}:${m.history.join(',')}`;
   if (key === chartKey) return;
   chartKey = key;
   const points = historyPoints(m);
   const max = Math.max(1, ...points.map(p => p.value));
   const vertices = points.map((p, i) => ({ ...p, x: 60 + (60 - points.length + i) / 59 * 688, y: 178 - p.value / max * 158 }));
-  byId('chart-line').setAttribute('points', vertices.map(p => `${p.x},${p.y}`).join(' '));
-  byId('chart-area').setAttribute('d', vertices.length ? `M${vertices[0].x},178 L${vertices.map(p => `${p.x},${p.y}`).join(' L')} L${vertices.at(-1).x},178 Z` : '');
+  const end = Math.floor(m.elapsed_seconds);
+  const animate = chartSession === m.session_id && end === chartEnd + 1 && chartVertices.length
+    && vertices.length && !reducedMotion.matches && !document.hidden && !finalStates.has(m.state);
+  cancelAnimationFrame(chartAnimation);
+  chartAnimation = 0;
+  const previous = chartVertices;
+  chartTarget = vertices;
+  chartSession = m.session_id;
+  chartEnd = end;
   const dots = document.createDocumentFragment();
   const rows = document.createDocumentFragment();
   for (const p of vertices) {
     const interval = `${elapsed(p.second)}–${elapsed(p.second + 1)}`;
     const dot = document.createElementNS(svgNS, 'circle');
     for (const [key, value] of Object.entries({ cx: p.x, cy: p.y, r: 2.5 })) dot.setAttribute(key, String(value));
+    dot.dataset.second = String(p.second);
     const title = document.createElementNS(svgNS, 'title');
     title.textContent = `${interval}: ${integer(p.count)} entries`;
     dot.append(title);
@@ -50,9 +103,28 @@ function chart(m) {
   }
   byId('chart-dots').replaceChildren(dots);
   byId('chart-values').replaceChildren(rows);
+  if (animate) {
+    const step = 688 / 59;
+    const from = vertices.map(p => previous.find(old => old.second === p.second)
+      ?? { ...p, x: p.x + step, y: previous.at(-1).y });
+    // Keep the outgoing point until it crosses the clipped left edge.
+    const outgoing = previous.filter(p => p.second < vertices[0].second);
+    const start = performance.now();
+    const tick = now => {
+      const progress = Math.min(1, (now - start) / 1000);
+      const moving = vertices.map((p, i) => ({ ...p,
+        x: from[i].x + (p.x - from[i].x) * progress,
+        y: from[i].y + (p.y - from[i].y) * progress,
+      }));
+      drawChart([...outgoing.map(p => ({ ...p, x: p.x - step * progress })), ...moving]);
+      if (progress < 1) chartAnimation = requestAnimationFrame(tick);
+      else { chartAnimation = 0; drawChart(vertices); }
+    };
+    drawChart([...outgoing, ...from]);
+    chartAnimation = requestAnimationFrame(tick);
+  } else drawChart(vertices);
   byId('chart-empty').setAttribute('visibility', points.length ? 'hidden' : 'visible');
   text('chart-max', points.length ? (max >= 1e6 ? max.toExponential(1) : rate(max)) : '0');
-  const end = Math.floor(m.elapsed_seconds);
   text('chart-start', elapsed(Math.max(0, end - 60)));
   text('chart-end', elapsed(end));
   const caption = points.length ? `Latest completed second: ${integer(points.at(-1).count)} entries · ${points.length} of 60 seconds available` : 'No completed seconds yet.';
