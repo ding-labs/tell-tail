@@ -1,0 +1,58 @@
+# Browser chart comparison
+
+Benchmark-only Chart.js 4.5.1 adapter and repeatable workload. Production assets
+and Rust dependencies are unchanged. The adapter preserves the dashboard, SVG
+grid/labels and exact-value table while replacing the plot with a Canvas layer.
+This is not a complete replacement: production resizing, accessibility, tooltip,
+visibility/reconnect and bundling integration would need separate validation.
+
+From the repository root, with Node, browser-tests dependencies and Chrome installed:
+
+```sh
+npm ci --prefix experiments/chart-rendering
+node experiments/chart-rendering/benchmark.mjs
+```
+
+Results and screenshots go to ignored `work/chart-benchmark/`. To smoke-test:
+
+```sh
+CHART_BENCH_SECONDS=2 CHART_BENCH_WARMUP=2 CHART_BENCH_ORDER=svg20,chartjs20,chartjs,svg60 node experiments/chart-rendering/benchmark.mjs
+```
+
+The default run uses eight independent headed Chrome instances, one at a time,
+in mirrored order: SVG20, Chart.js20, Chart.js native, SVG uncapped, then reverse.
+Each trial warms up for five seconds with a full history and measures 30 seconds.
+`CHART_BENCH_SECONDS`, `CHART_BENCH_WARMUP`, `CHART_BENCH_ORDER`,
+`CHART_BENCH_OUTPUT` and `CHART_BENCH_CHANNEL` override these settings.
+The existing `PLAYWRIGHT_MODULE_DIR` override can select a Playwright installation.
+
+All variants show the same deterministic 60-point history, monotone curves, dots,
+fill, axes and exact labels. Dashboard metrics update every 100 ms; the history
+advances once per second. Animation duration is always 1,000 ms. The viewport is
+1280 × 1100 at device scale 1 so the whole chart is visible. The driver calls the
+existing renderer directly; no native log capture, SSE parsing or reconnection
+logic is involved. Absolute CPU therefore differs from a live capture audit.
+
+- `svg20`: unmodified production chart with a 20 Hz paint ceiling.
+- `svg60`: production chart with that ceiling removed (actual refresh rate varies).
+- `chartjs`: native Chart.js animation at browser refresh rate; parsing disabled,
+  sorted/normalized data, explicit scale bounds, no legend/tooltip/event handling.
+- `chartjs20`: the same native animation with a `beforeDraw` plugin limiting Canvas
+  paints to 20 Hz. Animation calculations still run at browser refresh rate; this
+  separates paint cost from scheduling. Completion and stop force a final paint.
+
+CPU is the delta in cumulative CPU time for the entire isolated browser process
+tree, sampled with `ps`; 100% is one core. A process-tree stability assertion
+guards against losing CPU time from exiting children. RSS sums the whole browser
+tree and may count shared pages more than once. CDP records renderer task time,
+post-GC JS heap and DOM counts. Actual paint cadence uses SVG path mutations or
+Chart.js `afterDraw`, not just requestAnimationFrame callback counts. Paint gaps
+include update boundaries and are not a GPU presentation/drop-frame measurement.
+
+Every trial checks that a retained second moves across three intermediate
+positions throughout its animation, point coordinates remain finite, both plot
+edges align with the original SVG, stopping freezes geometry, and no uncaught
+page errors occur. Screenshots at the same fixed history support visual review.
+Two trials per renderer provide an initial comparison, not a broad device study.
+The version's official guidance is available in the [performance documentation](https://www.chartjs.org/docs/latest/general/performance.html)
+and [animation documentation](https://www.chartjs.org/docs/latest/configuration/animations.html).
