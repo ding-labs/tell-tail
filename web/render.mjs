@@ -134,8 +134,9 @@ function chart(m) {
     const previousBySecond = new Map(previous.map(p => [p.second, p]));
     const from = vertices.map(p => previousBySecond.get(p.second)
       ?? { ...p, x: p.x + step, y: previous.at(-1).y });
-    // Keep the outgoing point until it crosses the clipped left edge.
-    const outgoing = previous.filter(p => p.second < vertices[0].second);
+    // Keep neighbors at the clipped edge, but never accumulate invisible
+    // history when publications repeatedly interrupt an unfinished scroll.
+    const outgoing = previous.filter(p => p.second < vertices[0].second).slice(-2);
     const retained = vertices.filter(p => previousBySecond.has(p.second));
     const shift = retained.length ? previousBySecond.get(retained[0].second).x - retained[0].x : 0;
     const canTranslate = shift > 0 && shift <= step * 2 && retained.every(p => {

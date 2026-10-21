@@ -157,3 +157,34 @@ test('chart curves stay bounded and animate between seconds with motion controls
   await page.clock.runFor(1200);
   assert.equal(await path(), final, 'final metrics render immediately');
 });
+
+test('interrupted chart scrolling keeps offscreen geometry bounded', async t => {
+  const server = await monitor();
+  t.after(() => server.close());
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  await page.route('**/api/events', route => route.fulfill({ contentType: 'text/event-stream', body: `event: snapshot\ndata: ${JSON.stringify(fixture)}\n\n` }));
+  await page.goto(server.url);
+  await page.waitForFunction(() => document.getElementById('input-state').textContent === 'complete');
+  const result = await page.evaluate(async fixture => {
+    const { render } = await import('/render.mjs');
+    const frame = structuredClone(fixture);
+    Object.assign(frame.metrics, { history: Array(60).fill('1'), session_id: 'bounded', state: 'reading' });
+    let maxSegments = 0;
+    for (let end = 60; end < 100; end++) {
+      frame.metrics.elapsed_seconds = end;
+      render(frame);
+      const animations = document.getElementById('chart-motion').getAnimations();
+      if (end > 60 && animations.length !== 1) throw new Error('expected native scrolling');
+      if (animations.length) {
+        animations[0].pause();
+        animations[0].currentTime = 900;
+      }
+      maxSegments = Math.max(maxSegments, (document.getElementById('chart-line').getAttribute('d').match(/ C/g) || []).length);
+    }
+    return { maxSegments, dots: document.querySelectorAll('#chart-dots circle').length };
+  }, fixture);
+  assert.ok(result.maxSegments <= 61, `at most two outgoing vertices are retained: ${result.maxSegments} segments`);
+  assert.equal(result.dots, 60);
+});
