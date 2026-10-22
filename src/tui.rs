@@ -86,14 +86,16 @@ pub fn run(
     )?;
     let mut frozen: Option<Snapshot> = None;
     let mut help = false;
+    let mut review = Review::default();
     loop {
         let current = running.snapshot();
         terminal.draw(|frame| {
-            draw(
+            draw_review(
                 frame,
                 frozen.as_ref().unwrap_or(&current),
                 frozen.is_some(),
                 help,
+                &review,
             )
         })?;
         if current.state.is_final() {
@@ -114,6 +116,7 @@ pub fn run(
                         stop.store(signal_hook::consts::SIGINT as usize, Ordering::Relaxed)
                     }
                     KeyCode::Char(' ') => {
+                        review.offset = 0;
                         frozen = if frozen.is_some() {
                             None
                         } else {
@@ -122,13 +125,59 @@ pub fn run(
                     }
                     KeyCode::Char('?') => help = !help,
                     KeyCode::Esc => help = false,
+                    KeyCode::Char('f') => {
+                        review.fatal_only = !review.fatal_only;
+                        review.offset = 0;
+                    }
+                    KeyCode::Up
+                    | KeyCode::Down
+                    | KeyCode::PageUp
+                    | KeyCode::PageDown
+                    | KeyCode::Home
+                    | KeyCode::End => {
+                        let snapshot = frozen.get_or_insert(current);
+                        review.scroll(key.code, snapshot);
+                    }
                     _ => (),
                 }
             }
         }
     }
 }
+
+#[derive(Default)]
+struct Review {
+    fatal_only: bool,
+    offset: usize,
+}
+
+impl Review {
+    fn entries<'a>(&self, s: &'a Snapshot) -> Vec<&'a crate::recent::RecentError> {
+        s.recent_errors
+            .iter()
+            .filter(|e| !self.fatal_only || e.level == Level::Fatal)
+            .collect()
+    }
+
+    fn scroll(&mut self, key: KeyCode, s: &Snapshot) {
+        self.offset = match key {
+            KeyCode::Down => self.offset.saturating_add(1),
+            KeyCode::PageDown => self.offset.saturating_add(5),
+            KeyCode::Up => self.offset.saturating_sub(1),
+            KeyCode::PageUp => self.offset.saturating_sub(5),
+            KeyCode::End => usize::MAX,
+            KeyCode::Home => 0,
+            _ => self.offset,
+        }
+        .min(self.entries(s).len().saturating_sub(1));
+    }
+}
+
 pub fn draw(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool) {
+    draw_review(frame, s, frozen, help, &Review::default());
+}
+
+fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review: &Review) {
     let area = frame.area();
     let fg = Color::Rgb(215, 225, 235);
     let accent = Color::Rgb(234, 195, 119);
@@ -146,10 +195,16 @@ pub fn draw(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool) {
         );
         return;
     }
+    let review_height = if area.height >= 20 {
+        area.height - 17
+    } else {
+        0
+    };
     let regions = Layout::vertical([
         Constraint::Length(1),
         Constraint::Length(3),
         Constraint::Min(10),
+        Constraint::Length(review_height),
         Constraint::Length(3),
     ])
     .split(area);
@@ -258,15 +313,84 @@ pub fn draw(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool) {
             .title(" Severity "),
     );
     frame.render_widget(table, overview[1]);
+    let entries = review.entries(s);
+    let offset = review.offset.min(entries.len().saturating_sub(1));
+    let visible = usize::from(regions[3].height.saturating_sub(2));
+    let title = format!(
+        " Recent {} · {}/{} · newest first ",
+        if review.fatal_only {
+            "fatals"
+        } else {
+            "errors + fatal"
+        },
+        (offset + visible).min(entries.len()),
+        entries.len(),
+    );
+    let mut lines: Vec<Line> = entries
+        .iter()
+        .skip(offset)
+        .take(visible)
+        .map(|entry| {
+            let color = if entry.level == Level::Fatal {
+                Color::LightMagenta
+            } else {
+                Color::LightRed
+            };
+            let prefix = format!(
+                "{:>6.1}s {:5} ",
+                entry.elapsed_seconds,
+                entry.level.name().to_uppercase()
+            );
+            let width =
+                usize::from(regions[3].width.saturating_sub(2)).saturating_sub(prefix.len());
+            let mut preview = Line::from(entry.preview.to_string());
+            let clipped = preview.width() > width || entry.truncated;
+            if clipped {
+                let mut value = String::new();
+                for ch in entry.preview.chars() {
+                    let next = format!("{value}{ch}");
+                    if Line::from(next.as_str()).width() >= width {
+                        break;
+                    }
+                    value.push(ch);
+                }
+                value.push('…');
+                preview = Line::from(value);
+            }
+            Line::from(vec![
+                Span::styled(prefix, Style::default().fg(color)),
+                Span::raw(preview.to_string()),
+            ])
+        })
+        .collect();
+    if entries.is_empty() {
+        lines.push(Line::styled(
+            if review.fatal_only {
+                "No fatal records captured. f shows errors too."
+            } else {
+                "No errors or fatal records captured."
+            },
+            Style::default().fg(muted),
+        ));
+    }
+    frame.render_widget(
+        Paragraph::new(lines).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(muted))
+                .title(title),
+        ),
+        regions[3],
+    );
     let backlog = s
         .backlog_bytes
         .map(|b| format!("{b} B"))
         .unwrap_or_else(|| "unknown".into());
     let footer = if help {
-        "q: quit · Ctrl-C: interrupt · space: freeze display (ingestion continues)\nJSON uses a top-level level field. Physical lines are records.\nRates use processing time. ? or Esc closes this help.".into()
+        "q: quit · Ctrl-C: interrupt · space: freeze display (ingestion continues)\n↑/↓ or PgUp/PgDn review (freezes display) · f fatal only\n20 previews, 512 bytes each · ? or Esc closes help".into()
     } else {
         format!(
-            " Session: {} records · {:.2} MiB · {:.1}s   Backlog: {}\n Parse failures: {} · oversized: {} · pending: {} B · skipped: {} B\n q quit · space freeze display · ? help",
+            " Session: {} records · {:.2} MiB · {:.1}s   Backlog: {}\n Parse failures: {} · oversized: {} · pending: {} B · skipped: {} B\n q quit · space freeze · ↑↓ review · f fatal · ? help",
             s.totals.records,
             s.bytes_read as f64 / 1_048_576.0,
             s.elapsed_seconds,
@@ -277,7 +401,7 @@ pub fn draw(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool) {
             s.skipped_bytes
         )
     };
-    frame.render_widget(Paragraph::new(footer), regions[3]);
+    frame.render_widget(Paragraph::new(footer), regions[4]);
 }
 
 #[cfg(test)]
@@ -288,6 +412,59 @@ mod tests {
         stats::{State, Stats},
     };
     use ratatui::backend::TestBackend;
+
+    #[test]
+    fn recent_errors_can_be_filtered_and_scrolled_without_losing_metrics() {
+        use clap::Parser;
+        let mut engine = crate::engine::Engine::new(&crate::cli::Args::parse_from([
+            "tell-tail",
+            "--output",
+            "tui",
+        ]));
+        engine.feed(
+            b"ERROR first\nFATAL second\nERROR third\n",
+            Duration::from_secs(1),
+        );
+        let snapshot = engine.snapshot(Duration::from_secs(2), State::Following, None);
+        let mut review = Review::default();
+        for (width, height) in [(60, 20), (80, 24), (120, 40)] {
+            let mut terminal = Terminal::new(TestBackend::new(width, height)).unwrap();
+            terminal
+                .draw(|f| draw_review(f, &snapshot, true, false, &review))
+                .unwrap();
+            let text = terminal
+                .backend()
+                .buffer()
+                .content
+                .iter()
+                .map(|c| c.symbol())
+                .collect::<String>();
+            assert!(text.contains("ERROR third"), "{width}x{height}: {text}");
+            assert!(text.contains("UNKNOWN"));
+            assert!(text.contains("DISPLAY FROZEN"));
+        }
+        review.scroll(KeyCode::End, &snapshot);
+        assert_eq!(
+            review.entries(&snapshot)[review.offset].preview.as_ref(),
+            "ERROR first"
+        );
+        review.scroll(KeyCode::Home, &snapshot);
+        review.fatal_only = true;
+        let mut terminal = Terminal::new(TestBackend::new(80, 24)).unwrap();
+        terminal
+            .draw(|f| draw_review(f, &snapshot, false, false, &review))
+            .unwrap();
+        let text = terminal
+            .backend()
+            .buffer()
+            .content
+            .iter()
+            .map(|c| c.symbol())
+            .collect::<String>();
+        assert!(text.contains("FATAL second"));
+        assert!(!text.contains("ERROR third"));
+        assert!(!text.contains("ERROR first"));
+    }
     #[test]
     fn unknown_and_parse_failures_remain_visible_in_compact_view() {
         let mut stats = Stats::new(60, "stdin".into());
