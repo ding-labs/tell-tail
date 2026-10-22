@@ -263,9 +263,13 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
     }
     let overview =
         Layout::horizontal([Constraint::Min(16), Constraint::Length(43)]).split(regions[2]);
+    let history_start = s
+        .history
+        .len()
+        .saturating_sub(usize::from(overview[0].width.saturating_sub(2)));
     frame.render_widget(
         Sparkline::default()
-            .data(&s.history)
+            .data(&s.history[history_start..])
             .style(Style::default().fg(accent))
             .block(
                 Block::default()
@@ -412,6 +416,23 @@ mod tests {
         stats::{State, Stats},
     };
     use ratatui::backend::TestBackend;
+
+    #[test]
+    fn narrow_chart_keeps_the_newest_completed_second() {
+        let mut snapshot = Stats::new(60, "stdin".into()).snapshot(
+            Duration::from_secs(60),
+            State::Following,
+            0,
+            None,
+        );
+        snapshot.history = vec![0; 60];
+        snapshot.history[59] = 100;
+        let mut terminal = Terminal::new(TestBackend::new(80, 24)).unwrap();
+        terminal.draw(|f| draw(f, &snapshot, false, false)).unwrap();
+        let buffer = terminal.backend().buffer();
+        assert_eq!(buffer[(35, 12)].symbol(), "█");
+        assert_eq!(buffer[(1, 12)].symbol(), " ");
+    }
 
     #[test]
     fn recent_errors_can_be_filtered_and_scrolled_without_losing_metrics() {
