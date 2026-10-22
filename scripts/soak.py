@@ -19,7 +19,8 @@ import termios
 import threading
 import time
 import fcntl
-from soak_support import Counts, LEVELS, ObservationClock, make_batch, resources
+from soak_support import (Counts, LEVELS, ObservationClock, alert_phase, make_alert_batch,
+                          make_batch, resources)
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -105,7 +106,9 @@ def run(args):
     expected = Counts()
     finished = threading.Event()
     latest = [None]
-    errors = []
+    errors = getattr(args, 'external_errors', [])
+    alerting = args.profile == 'alerting'
+    high_payload, high_batch, high_digest = make_alert_batch(args.seed, True) if alerting else (None, None, None)
     terminal_tail = bytearray()
     error_tail = bytearray()
     ages = [0] * 201  # 10 ms bins plus an overflow bin; constant memory.
@@ -124,6 +127,9 @@ def run(args):
                     '--max-record-bytes', str(args.max_record_bytes)]
         if args.output == 'prometheus':
             command += ['--metrics-file', str(metrics)]
+        if getattr(args, 'alert_webhook', None):
+            command += ['--alert-webhook', args.alert_webhook, '--alert-error-percent', '25',
+                        '--alert-min-records', '100', '--alert-cooldown', str(args.alert_cooldown)]
         master = slave = None
         if args.output == 'tui':
             master, slave = pty.openpty()
@@ -223,11 +229,14 @@ def run(args):
                             finished.wait(min(pacing - elapsed, .1))
                             continue
                         write_started = time.monotonic()
-                        stream.write(payload)
+                        high = alerting and alert_phase(elapsed, args.alert_cycle_seconds,
+                                                        args.alert_start_seconds, args.alert_duration_seconds)
+                        current_payload, current_batch = (high_payload, high_batch) if high else (payload, batch)
+                        stream.write(current_payload)
                         stream.flush()
                         write_seconds += time.monotonic() - write_started
-                        expected.add(batch)
-                        file_bytes += len(payload)
+                        expected.add(current_batch)
+                        file_bytes += len(current_payload)
                         if args.input == 'file' and file_bytes >= args.rotate_bytes:
                             wait_for(lambda s: s['totals']['records'] == expected.records)
                             partial = b'INFO unfinished' if args.profile == 'rotation' else b''
@@ -365,6 +374,12 @@ def run(args):
                            'peak_sampled_descriptors': peak_fds, 'peak_sampled_processes': peak_processes,
                            'snapshot_age_p95_upper_ms': p95,
                            'max_snapshot_age_seconds': max_age[0] if observed[0] else None})
+            if alerting:
+                result['alerting'] = {'high_fixture_sha256': high_digest,
+                                     'cycle_seconds': args.alert_cycle_seconds,
+                                     'start_seconds': args.alert_start_seconds,
+                                     'duration_seconds': args.alert_duration_seconds,
+                                     'cooldown_seconds': args.alert_cooldown}
             return result
         except Exception as error:
             error.soak_details = {'expected': expected.__dict__, 'latest_snapshot': latest[0],
@@ -400,7 +415,12 @@ def main():
     parser.add_argument('--output', choices=['json', 'prometheus', 'tui'], default='json')
     parser.add_argument('--tui', action='store_true', help='alias for --output tui')
     parser.add_argument('--exercise-terminal', action='store_true', help='periodically freeze, show help, resume, and resize the TUI')
-    parser.add_argument('--profile', choices=['sustained', 'mixed', 'burst', 'rotation', 'idle'], default='sustained')
+    parser.add_argument('--profile', choices=['sustained', 'mixed', 'burst', 'rotation', 'idle', 'alerting'], default='sustained')
+    parser.add_argument('--alert-webhook', help='HTTP receiver for alerting validation; not recorded in reports')
+    parser.add_argument('--alert-cycle-seconds', type=float, default=3600)
+    parser.add_argument('--alert-start-seconds', type=float, default=120)
+    parser.add_argument('--alert-duration-seconds', type=float, default=120)
+    parser.add_argument('--alert-cooldown', type=int, default=300)
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--rate', type=float, default=1000, help='records/sec; 0 is unlimited')
     parser.add_argument('--max-record-bytes', type=int, default=1024**2)
@@ -427,6 +447,11 @@ def main():
         parser.error('the rotation profile requires --input file')
     if args.profile == 'idle' and args.records:
         parser.error('idle runs cannot have a fixed record count')
+    if args.profile == 'alerting' and not (args.batch_copies == 1 and args.max_record_bytes >= 512
+            and args.alert_cycle_seconds > args.alert_start_seconds + args.alert_duration_seconds + args.window
+            and args.alert_start_seconds >= args.window and args.alert_duration_seconds >= args.window
+            and 0 <= args.alert_cooldown <= 86400):
+        parser.error('alerting requires complete healthy/breach/recovery windows and standard-sized batches')
     args.binary = args.binary.resolve()
     args.source_directory = args.source_directory.resolve()
     try:

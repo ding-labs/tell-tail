@@ -5,7 +5,8 @@ import os
 import subprocess
 import sys
 import unittest
-from soak_support import Counts, ObservationClock, cpu_seconds, make_batch, select_tree
+from soak_support import (Counts, ObservationClock, alert_phase, cpu_seconds, make_alert_batch,
+                          make_batch, select_tree)
 
 
 class SupportTests(unittest.TestCase):
@@ -61,6 +62,23 @@ class SupportTests(unittest.TestCase):
         self.assertEqual(counts.levels['error'], 1)
         self.assertEqual(make_batch(7, 'sustained', 1024)[2], digest)
         self.assertNotEqual(make_batch(8, 'sustained', 1024)[2], digest)
+
+    def test_alerting_fixtures_have_exact_counts_and_healthy_recovery_input(self):
+        for high, errors, fatals in [(False, 1, 0), (True, 40, 10)]:
+            payload, counts, digest = make_alert_batch(7, high)
+            self.assertEqual(counts.records, 100)
+            self.assertEqual(counts.levels['error'], errors)
+            self.assertEqual(counts.levels['fatal'], fatals)
+            self.assertEqual(counts.bytes_read, len(payload))
+            self.assertEqual(len(payload.splitlines()), 100)
+            self.assertEqual(make_alert_batch(7, high)[2], digest)
+            self.assertTrue(all(len(line) < 512 for line in payload.splitlines()))
+        self.assertEqual(make_batch(7, 'alerting', 1024), make_alert_batch(7, False))
+
+    def test_alerting_phases_repeat_with_healthy_windows_on_both_sides(self):
+        for elapsed, expected in [(0, False), (119.9, False), (120, True),
+                                  (239.9, True), (240, False), (3600, False), (3720, True)]:
+            self.assertEqual(alert_phase(elapsed, 3600, 120, 120), expected)
 
     def test_mixed_fixture_and_accounting_detect_mismatches(self):
         payload, counts, _ = make_batch(1, 'mixed', 1024)
