@@ -131,12 +131,13 @@ pub fn run(
 pub fn draw(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool) {
     let area = frame.area();
     let fg = Color::Rgb(215, 225, 235);
-    let accent = Color::Rgb(93, 216, 203);
+    let accent = Color::Rgb(234, 195, 119);
+    let muted = Color::Rgb(130, 139, 153);
     frame.render_widget(Block::default().style(Style::default().fg(fg)), area);
-    if area.width < 60 || area.height < 22 {
+    if area.width < 60 || area.height < 18 {
         frame.render_widget(
             Paragraph::new(format!(
-                "Tell-Tail · {:?}\n{} records · {} bytes\nwarn {} · error {}\nUnknown: {}\nParse failures: {}\nResize to 60 × 22 for dashboard\nq quit · space freeze",
+                "Tell-Tail · {:?}\n{} records · {} bytes\nwarn {} · error {}\nUnknown: {}\nParse failures: {}\nResize to 60 × 18 for dashboard\nq quit · space freeze",
                 s.state, s.totals.records, s.bytes_read,
                 percent(s.window.warning_ratio), percent(s.window.error_ratio),
                 s.totals.levels.get(Level::Unknown), s.totals.parse_failures,
@@ -146,9 +147,8 @@ pub fn draw(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool) {
         return;
     }
     let regions = Layout::vertical([
-        Constraint::Length(2),
+        Constraint::Length(1),
         Constraint::Length(3),
-        Constraint::Length(4),
         Constraint::Min(10),
         Constraint::Length(3),
     ])
@@ -159,11 +159,11 @@ pub fn draw(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool) {
             Style::default().fg(accent).add_modifier(Modifier::BOLD),
         ),
         Span::raw(format!(
-            " {} · {:?} · {}s window{}",
-            s.source.escape_debug(),
+            "{:?}{} · {}s · {}",
             s.state,
+            if frozen { " · DISPLAY FROZEN" } else { "" },
             s.window.configured_seconds,
-            if frozen { " · DISPLAY FROZEN" } else { "" }
+            s.source.escape_debug()
         )),
     ]);
     frame.render_widget(Paragraph::new(header), regions[0]);
@@ -197,10 +197,17 @@ pub fn draw(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool) {
         frame.render_widget(
             Paragraph::new(value)
                 .style(Style::default().fg(color).add_modifier(Modifier::BOLD))
-                .block(Block::default().borders(Borders::ALL).title(title)),
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_style(Style::default().fg(muted))
+                        .title(title),
+                ),
             cards[index],
         );
     }
+    let overview =
+        Layout::horizontal([Constraint::Min(16), Constraint::Length(43)]).split(regions[2]);
     frame.render_widget(
         Sparkline::default()
             .data(&s.history)
@@ -208,9 +215,10 @@ pub fn draw(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool) {
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .title(" Throughput · completed seconds "),
+                    .border_style(Style::default().fg(muted))
+                    .title(" Throughput · entries/s "),
             ),
-        regions[2],
+        overview[0],
     );
     let rows = Level::ALL.into_iter().map(|level| {
         let count = s.window.counts.levels.get(level);
@@ -230,17 +238,26 @@ pub fn draw(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool) {
         ])
         .style(Style::default().fg(color))
     });
-    let table = Table::new(rows, [Constraint::Percentage(25); 4])
-        .header(
-            Row::new(["Severity", "Window count", "Window share", "Session count"])
-                .style(Style::default().add_modifier(Modifier::BOLD)),
-        )
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(" Severity · unknown records remain in the denominator "),
-        );
-    frame.render_widget(table, regions[3]);
+    let table = Table::new(
+        rows,
+        [
+            Constraint::Length(9),
+            Constraint::Min(8),
+            Constraint::Length(9),
+            Constraint::Min(8),
+        ],
+    )
+    .header(
+        Row::new(["Level", "Window", "Share", "Session"])
+            .style(Style::default().add_modifier(Modifier::BOLD)),
+    )
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(muted))
+            .title(" Severity "),
+    );
+    frame.render_widget(table, overview[1]);
     let backlog = s
         .backlog_bytes
         .map(|b| format!("{b} B"))
@@ -260,7 +277,7 @@ pub fn draw(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool) {
             s.skipped_bytes
         )
     };
-    frame.render_widget(Paragraph::new(footer), regions[4]);
+    frame.render_widget(Paragraph::new(footer), regions[3]);
 }
 
 #[cfg(test)]
@@ -315,7 +332,7 @@ mod tests {
             Duration::ZERO,
         );
         let s = stats.snapshot(Duration::from_secs(1), State::Following, 4, Some(5));
-        for (width, height) in [(100, 26), (60, 22), (20, 5), (1, 1)] {
+        for (width, height) in [(120, 40), (100, 26), (80, 24), (60, 18), (20, 5), (1, 1)] {
             let mut terminal = Terminal::new(TestBackend::new(width, height)).unwrap();
             terminal.draw(|f| draw(f, &s, true, false)).unwrap();
             let text = terminal
