@@ -96,6 +96,9 @@ It shows rolling rates and ratios, exact session totals, a 60-second throughput
 chart, severity counts, and ingestion diagnostics. Freeze/resume affects only
 the display; connection and failure status stay live. Hidden tabs release their
 stream and reconnect when shown. The binary works offline without Node or a CDN.
+The compact layout also shows the latest 20 error/fatal previews with a fatal-only
+filter. Freeze holds these previews for review; each is capped at 512 bytes and
+retained only in memory.
 
 `--open` optionally launches the default browser. Use
 `--web-port 8765` for a fixed port; otherwise the OS selects one. It writes no

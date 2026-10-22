@@ -19,6 +19,51 @@ const chartLine = byId('chart-line');
 const chartArea = byId('chart-area');
 let chartDots = new Map();
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+let recentFrame = null;
+let recentKey = '';
+const fatalFilter = byId('fatal-only');
+fatalFilter.addEventListener('click', () => {
+  fatalFilter.setAttribute('aria-pressed', fatalFilter.getAttribute('aria-pressed') !== 'true' ? 'true' : 'false');
+  if (recentFrame) recentErrors(recentFrame);
+});
+
+function recentErrors(frame) {
+  recentFrame = frame;
+  const fatalOnly = fatalFilter.getAttribute('aria-pressed') === 'true';
+  const all = frame.recent_errors ?? [];
+  const key = `${frame.metrics.session_id}:${fatalOnly}:${all.map(entry => entry.record).join(',')}`;
+  if (key === recentKey) return;
+  recentKey = key;
+  const entries = all.filter(entry => !fatalOnly || entry.level === 'fatal');
+  text('recent-errors-count', `${entries.length} retained`);
+  text('recent-empty', fatalOnly ? 'No fatal records in the recent previews.' : 'No errors or fatal records captured.');
+  byId('recent-empty').hidden = entries.length > 0;
+  const list = byId('recent-errors');
+  list.hidden = entries.length === 0;
+  const rows = document.createDocumentFragment();
+  for (const entry of entries) {
+    const row = document.createElement('li');
+    const meta = document.createElement('div');
+    meta.className = 'recent-meta';
+    const badge = document.createElement('span');
+    badge.className = `recent-level recent-${entry.level}`;
+    badge.textContent = entry.level;
+    const position = document.createElement('span');
+    position.textContent = `+${elapsed(entry.elapsed_seconds)} · entry ${integer(entry.record)}`;
+    meta.append(badge, position);
+    const preview = document.createElement('pre');
+    preview.textContent = entry.preview;
+    row.append(meta, preview);
+    if (entry.truncated) {
+      const note = document.createElement('span');
+      note.className = 'subtle';
+      note.textContent = 'Preview shortened…';
+      row.append(note);
+    }
+    rows.append(row);
+  }
+  list.replaceChildren(rows);
+}
 
 // Monotone cubic interpolation rounds the line without overshooting counts.
 function curve(vertices) {
@@ -218,4 +263,5 @@ export function render(frame) {
     row.share.textContent = m.totals.records === '0' ? '—' : percent(Number(count) / Number(m.totals.records));
   }
   chart(m);
+  recentErrors(frame);
 }

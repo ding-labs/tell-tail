@@ -77,6 +77,15 @@
           <p class="subtle" id="session-ratios">Warning — · Error + fatal —</p>
         </section>
       </div>
+      <section class="panel recent-panel" aria-labelledby="recent-title">
+        <div class="section-heading">
+          <h2 id="recent-title">Recent errors <span class="subtle" id="recent-errors-count">0 retained</span></h2>
+          <button id="fatal-only" type="button" aria-pressed="false">Fatal only</button>
+        </div>
+        <p class="subtle">Latest 20 error and fatal previews · newest first · freeze the display to review</p>
+        <p class="recent-empty" id="recent-empty">No errors or fatal records captured.</p>
+        <ol class="recent-errors" id="recent-errors" aria-label="Recent log previews" tabindex="0" hidden></ol>
+      </section>
       <details class="panel diagnostics">
         <summary>Ingestion diagnostics <span>Session totals and current buffers</span></summary>
         <dl class="diagnostic-grid">
@@ -92,7 +101,7 @@
         <p class="subtle">Unavailable values appear as —. Counters are exact; chart positions are approximate.</p>
       </details>
     </main>
-    <footer><span>Aggregate metrics · no raw log capture</span><span>Close this tab freely. Stop the monitor with Ctrl+C.</span></footer>
+    <footer><span>Metrics + recent error previews · kept in memory</span><span>Close this tab freely. Stop the monitor with Ctrl+C.</span></footer>
     <noscript>This dashboard requires JavaScript. Current metrics are available at <a href="/api/snapshot">/api/snapshot</a>.</noscript>
   </div>
 </body>

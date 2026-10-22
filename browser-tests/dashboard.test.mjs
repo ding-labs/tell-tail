@@ -5,6 +5,41 @@ import { chromium, monitor } from './helpers.mjs';
 
 const fixture = JSON.parse(await readFile(new URL('../tests/fixtures/output/empty-web-v1.json', import.meta.url), 'utf8'));
 
+test('recent error review is safe, frozen, filterable and bounded under a flood', async t => {
+  const server = await monitor();
+  t.after(() => server.close());
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  server.child.stdin.write('INFO ready\nERROR first\nFATAL <img src=x onerror="window.unsafe=true">\n');
+  await page.goto(server.url);
+  await page.waitForFunction(() => document.querySelectorAll('#recent-errors li').length === 2);
+  assert.match(await page.locator('#recent-errors li').first().textContent(), /FATAL <img/);
+  assert.equal(await page.locator('img').count(), 0);
+  assert.equal(await page.evaluate(() => window.unsafe), undefined);
+  await page.locator('#fatal-only').click();
+  assert.equal(await page.locator('#recent-errors li').count(), 1);
+  await page.locator('#freeze').click();
+  server.child.stdin.write('ERROR later\n');
+  await page.waitForFunction(async () => (await (await fetch('/api/snapshot')).json()).metrics.totals.records === '4');
+  await page.locator('#fatal-only').click();
+  assert.equal(await page.locator('#recent-errors li').count(), 2, 'filter reviews the frozen sample');
+  assert.doesNotMatch(await page.locator('#recent-errors').textContent(), /later/);
+  await page.locator('#freeze').click();
+  await page.waitForFunction(() => document.querySelectorAll('#recent-errors li').length === 3);
+  server.child.stdin.end(Array.from({ length: 25 }, (_, i) => `ERROR flood ${i} ${'é'.repeat(400)}\n`).join(''));
+  await page.waitForFunction(() => document.getElementById('input-state').textContent === 'complete');
+  assert.equal(await page.locator('#recent-errors li').count(), 20);
+  assert.match(await page.locator('#recent-errors li').first().textContent(), /entry 29.*ERROR flood 24/s);
+  assert.match(await page.locator('#recent-errors li').last().textContent(), /ERROR flood 5/);
+  assert.match(await page.locator('#recent-errors li').first().textContent(), /Preview shortened/);
+  await page.setViewportSize({ width: 320, height: 900 });
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  await page.locator('#fatal-only').click();
+  assert.equal(await page.locator('#recent-errors').isVisible(), false);
+  assert.match(await page.locator('#recent-empty').textContent(), /No fatal records/);
+});
+
 test('embedded dashboard renders real final metrics, diagnostics and responsive layout', async t => {
   const server = await monitor();
   t.after(() => server.close());
