@@ -375,6 +375,8 @@ def run(args):
                            'snapshot_age_p95_upper_ms': p95,
                            'max_snapshot_age_seconds': max_age[0] if observed[0] else None})
             if alerting:
+                diagnostic.join(timeout=1)
+                assert not diagnostic.is_alive() and not error_tail, error_tail.decode(errors='replace')
                 result['alerting'] = {'high_fixture_sha256': high_digest,
                                      'cycle_seconds': args.alert_cycle_seconds,
                                      'start_seconds': args.alert_start_seconds,
