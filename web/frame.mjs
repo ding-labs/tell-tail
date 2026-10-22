@@ -1,7 +1,8 @@
 /** @typedef {{records: string, levels: Record<string, string>, parse_failures: string, oversized_records: string}} Counts */
 /** @typedef {{configured_seconds: number, resolution_seconds: number, observed_seconds: number, counts: Counts, bytes_read: string, records_per_second: number, bytes_per_second: number, warning_ratio: number|null, error_ratio: number|null}} Window */
 /** @typedef {{kind: string, session_id: string, source: string, state: string, elapsed_seconds: number, observed_at_unix_seconds: number, totals: Counts, bytes_read: string, pending_bytes: string, skipped_bytes: string, discarded_partial_records: string, backlog_bytes: string|null, warning_ratio: number|null, error_ratio: number|null, window: Window, history: string[]}} Metrics */
-/** @typedef {{web_schema_version: 1, sequence: string, metrics: Metrics}} Frame */
+/** @typedef {{record: string, elapsed_seconds: number, level: 'error'|'fatal', preview: string, truncated: boolean}} RecentError */
+/** @typedef {{web_schema_version: 1, sequence: string, metrics: Metrics, recent_errors?: RecentError[]}} Frame */
 
 export const levels = ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'unknown'];
 export const finalStates = new Set(['complete', 'stopped', 'failed']);
@@ -86,6 +87,18 @@ export function parseFrame(json) {
   ratio(w.error_ratio, 'metrics.window.error_ratio');
   requireField(Array.isArray(m.history) && m.history.length <= 60, 'metrics.history', 'an array of at most 60 counters');
   for (const point of m.history) counter(point, 'metrics.history[]');
+  if (frame.recent_errors !== undefined) {
+    const entries = frame.recent_errors;
+    requireField(Array.isArray(entries) && entries.length <= 20, 'recent_errors', 'an array of at most 20 previews');
+    for (const entry of entries) {
+      object(entry, 'recent_errors[]');
+      counter(entry.record, 'recent_errors[].record');
+      number(entry.elapsed_seconds, 'recent_errors[].elapsed_seconds');
+      requireField(entry.level === 'error' || entry.level === 'fatal', 'recent_errors[].level', 'error or fatal');
+      requireField(typeof entry.preview === 'string' && new TextEncoder().encode(entry.preview).length <= 512, 'recent_errors[].preview', 'a string of at most 512 UTF-8 bytes');
+      requireField(typeof entry.truncated === 'boolean', 'recent_errors[].truncated', 'a boolean');
+    }
+  }
   return frame;
 }
 
