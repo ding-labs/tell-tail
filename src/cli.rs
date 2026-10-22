@@ -68,16 +68,16 @@ pub struct Args {
     /// Text, JSON, and metrics-file publication interval in milliseconds.
     #[arg(long, default_value_t = 1000, value_parser = clap::value_parser!(u32).range(100..=60_000))]
     pub interval_ms: u32,
-    /// POST alert JSON to this HTTP(S) endpoint.
+    /// POST breach and recovery JSON to this HTTP(S) endpoint.
     #[arg(long, requires = "alert_error_percent")]
     pub alert_webhook: Option<String>,
     /// Alert when rolling (error + fatal) / all records is at least this percent.
     #[arg(long, requires = "alert_webhook")]
     pub alert_error_percent: Option<f64>,
-    /// Message included in the alert JSON (at most 4096 bytes).
+    /// Message included in breach JSON (at most 4096 bytes).
     #[arg(long, requires = "alert_webhook")]
     pub alert_message: Option<String>,
-    /// Minimum records in the rolling window before evaluating an alert.
+    /// Minimum records in the rolling window to evaluate a breach or recovery.
     #[arg(long, default_value_t = 100, requires = "alert_webhook", value_parser = clap::value_parser!(u64).range(1..))]
     pub alert_min_records: u64,
     /// Minimum seconds between new breaches; sustained breaches only fire once.

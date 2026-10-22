@@ -41,18 +41,27 @@ impl Alerts {
         }
         let at = Duration::from_secs_f64(snapshot.elapsed_seconds);
         if let Some(event) = self.rule.next_event(&snapshot.window.counts, at) {
-            if event == AlertEvent::Recovery || self.delivery.try_send(self.payload(snapshot)) {
+            if self.delivery.try_send(self.payload(snapshot, event)) {
+                // Both transitions commit on enqueue, not HTTP acknowledgement.
+                // A full queue leaves the event eligible on a later snapshot.
                 self.rule.commit(event, at);
             }
         }
     }
 
-    fn payload(&self, snapshot: &Snapshot) -> String {
+    fn payload(&self, snapshot: &Snapshot, event: AlertEvent) -> String {
         let counts = &snapshot.window.counts;
+        let (event, message) = match event {
+            AlertEvent::Breach => ("error_threshold_met", self.message.as_str()),
+            AlertEvent::Recovery => (
+                "error_threshold_recovered",
+                "Tell-Tail error percentage recovered below its threshold.",
+            ),
+        };
         serde_json::json!({
             "schema_version": 1,
-            "event": "error_threshold_met",
-            "message": self.message,
+            "event": event,
+            "message": message,
             "session_id": snapshot.session_id,
             "source": snapshot.source,
             "observed_at_unix_seconds": snapshot.observed_at_unix_seconds,

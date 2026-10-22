@@ -137,7 +137,8 @@ CLI-only binary. See the [dashboard guide](docs/WEB-DASHBOARD.md),
 
 ## Webhook alerts
 
-Send a JSON message when errors reach 25% of records in the rolling window:
+Send a JSON message when errors reach 25% of records in the rolling window,
+and a recovery notification when they fall below it:
 
 ```sh
 tell-tail app.log --window 60 \
@@ -153,16 +154,23 @@ stdin, files, every output mode, and a frozen dashboard display.
 
 - `--alert-error-percent`: inclusive threshold from 0 to 100. Requires an endpoint.
 - `--alert-webhook`: one HTTP(S) endpoint, up to 2048 bytes. Requires a threshold.
-- `--alert-message`: optional text, up to 4096 bytes, included as a JSON string.
+- `--alert-message`: optional breach text, up to 4096 bytes, included as a JSON
+  string. Recovery uses its own fixed message.
 - `--alert-min-records`: minimum records in the window; default **100**. A partial
   startup window can qualify. Set this to 1 for very small test streams.
 - `--alert-cooldown`: minimum seconds between new breaches; default **300**.
   Accepts 0 through 86400.
 
-A sustained breach fires once. An eligible window below the threshold rearms the
-rule; a subsequent breach can fire once the cooldown expires. Empty or undersized
-windows do not count as recovery. State resets when Tell-Tail restarts. There are
-no repeated reminders or recovery notifications in this version.
+A sustained breach fires once. After a breach is queued, the first eligible
+window strictly below the threshold sends one recovery notification and rearms
+the rule when that notification is queued. Recovery requires the same minimum
+record count as a breach. It bypasses the cooldown and does not restart it;
+subsequent breaches can fire once the cooldown since the last queued breach
+expires. A breach suppressed by cooldown does not produce a recovery notification.
+Initially healthy, empty, and undersized windows do not send recovery. Stopping
+the process or an input failure does not signal recovery. State resets when
+Tell-Tail restarts. There are no repeated reminders. With a threshold of 0,
+eligible windows always breach and cannot recover.
 
 The fixed payload includes your message and aggregate statistics:
 
@@ -183,8 +191,14 @@ The fixed payload includes your message and aggregate statistics:
 }
 ```
 
+Recovery uses the same payload shape with `event: "error_threshold_recovered"`
+and `message: "Tell-Tail error percentage recovered below its threshold."`.
+Its statistics describe the recovered window; `session_id` and `source` identify
+the same monitoring session as the breach. Receivers should distinguish the two
+event values rather than treating every message as a breach.
+
 Webhook schema 1 is separate from the existing snapshot schema. Percentages are
-on a 0–100 scale. No raw log records or endpoint URL are included in the payload.
+on a 0–100 scale. No raw log records or endpoint URL are included in either payload.
 
 Delivery uses `POST` with `Content-Type: application/json`; any HTTP 2xx response
 counts as success. HTTPS verifies certificates. Redirects are not followed, and
@@ -192,9 +206,12 @@ URL userinfo/fragment syntax is rejected. Custom headers and arbitrary JSON
 templates are outside this first version.
 
 Delivery is best effort: one active request and one queued event, with a
-five-second request deadline. A full queue leaves the current breach eligible
-for evaluation on the next snapshot. There are no automatic retries or durable
-storage, so transient breaches or failed deliveries can be lost. Failures write a
+five-second request deadline. A full queue leaves the current transition eligible
+for evaluation on a later qualifying snapshot without changing the rule state.
+There are no automatic retries or durable storage, so transient breaches,
+recoveries, or failed deliveries can be lost. State changes when a notification
+is queued, even if delivery later fails; a recovery can therefore arrive when
+the receiver missed its breach. Failures write a
 sanitized diagnostic to stderr and do not change log counts or the exit status.
 Shutdown allows 250 ms for delivery, then cancels pending work; even a finite scan
 can exit before a slow receiver acknowledges its final alert. Network I/O never

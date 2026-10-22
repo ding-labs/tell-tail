@@ -18,6 +18,10 @@
   Minimum samples, breach suppression, and cooldown limit noise. HTTP(S) delivery
   uses bounded state, request deadlines, and prompt cancellation; failures are
   best effort and do not stop ingestion. See the README for payload and options.
+- Threshold webhooks also send one `error_threshold_recovered` notification when
+  an eligible rolling window falls below the threshold after a queued breach.
+  Recovery bypasses breach cooldown, uses a separate message, and requires the
+  same minimum sample size. Empty windows and shutdown do not signal recovery.
 
 ### Changed
 
