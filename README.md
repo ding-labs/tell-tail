@@ -138,7 +138,8 @@ CLI-only binary. See the [dashboard guide](docs/WEB-DASHBOARD.md),
 ## Webhook alerts
 
 Send a JSON message when errors reach 25% of records in the rolling window,
-and a recovery notification when they fall below it:
+and a recovery notification when they fall below it. Configure these options
+when starting Tell-Tail; the receiver must accept JSON POSTs and return HTTP 2xx:
 
 ```sh
 tell-tail app.log --window 60 \
@@ -146,6 +147,20 @@ tell-tail app.log --window 60 \
   --alert-webhook https://example.com/hooks/tell-tail \
   --alert-message "Check the service: errors reached 25%"
 ```
+
+For a quick demo from a source checkout, run:
+
+```sh
+cargo build --locked
+python3 scripts/demo_webhooks.py
+```
+
+The [demo](scripts/demo_webhooks.py) starts a temporary local webhook receiver
+and runs the real binary through healthy logs (0% errors), a breach (50%), and
+recovery (20%). It prints excerpts from both received JSON payloads, acknowledges
+them with HTTP 204, and exits. Python 3 and the built binary are the only runtime
+requirements. Use `--binary /path/to/tell-tail` to select a different binary.
+Recovery arrives during the default five-minute breach cooldown.
 
 The rule uses `(error + fatal) / all records`, including unknown records in the
 denominator. It evaluates each ingestion snapshot (roughly every 100 ms) and at
