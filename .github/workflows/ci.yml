@@ -44,6 +44,7 @@ jobs:
           target/debug/tell-tail --output prometheus < /dev/null | work/tools/promtool check metrics
       - run: cargo build --release --locked
       - run: python3 scripts/test_soak_support.py
+      - run: python3 scripts/test_soak_webhooks.py
       - run: python3 scripts/test_watch_docker_soak.py
       - run: python3 scripts/soak.py --seconds 3 --profile mixed --report work/stdin.json
       - run: python3 scripts/soak.py --seconds 3 --profile mixed --tui --report work/tui.json

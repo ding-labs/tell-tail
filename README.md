@@ -162,6 +162,11 @@ them with HTTP 204, and exits. Python 3 and the built binary are the only runtim
 requirements. Use `--binary /path/to/tell-tail` to select a different binary.
 Recovery arrives during the default five-minute breach cooldown.
 
+For continuous testing with resource limits and optional Slack delivery, see the
+[24-hour webhook validation guide](docs/WEBHOOK-SOAK.md). Slack incoming webhooks
+require a Slack message payload; the test harness supplies a small formatting
+relay for Tell-Tail's generic alert JSON.
+
 The rule uses `(error + fatal) / all records`, including unknown records in the
 denominator. It evaluates each ingestion snapshot (roughly every 100 ms) and at
 finite EOF, independently of the display/publication interval. It works with
