@@ -66,3 +66,12 @@ The October 22 scenario freezes application source
 The constrained preflight passed with 20,000 records, two Slack notifications and
 5.06 MiB peak sampled monitor/helper RSS. The full-day verdict requires review
 of its separate completed report.
+
+The day run started October 22, 2026 at 10:33:49 PDT, with an expected finish
+October 23 at 10:33:49 PDT. Its container is
+`tell-tail-webhooks-day-2026-10-22`; the frozen manifest and evidence are under
+`work/soak-2026-10-22-1gb1cpu/`. The start check verified the resource limits,
+running journal, host watcher and owned sleep assertion. Notifications and
+start/final summaries go to
+[#telltale-soak-2026-10-22](https://app.slack.com/client/T0ARKPDHAKX/C0CC7NJS7A4)
+in devrel-flywheel. The run is in progress; it has no full-duration pass yet.
