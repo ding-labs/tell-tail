@@ -1,5 +1,14 @@
 # Continuous webhook validation
 
+The October 22–23, 2026 test passed 24 uninterrupted hours at 1,000
+records/second under one CPU, 1 GiB RAM and no swap. The frozen Linux ARM64 build
+processed 86.4 million records with exact final counters and byte totals. All
+24 breach/recovery pairs reached Slack. Peak sampled monitor/helper memory was
+7.95 MiB, and peak memory for the whole test container was 42 MiB.
+
+See the [reviewed results](#reviewed-october-23-result-passed) and
+[portable evidence summary](validation/webhook-soak-2026-10-23.json).
+
 `scripts/soak_webhooks.py` runs the real Tell-Tail binary against deterministic
 mixed text/JSON logs. It captures each HTTP webhook, checks its statistics and
 transition order, and optionally formats and forwards it to a Slack incoming
@@ -95,6 +104,20 @@ progress stream and Slack channel history.
 | Container enforcement | CPU 0, quota 100000/100000; 1,073,741,824-byte memory limit; zero swap; read-only root; peak cgroup memory 42 MiB |
 | Exit and identity | Exit 0, zero restarts, OOMKilled false and zero cgroup OOM events; frozen source, binary and harness hashes unchanged |
 
+The workload exercised ingestion from stdin, rolling statistics, breach and
+recovery decisions, HTTP delivery and Slack forwarding in one monitoring
+session. Each hourly spike crossed the threshold and then recovered while
+traffic continued. Matching every final counter and byte total checked for
+input loss across the full run; the ordered event ledger and Slack history
+checked both notification paths.
+
+Memory stayed within the existing plateau tolerance: the ten-minute medians
+were approximately 4.46–4.77 MiB after warmup. The 7.95 MiB peak is a sampled
+resident-memory measurement of the monitor and its helpers. The separate
+42 MiB kernel cgroup peak includes the generator, receiver and formatting relay
+as well. The producer CPU fraction measures the traffic generator, not total
+application CPU use.
+
 AC power disconnected during the final hour. The user explicitly authorized
 continuing on battery; the lid stayed open at follow-up checks and the owned
 sleep assertion remained present until the watcher finished. The continuity
@@ -106,6 +129,12 @@ Docker state/logs and Slack review are preserved under the campaign directory.
 manifest; `review_result.py` preserves the independent checks. The runner's
 final Slack summary was confirmed, so no duplicate was sent.
 
+The checked-in [evidence summary](validation/webhook-soak-2026-10-23.json)
+retains the tested identities, workload, exact results and hashes of the local
+reports. It contains no webhook credentials or private host paths.
+
 This pass covers the frozen webhook build in a Linux ARM64 container under the
 one-CPU/1-GiB/no-swap limits. It excludes a separate VM operating system and
 does not certify the older frozen release candidate or change its release gates.
+The run used headless JSON output; it does not establish a TUI/browser memory
+budget, native macOS behavior or maximum ingestion throughput.
