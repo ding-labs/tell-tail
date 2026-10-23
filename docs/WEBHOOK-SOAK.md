@@ -64,14 +64,48 @@ The October 22 scenario freezes application source
 `328a0994b52bd6100f9a4419fbee66c120c02037`. Its Linux ARM64 release binary SHA-256 is
 `34a3e0b8854f3a4c7579004f90c08ed7db72b4d9d20824f07848d8768e95479f`.
 The constrained preflight passed with 20,000 records, two Slack notifications and
-5.06 MiB peak sampled monitor/helper RSS. The full-day verdict requires review
-of its separate completed report.
+5.06 MiB peak sampled monitor/helper RSS. It supplies no duration credit to the
+separately reviewed day run below.
 
-The day run started October 22, 2026 at 10:33:49 PDT, with an expected finish
-October 23 at 10:33:49 PDT. Its container is
+The day run started October 22, 2026 at 10:33:49 PDT and finished October 23 at
+10:33:50 PDT. Its container is
 `tell-tail-webhooks-day-2026-10-22`; the frozen manifest and evidence are under
 `work/soak-2026-10-22-1gb1cpu/`. The start check verified the resource limits,
 running journal, host watcher and owned sleep assertion. Notifications and
 start/final summaries go to
 [#telltale-soak-2026-10-22](https://app.slack.com/client/T0ARKPDHAKX/C0CC7NJS7A4)
-in devrel-flywheel. The run is in progress; it has no full-duration pass yet.
+in devrel-flywheel.
+
+## Reviewed October 23 result: passed
+
+An independent review reconstructed both seeded input fixtures, recomputed the
+exact totals and memory plateau checks, checked every event and its session,
+and corroborated the report with Docker exit evidence, the retained minute
+progress stream and Slack channel history.
+
+| Check | Reviewed evidence |
+| --- | --- |
+| Continuous production | 86,400.000516 seconds; maximum observation gap 0.180433 seconds |
+| Input and final counters | 86,400,000 records; 16,850,275,200 bytes; exact agreement |
+| Levels | 75,772,800 info; 8,352,000 warn; 1,987,200 error; 288,000 fatal; all other levels zero |
+| Parsing and shutdown | No parse failures, oversized, pending, skipped or discarded records/bytes; final state complete |
+| Webhooks | 24 ordered breach/recovery pairs, one unchanged session; all 48 accepted by Slack and visible in the channel |
+| Monitor/helper memory | Peak sampled RSS 7.953125 MiB; 143 ten-minute medians between 4.460938 and 4.765625 MiB; post-warmup limit 8.460938 MiB |
+| Producer CPU | 171.892329 CPU seconds / production duration = 0.001989495 of one CPU, below 0.75 |
+| Container enforcement | CPU 0, quota 100000/100000; 1,073,741,824-byte memory limit; zero swap; read-only root; peak cgroup memory 42 MiB |
+| Exit and identity | Exit 0, zero restarts, OOMKilled false and zero cgroup OOM events; frozen source, binary and harness hashes unchanged |
+
+AC power disconnected during the final hour. The user explicitly authorized
+continuing on battery; the lid stayed open at follow-up checks and the owned
+sleep assertion remained present until the watcher finished. The continuity
+check passed without a restart or combined partial durations.
+
+The separate `results/day/report.json`, `results/day/webhooks.ndjson`, final
+Docker state/logs and Slack review are preserved under the campaign directory.
+`results/reviewed-result.json` records the reviewed values and evidence SHA-256
+manifest; `review_result.py` preserves the independent checks. The runner's
+final Slack summary was confirmed, so no duplicate was sent.
+
+This pass covers the frozen webhook build in a Linux ARM64 container under the
+one-CPU/1-GiB/no-swap limits. It excludes a separate VM operating system and
+does not certify the older frozen release candidate or change its release gates.
