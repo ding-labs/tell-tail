@@ -167,6 +167,12 @@ For continuous testing with resource limits and optional Slack delivery, see the
 require a Slack message payload; the test harness supplies a small formatting
 relay for Tell-Tail's generic alert JSON.
 
+The [October 22–23, 2026 run](docs/WEBHOOK-SOAK.md#reviewed-october-23-result-passed)
+passed 24 uninterrupted hours at 1,000 records/second under one CPU, 1 GiB RAM
+and no swap. All 86.4 million records matched the expected counters and bytes,
+and all 24 breach/recovery pairs reached Slack. Peak sampled monitor/helper
+memory was 7.95 MiB; peak memory for the whole test container was 42 MiB.
+
 The rule uses `(error + fatal) / all records`, including unknown records in the
 denominator. It evaluates each ingestion snapshot (roughly every 100 ms) and at
 finite EOF, independently of the display/publication interval. It works with

@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-23",
+  "status": "passed",
+  "reviewed_at": "2026-10-23T17:37:51.326603+00:00",
+  "tested_source_commit": "328a0994b52bd6100f9a4419fbee66c120c02037",
+  "release_binary_sha256": "34a3e0b8854f3a4c7579004f90c08ed7db72b4d9d20824f07848d8768e95479f",
+  "harness_commit": "b4f803e138e275dded4bf1c3276e9586d8b877da",
+  "runtime": {
+    "platform": "Linux-6.10.14-linuxkit-aarch64-with-glibc2.36",
+    "architecture": "aarch64",
+    "rust": "rustc 1.88.0 (6b00bc388 2025-06-23)",
+    "input": "stdin",
+    "output": "json"
+  },
+  "started_at": "2026-10-22T17:33:49.247728+00:00",
+  "finished_at": "2026-10-23T17:33:50.051966+00:00",
+  "limits": {
+    "cpu_cores": 1,
+    "cpu_set": "0",
+    "cpu_max": "100000 100000",
+    "memory_bytes": 1073741824,
+    "swap_bytes": 0,
+    "read_only_root": true
+  },
+  "workload": {
+    "rate_records_per_second": 1000,
+    "window_seconds": 60,
+    "threshold_percent": 25,
+    "minimum_records": 100,
+    "breach_cooldown_seconds": 300,
+    "cycle_seconds": 3600,
+    "breach_start_seconds": 120,
+    "breach_duration_seconds": 120,
+    "healthy_error_percent": 1,
+    "breach_error_percent": 40,
+    "breach_fatal_percent": 10
+  },
+  "results": {
+    "duration_seconds": 86400.000516022,
+    "records": 86400000,
+    "bytes": 16850275200,
+    "levels": {
+      "trace": 0,
+      "debug": 0,
+      "info": 75772800,
+      "warn": 8352000,
+      "error": 1987200,
+      "fatal": 288000,
+      "unknown": 0
+    },
+    "max_observation_gap_seconds": 0.18043255805969238,
+    "peak_monitor_helper_rss_mib": 7.953125,
+    "rss_median_count": 143,
+    "rss_median_range_mib": [
+      4.4609375,
+      4.765625
+    ],
+    "rss_plateau_limit_mib": 8.4609375,
+    "producer_cpu_fraction": 0.00198949453411316,
+    "container_peak_memory_bytes": 44040192,
+    "exact_counters_verified": true,
+    "parse_failures": 0,
+    "oversized_records": 0,
+    "pending_bytes": 0,
+    "skipped_bytes": 0,
+    "discarded_partial_records": 0
+  },
+  "webhooks": {
+    "ordered_breach_recovery_pairs": 24,
+    "slack_accepted_events": 48,
+    "single_session": true,
+    "session_id": "9-1792690429258172044",
+    "slack_channel_history_verified": true
+  },
+  "exit": {
+    "container_exit_code": 0,
+    "oom_killed": false,
+    "restart_count": 0,
+    "cgroup_oom_events": 0
+  },
+  "power_note": "AC power disconnected during the final hour. The user authorized continuing on battery; continuity checks passed.",
+  "scope": "Linux ARM64 container with headless JSON output; separate VM OS, TUI/browser budgets, native macOS behavior, maximum throughput and the older frozen release candidate are outside this result.",
+  "local_evidence_directory": "work/soak-2026-10-22-1gb1cpu/results/",
+  "local_evidence_sha256": {
+    "day/report.json": "4f1b7c85a0380f230818575fb78829ef999288148b631f19f8049af472de0283",
+    "day/campaign.json": "59604d8990c79579f56102a2ec6913856822ecebbf6529fe8be5877104383690",
+    "day/webhooks.ndjson": "343621f1f045261566e61336a3b07190c88d95b328a74848f32b0102ce6bb84f",
+    "container-final-state.json": "01326543f942f9607e1d616f137bf55bc0d79d0ad9ec71a047c7ae168de5fc75",
+    "container-final-logs.txt": "97af6fbccb54ff9308b7afeee39935b784113e80433901a07a16a456156200a4",
+    "slack-completion-review.json": "a1341b743925bb59966055f8f1ab120f109c9d8e0596946c00ca396e66db4701",
+    "host-monitor.json": "abe4b0426ebea522a7e3a4101d899e1467c3152f5c181a7c040ddfd437561266",
+    "ac-power-disconnected-2026-10-23T163500Z.json": "a8a24edd01b4974a2188b0c3350bae26cb929b41449d0bbe01b3f64bcb8782b0"
+  },
+  "local_review_sha256": "b60d2546498695d854ece92905eaf061a3be88a01b9f5663cce470ebf6df79cc",
+  "review_script_sha256": "75314689caf8f08efebcfaf8e6ec7e886821c801a4b5f8f12d4a030ed64e3231",
+  "harness_files_sha256": {
+    "soak.py": "ef008fea104ce89cd16aa6c4f00e5240f0e2f51b6efd99a38f77502571f9035d",
+    "soak_support.py": "f0ab631e83308efda2773d06cc19d74fb4d4a42498f68559c64711415684bb52",
+    "soak_webhooks.py": "94a7e49f6e279853a91377e00e9608b719f33ad5a090dda9d6dac889624d6f6c"
+  },
+  "host_watcher_sha256": "7174e6e26f29ae3ca4b833c7d1d9f949c3b140953c7ce5e4765dbaf2cb16cf31"
+}
