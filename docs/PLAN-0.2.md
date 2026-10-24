@@ -309,9 +309,12 @@ with its build verification, then install from the extracted package in a clean
 directory and run a known fixture. Exclude generated logs and fuzz artifacts.
 
 Keep Rust 1.88 unless a required change justifies an explicit toolchain increment.
-Build checksummed candidate archives for macOS arm64 and Linux x86_64 first.
-Add macOS x86_64 and Linux arm64 artifacts only with runtime smoke evidence and
-documented minimum OS/libc versions. Pin CI actions and release tooling to reviewed
+Build checksummed candidate archives for macOS arm64 and static musl Linux
+x86_64/arm64, with native tests and archive smoke evidence for every target.
+Exercise the Linux archives in Debian 11 and Alpine userspaces; this broadens
+libc compatibility without establishing an older-kernel guarantee. Add macOS
+x86_64 only with native evidence and a documented minimum OS version.
+Pin CI actions and release tooling to reviewed
 versions or commits. Package checks establish local readiness; registry publishing
 and public release distribution are separate actions.
 
@@ -321,10 +324,11 @@ notarization and broader platform coverage remain future distribution decisions.
 
 ### Release automation
 
-The [Release candidate workflow](../.github/workflows/release.yml) is manually
-triggered. Its default is build-only: no tag, draft, or public release is created.
-It tests and builds macOS 14+ Apple Silicon and Linux x86_64 (Ubuntu 24.04,
-glibc 2.39), packages license texts and build identity, exercises the extracted
+The [Release candidate workflow](../.github/workflows/release.yml) runs for
+packaging changes or manual dispatch. Its default is build-only: no tag, draft,
+or public release is created. Branch builds are supported; publication requires
+`main`. It tests and builds macOS 14+ Apple Silicon and static musl Linux x86_64
+and ARM64 on native Ubuntu runners, packages license texts and build identity, exercises the extracted
 binary, and installs it through a temporary local Homebrew tap. It assembles
 SHA-256 checksums, a release manifest, and a generated formula as Actions
 artifacts retained for 14 days. It does not publish to crates.io.
