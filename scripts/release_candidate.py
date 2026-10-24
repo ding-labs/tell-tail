@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Resolve a candidate on main and enforce validation when publication is requested."""
+"""Resolve a build candidate; publication additionally requires main and validation."""
 import argparse
 import json
 import pathlib
@@ -18,7 +18,9 @@ def main():
     args = parser.parse_args()
     if not re.fullmatch(r'[0-9a-f]{40}', args.commit):
         parser.error('use a full candidate commit SHA')
-    subprocess.run(['git', 'merge-base', '--is-ancestor', args.commit, 'origin/main'], check=True)
+    subprocess.run(['git', 'cat-file', '-e', args.commit + '^{commit}'], check=True)
+    if args.publish == 'true':
+        subprocess.run(['git', 'merge-base', '--is-ancestor', args.commit, 'origin/main'], check=True)
     source = subprocess.check_output(['git', 'show', f'{args.commit}:Cargo.toml'], text=True)
     version = tomllib.loads(source)['package']['version']
     if not re.fullmatch(VERSION, version):

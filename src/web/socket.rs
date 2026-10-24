@@ -134,32 +134,37 @@ mod tests {
     fn stalled_writes_expire_but_idle_sockets_and_progress_do_not() {
         tokio::runtime::Builder::new_current_thread()
             .enable_time()
+            .start_paused(true)
             .build()
             .unwrap()
             .block_on(async {
-                let (writer, mut reader) = duplex(4);
-                let mut writer = ProgressIo::new(writer, Duration::from_millis(100));
-                // Idle time before the first write cannot consume its deadline.
-                sleep(Duration::from_millis(120)).await;
-                writer.write_all(b"1234").await.unwrap();
-                let error = writer.write_all(b"x").await.unwrap_err();
-                assert_eq!(error.kind(), io::ErrorKind::TimedOut);
-                reader.read_exact(&mut [0; 4]).await.unwrap();
-                writer.write_all(b"abcd").await.unwrap();
+                tokio::time::timeout(Duration::from_secs(2), async {
+                    let (writer, mut reader) = duplex(4);
+                    let mut writer = ProgressIo::new(writer, Duration::from_millis(100));
+                    // Idle time before the first write cannot consume its deadline.
+                    sleep(Duration::from_millis(120)).await;
+                    writer.write_all(b"1234").await.unwrap();
+                    let error = writer.write_all(b"x").await.unwrap_err();
+                    assert_eq!(error.kind(), io::ErrorKind::TimedOut);
+                    reader.read_exact(&mut [0; 4]).await.unwrap();
+                    writer.write_all(b"abcd").await.unwrap();
 
-                let drain = async {
-                    for _ in 0..8 {
-                        sleep(Duration::from_millis(25)).await;
-                        reader.read_exact(&mut [0; 4]).await.unwrap();
-                    }
-                };
-                // Total write time exceeds the timeout, with regular progress.
-                let started = Instant::now();
-                let (result, ()) = tokio::join!(writer.write_all(&[0; 32]), drain);
-                result.unwrap();
-                assert!(started.elapsed() > Duration::from_millis(100));
-                drop(reader);
-                assert!(writer.write_all(b"closed").await.is_err());
+                    let drain = async {
+                        for _ in 0..8 {
+                            sleep(Duration::from_millis(25)).await;
+                            reader.read_exact(&mut [0; 4]).await.unwrap();
+                        }
+                    };
+                    // Total write time exceeds the timeout, with regular progress.
+                    let started = Instant::now();
+                    let (result, ()) = tokio::join!(writer.write_all(&[0; 32]), drain);
+                    result.unwrap();
+                    assert!(started.elapsed() > Duration::from_millis(100));
+                    drop(reader);
+                    assert!(writer.write_all(b"closed").await.is_err());
+                })
+                .await
+                .expect("socket progress test must finish within two seconds of virtual time");
             });
     }
 }

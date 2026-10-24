@@ -1,9 +1,38 @@
 name: Release candidate
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'src/**'
+      - 'web/**'
+      - 'tests/**'
+      - 'packaging/tell-tail.rb.in'
+      - 'scripts/*release*.py'
+      - 'scripts/*formula.py'
+      - 'scripts/check_homebrew.py'
+      - 'scripts/check_package.py'
+  pull_request:
+    paths:
+      - '.github/workflows/release.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'src/**'
+      - 'web/**'
+      - 'tests/**'
+      - 'packaging/tell-tail.rb.in'
+      - 'scripts/*release*.py'
+      - 'scripts/*formula.py'
+      - 'scripts/check_homebrew.py'
+      - 'scripts/check_package.py'
   workflow_dispatch:
     inputs:
       source_commit:
-        description: Full candidate commit SHA on main (empty uses the workflow commit)
+        description: Full candidate SHA (empty uses workflow commit; publishing requires main)
         type: string
         default: ''
       publish:
@@ -13,8 +42,8 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: release-candidate
-  cancel-in-progress: false
+  group: release-candidate-${{ github.ref }}-${{ inputs.publish && 'publish' || 'build' }}
+  cancel-in-progress: ${{ !inputs.publish }}
 jobs:
   candidate:
     runs-on: ubuntu-24.04
@@ -31,9 +60,9 @@ jobs:
         id: candidate
         env:
           SOURCE_COMMIT: ${{ inputs.source_commit }}
-          PUBLISH: ${{ inputs.publish }}
+          PUBLISH: ${{ inputs.publish || false }}
         run: |
-          test "$GITHUB_REF" = refs/heads/main
+          if [ "$PUBLISH" = true ]; then test "$GITHUB_REF" = refs/heads/main; fi
           python3 scripts/release_candidate.py \
             --commit "${SOURCE_COMMIT:-$GITHUB_SHA}" --publish "$PUBLISH" --output "$GITHUB_OUTPUT"
   archive:
@@ -43,24 +72,33 @@ jobs:
       matrix:
         include:
           - {os: macos-14, target: aarch64-apple-darwin}
-          - {os: ubuntu-24.04, target: x86_64-unknown-linux-gnu}
+          - {os: ubuntu-24.04, target: x86_64-unknown-linux-musl}
+          - {os: ubuntu-24.04-arm, target: aarch64-unknown-linux-musl}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     env:
       MACOSX_DEPLOYMENT_TARGET: '14.0'
+      CARGO_BUILD_TARGET: ${{ matrix.target }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           ref: ${{ needs.candidate.outputs.commit }}
           persist-credentials: false
-      - run: rustup toolchain install 1.88.0 --profile minimal
+      - run: rustup toolchain install 1.88.0 --profile minimal --target "${{ matrix.target }}"
+      - name: Prepare static Linux linking
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y musl-tools
+          echo 'CC=musl-gcc' >> "$GITHUB_ENV"
+          echo 'RUSTFLAGS=-C linker=musl-gcc -C target-feature=+crt-static' >> "$GITHUB_ENV"
       - run: cargo test --locked
       - run: cargo build --release --locked
       - name: Build and exercise the native archive
         env:
           TARGET: ${{ matrix.target }}
         run: |
-          python3 scripts/package_release.py --target "$TARGET" --binary target/release/tell-tail
+          python3 scripts/package_release.py --target "$TARGET" --binary "target/$TARGET/release/tell-tail"
           python3 scripts/check_release_archive.py dist/*.tar.gz
       - name: Install the candidate through a temporary Homebrew tap
         env:
@@ -69,7 +107,24 @@ jobs:
           if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
             eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           fi
+          if ! command -v brew >/dev/null; then
+            curl -fsSL https://raw.githubusercontent.com/Homebrew/install/85d1a3fc80d8a63932f632aca8f787de11d14a64/install.sh -o "$RUNNER_TEMP/homebrew-install.sh"
+            NONINTERACTIVE=1 bash "$RUNNER_TEMP/homebrew-install.sh"
+            eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+          fi
           python3 scripts/check_homebrew.py --target "$TARGET" --assets dist
+      - name: Exercise static archives on older glibc and Alpine userspaces
+        if: runner.os == 'Linux'
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          version=$(python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["package"]["version"])')
+          for image in \
+            python:3.11-slim-bullseye@sha256:9e25f400253a5fa3191813d6a67eb801ca1e6f012b3bd2588fa6920b59e3eba6 \
+            python:3.11-alpine3.22@sha256:a4fc589b32e824f3f02ed9d7e7be19518aa47e105b80416336af9f202275a489; do
+            docker run --rm --network none -v "$PWD/dist:/dist:ro" -v "$PWD/scripts:/checks:ro" \
+              "$image" python /checks/check_release_archive.py "/dist/tell-tail-$version-$TARGET.tar.gz"
+          done
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: native-${{ matrix.target }}

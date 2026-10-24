@@ -7,6 +7,8 @@ import subprocess
 import tarfile
 import tempfile
 
+from check_package import check_web_install
+
 
 def check(path):
     prefix = path.name.removesuffix('.tar.gz')
@@ -23,6 +25,8 @@ def check(path):
                 destination.chmod(member.mode & 0o777)
         bundle = directory / prefix
         build = json.loads((bundle / 'BUILD.json').read_text())
+        if prefix != f'tell-tail-{build["version"]}-{build["target"]}':
+            raise ValueError('archive filename does not match its build identity')
         binary = bundle / 'tell-tail'
         version = subprocess.check_output([str(binary), '--version'], text=True, timeout=5).strip()
         if version != f'tell-tail {build["version"]}':
@@ -35,7 +39,13 @@ def check(path):
             raise ValueError('packaged binary fixture failed')
         if not (bundle / 'LICENSE').is_file() or not (bundle / 'THIRD_PARTY_NOTICES.md').is_file():
             raise ValueError('license notices missing')
-        print(json.dumps({'archive': path.name, 'native_smoke': 'passed', 'build': build}))
+        if build['target'].endswith('-linux-musl'):
+            for name in ('musl-1.2.3.COPYRIGHT', 'musl-1.2.3-SOURCE-NOTICES.txt'):
+                if not (bundle / 'THIRD_PARTY_LICENSES/musl' / name).is_file():
+                    raise ValueError('static musl license notices missing')
+        check_web_install(binary, directory)
+        print(json.dumps({'archive': path.name, 'native_smoke': 'passed',
+                          'embedded_web_smoke': 'passed', 'build': build}))
 
 
 if __name__ == '__main__':
