@@ -37,6 +37,11 @@ error and fatal share coral and remain distinguished by text. Trace/debug and
 inactive or final states use neutral colors. Selection and keyboard focus remain
 visible in both schemes.
 
-This first design pass changes the mark and colors. The dashboard's type scale,
-spacing, component shapes, responsive layout, and behavior retain their existing
-structure for later design work.
+## Typography
+
+The dashboard follows Ding Console's system sans-serif and monospace stacks,
+with a 14 px body at 1.6 line height, 29 px page headings (25 px on mobile),
+21 px section headings, and 14 px metric labels. Supporting text is 12 px and
+eyebrows are 11 px. Paths and log previews use the shared monospace stack;
+counters use tabular numerals. Metric values are 32 px (28 px on mobile), with
+600 weight for a clear hierarchy. Fonts remain local and work offline.
