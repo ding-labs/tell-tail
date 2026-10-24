@@ -11,6 +11,7 @@ pub struct Alerts {
     rule: Rule,
     threshold_percent: f64,
     message: String,
+    slack: bool,
     delivery: DeliveryQueue,
 }
 
@@ -31,6 +32,7 @@ impl Alerts {
                 .alert_message
                 .clone()
                 .unwrap_or_else(|| "Tell-Tail error percentage reached its threshold.".into()),
+            slack: args.slack,
             delivery: DeliveryQueue::start(url.clone(), std::env::current_exe()?)?,
         }))
     }
@@ -51,16 +53,19 @@ impl Alerts {
 
     fn payload(&self, snapshot: &Snapshot, event: AlertEvent) -> String {
         let counts = &snapshot.window.counts;
-        let (event, message) = match event {
+        let (event_name, message) = match event {
             AlertEvent::Breach => ("error_threshold_met", self.message.as_str()),
             AlertEvent::Recovery => (
                 "error_threshold_recovered",
                 "Tell-Tail error percentage recovered below its threshold.",
             ),
         };
+        if self.slack {
+            return crate::slack::payload(snapshot, event, message, self.threshold_percent);
+        }
         serde_json::json!({
             "schema_version": 1,
-            "event": event,
+            "event": event_name,
             "message": message,
             "session_id": snapshot.session_id,
             "source": snapshot.source,

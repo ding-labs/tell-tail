@@ -202,6 +202,58 @@ fn recovery_at_finite_eof_bypasses_breach_cooldown() {
 }
 
 #[test]
+fn slack_flag_posts_breach_and_recovery_messages_directly() {
+    let server = listener();
+    let mut monitor = Monitor::start(&server, &["--slack"]);
+    monitor.write(INPUT);
+    let (mut stream, breach) = receive(&server);
+    stream
+        .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+        .unwrap();
+
+    // Slack uses the same recovery rule, even during the default cooldown.
+    monitor.write(b"INFO healthy\n");
+    monitor.close_input();
+    let (mut stream, recovery) = receive(&server);
+    stream
+        .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+        .unwrap();
+    let output = monitor.finish();
+    assert!(output.status.success());
+    assert!(output.stderr.is_empty(), "{:?}", output.stderr);
+    let snapshot: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    for (payload, title, message, statistics) in [
+        (
+            breach,
+            "🚨 Tell-Tail alert: error threshold reached",
+            "Check \"service\"\nnow",
+            "Errors + fatal: 25.00% (1 / 4 records); threshold: 25%.",
+        ),
+        (
+            recovery,
+            "✅ Tell-Tail recovery: error rate below threshold",
+            "Tell-Tail error percentage recovered below its threshold.",
+            "Errors + fatal: 20.00% (1 / 5 records); threshold: 25%.",
+        ),
+    ] {
+        let text = payload["text"].as_str().unwrap();
+        assert!(text.starts_with(title));
+        assert!(text.contains(message));
+        assert!(text.contains(statistics));
+        assert!(text.contains("Window: 60s"));
+        assert!(text.contains("Source: stdin"));
+        assert!(text.contains(snapshot["session_id"].as_str().unwrap()));
+        assert!(!text.contains("raw log secret"));
+        assert!(!text.contains("secret-endpoint"));
+        assert!(payload.get("schema_version").is_none());
+    }
+    assert!(
+        server.accept().is_err(),
+        "Slack recovery must not repeat at EOF"
+    );
+}
+
+#[test]
 fn each_new_breach_can_recover_once() {
     let server = listener();
     let mut monitor = Monitor::start(&server, &["--alert-cooldown", "0"]);
