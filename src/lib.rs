@@ -2,6 +2,8 @@ pub mod cli;
 
 pub mod alerts;
 
+pub mod slack;
+
 pub mod framing;
 
 pub mod parse;
