@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "version": "0.2.0",
+  "source_commit": "ffda8eaebec5e3f08115e622423bd8a30e7d673c",
+  "gates": {
+    "correctness": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671783912", "docs/VALIDATION-0.2.md: reviewed candidate results"]},
+    "fuzzing": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671823099", "docs/VALIDATION-0.2.md: 1,801 seconds per target, no finding"]},
+    "linux_day": {"passed": false, "evidence": []},
+    "dashboard_hour": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671823099", "docs/VALIDATION-0.2.md: one-hour native dashboard results"]},
+    "default_memory": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671823099", "docs/VALIDATION-0.2.md: default dashboard RSS peaks and post-warmup medians; day-run memory monitoring continues"]},
+    "maximum_memory": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671823099", "docs/VALIDATION-0.2.md: maximum configuration in headless and TUI modes"]},
+    "responsiveness": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671783912", "https://github.com/zuchka/tell-tail/actions/runs/38671823099", "docs/VALIDATION-0.2.md: controlled cancellation and freshness results"]},
+    "performance": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38677628380", "docs/validation/0.2-performance.json", "docs/VALIDATION-0.2.md: controlled Linux reference result"]},
+    "compatibility": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671783912", "Schema 2, CLI/exit-status fixtures and promtool checks passed on both native platforms"]},
+    "distribution": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671826035", "https://github.com/zuchka/tell-tail/actions/runs/38671783912", "docs/VALIDATION-0.2.md: reviewed candidate results and archive checksums"]}
+  }
+}
