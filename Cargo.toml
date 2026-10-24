@@ -48,3 +48,4 @@ signal-hook = "0.3"
 
 [dev-dependencies]
 proptest = { version = "=1.12.0", default-features = false, features = ["std"] }
+tokio = { version = "=1.52.3", features = ["test-util"] }
