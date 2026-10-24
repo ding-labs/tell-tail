@@ -31,7 +31,9 @@ that installation path before advertising direct macOS downloads; see
 
 ## Build without publishing
 
-Source, dependency, and packaging changes run the release workflow automatically.
+Source, dependency, and packaging changes run the release workflow automatically
+on pull requests and pushes to main. Superseded build-only runs are cancelled;
+publication runs remain serialized and are never cancelled by a new build.
 To build a branch:
 
 ```sh

@@ -1,6 +1,7 @@
 name: Release candidate
 on:
   push:
+    branches: [main]
     paths:
       - '.github/workflows/release.yml'
       - 'Cargo.toml'
@@ -41,8 +42,8 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: release-candidate-${{ github.ref }}
-  cancel-in-progress: false
+  group: release-candidate-${{ github.ref }}-${{ inputs.publish && 'publish' || 'build' }}
+  cancel-in-progress: ${{ !inputs.publish }}
 jobs:
   candidate:
     runs-on: ubuntu-24.04
