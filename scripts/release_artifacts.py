@@ -11,7 +11,12 @@ import tarfile
 
 from release_gate import VERSION
 
-TARGETS = ('aarch64-apple-darwin', 'x86_64-unknown-linux-gnu')
+FORMULA_TARGETS = {
+    'aarch64-apple-darwin': 'MAC',
+    'x86_64-unknown-linux-musl': 'LINUX_X86',
+    'aarch64-unknown-linux-musl': 'LINUX_ARM',
+}
+TARGETS = tuple(FORMULA_TARGETS)
 
 
 def digest(path):
@@ -59,7 +64,7 @@ def validate_manifest(manifest, directory):
 def assemble(directory):
     records = [json.loads(path.read_text()) for path in sorted(directory.glob('manifest-*.json'))]
     if len(records) != len(TARGETS):
-        raise ValueError('expected exactly two native build manifests')
+        raise ValueError('expected one native build manifest per supported target')
     identity = {key: records[0][key] for key in ('version', 'source_commit', 'dirty')}
     if any(any(record[key] != value for key, value in identity.items()) for record in records):
         raise ValueError('native builds do not describe the same candidate')
