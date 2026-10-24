@@ -77,3 +77,28 @@ timed engine 2,971,822. The pinned nightly, bounded input/RSS settings and log
 hashes are retained in `docs/validation/0.2.0-rc.1/fuzz-summary.json`; full logs
 were downloaded into the ignored `work/rc1-ci/extended` evidence directory.
 The fuzzing gate passes. The dashboard-hour jobs are still running.
+
+## Performance blocker — October 24
+
+The fresh [controlled Linux measurement](https://github.com/zuchka/tell-tail/actions/runs/40055923758)
+completed correctly but **fails the unchanged performance gate**. On
+`runnervm8k3b6`, AMD EPYC 7763, producer CPU 0 and consumer/helper CPU 3,
+five paired runs each processed 404,262,400 identical mixed-input records.
+Median headless/TUI rates were 6.78M/3.27M records/s: paired median dashboard
+loss **51.83%**, above the required <10%. Headless/TUI timing ranges were
+2.02%/0.53%, and maximum producer CPU use was 36.62%, so this is a qualifying
+measurement rather than a producer or timing-noise rejection. The cached text
+median of 20.64M records/s exceeds the absolute 1M reference target.
+
+The separate Linux extended run corroborates the slowdown (51.25% loss, stable
+ranges). macOS measured 46.73% loss, but its 14.73% headless range makes that
+measurement inconclusive. A green workflow means the benchmark completed;
+it does not mean the performance gate passed. Report hashes, exact source and
+binary identities, fixture hashes, all pair timings and reference hosts are in
+`docs/validation/0.2.0-rc.1/performance-summary.json`; complete reports and logs
+were downloaded under ignored `work/rc1-ci`.
+
+The new interactive error-preview capture path is under investigation. The
+frozen source, tag and running Railway binary remain unchanged. Linux duration
+validation continues, and publication remains blocked by performance and the
+other pending gates.

@@ -40,7 +40,10 @@
     },
     "performance": {
       "passed": false,
-      "evidence": []
+      "evidence": [
+        "https://github.com/zuchka/tell-tail/actions/runs/40055923758",
+        "docs/validation/0.2.0-rc.1/performance-summary.json: qualifying measurement exceeds the 10% dashboard loss limit"
+      ]
     },
     "compatibility": {
       "passed": true,
