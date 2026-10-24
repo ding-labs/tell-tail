@@ -1,4 +1,4 @@
-FROM python:3.11-slim-bullseye@sha256:9e25f400253a5fa3191813d6a67eb801ca1e6f012b3bd2588fa6920b59e3eba6
+FROM python:3.11-slim-bookworm@sha256:f06d01d4ba3f8ad5af45a3ec87df19c1d317d8e8961edc0fabda61811af6f7cf
 RUN apt-get update && apt-get install --no-install-recommends -y git procps ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 ARG SOURCE_COMMIT=33f2f9ac959350bcd72332f5a62b53480361c933
