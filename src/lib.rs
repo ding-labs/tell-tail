@@ -4,6 +4,8 @@ pub mod alerts;
 
 pub mod slack;
 
+pub mod discord;
+
 pub mod framing;
 
 pub mod parse;
