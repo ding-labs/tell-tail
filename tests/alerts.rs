@@ -254,6 +254,69 @@ fn slack_flag_posts_breach_and_recovery_messages_directly() {
 }
 
 #[test]
+fn discord_flag_posts_breach_and_recovery_embeds_directly() {
+    let server = listener();
+    let mut monitor = Monitor::start(&server, &["--discord"]);
+    monitor.write(INPUT);
+    let (mut stream, breach) = receive(&server);
+    stream
+        .write_all(b"HTTP/1.1 204 No Content\r\nContent-Length: 0\r\n\r\n")
+        .unwrap();
+
+    // Discord uses the same recovery rule, even during the default cooldown.
+    monitor.write(b"INFO healthy\n");
+    monitor.close_input();
+    let (mut stream, recovery) = receive(&server);
+    stream
+        .write_all(b"HTTP/1.1 204 No Content\r\nContent-Length: 0\r\n\r\n")
+        .unwrap();
+    let output = monitor.finish();
+    assert!(output.status.success());
+    assert!(output.stderr.is_empty(), "{:?}", output.stderr);
+    let snapshot: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    for (payload, title, message, statistics, color) in [
+        (
+            breach,
+            "🚨 Tell-Tail alert: error threshold reached",
+            "Check \"service\"\nnow",
+            "25.00% (1 / 4 records)",
+            0xdc2626,
+        ),
+        (
+            recovery,
+            "✅ Tell-Tail recovery: error rate below threshold",
+            "Tell-Tail error percentage recovered below its threshold.",
+            "20.00% (1 / 5 records)",
+            0x16a34a,
+        ),
+    ] {
+        assert_eq!(
+            payload["allowed_mentions"],
+            serde_json::json!({ "parse": [] })
+        );
+        assert_eq!(payload["embeds"].as_array().unwrap().len(), 1);
+        let embed = &payload["embeds"][0];
+        assert_eq!(embed["title"], title);
+        assert_eq!(embed["color"], color);
+        assert_eq!(embed["description"], message);
+        let fields = &embed["fields"];
+        assert_eq!(fields[0]["value"], statistics);
+        assert_eq!(fields[1]["value"], "25%");
+        assert!(fields[2]["value"].as_str().unwrap().starts_with("60s ("));
+        assert_eq!(fields[3]["value"], "stdin");
+        assert_eq!(fields[4]["value"], snapshot["session_id"]);
+        assert!(!payload.to_string().contains("raw log secret"));
+        assert!(!payload.to_string().contains("secret-endpoint"));
+        assert!(payload.get("schema_version").is_none());
+        assert!(payload.get("text").is_none());
+    }
+    assert!(
+        server.accept().is_err(),
+        "Discord recovery must not repeat at EOF"
+    );
+}
+
+#[test]
 fn each_new_breach_can_recover_once() {
     let server = listener();
     let mut monitor = Monitor::start(&server, &["--alert-cooldown", "0"]);

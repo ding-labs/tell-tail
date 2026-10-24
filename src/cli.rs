@@ -68,12 +68,15 @@ pub struct Args {
     /// Text, JSON, and metrics-file publication interval in milliseconds.
     #[arg(long, default_value_t = 1000, value_parser = clap::value_parser!(u32).range(100..=60_000))]
     pub interval_ms: u32,
-    /// POST breach and recovery JSON to this HTTP(S) endpoint; use --slack for Slack.
+    /// POST breach/recovery JSON; use --slack or --discord for chat webhooks.
     #[arg(long, requires = "alert_error_percent")]
     pub alert_webhook: Option<String>,
     /// Format alerts for a Slack incoming webhook; requires --alert-webhook.
     #[arg(long, requires = "alert_webhook")]
     pub slack: bool,
+    /// Format alerts for a Discord webhook; requires --alert-webhook.
+    #[arg(long, requires = "alert_webhook", conflicts_with = "slack")]
+    pub discord: bool,
     /// Alert when rolling (error + fatal) / all records is at least this percent.
     #[arg(long, requires = "alert_webhook")]
     pub alert_error_percent: Option<f64>,
@@ -327,17 +330,9 @@ mod tests {
     }
 
     #[test]
-    fn slack_requires_a_webhook_and_threshold_and_is_opt_in() {
-        assert!(!Args::parse_from(["tell-tail"]).slack);
-        for extra in [
-            vec![],
-            vec!["--alert-error-percent", "25"],
-            vec!["--alert-webhook", "https://example.com/hook"],
-        ] {
-            assert!(
-                Args::try_parse_from(["tell-tail", "--slack"].into_iter().chain(extra)).is_err()
-            );
-        }
+    fn chat_formats_require_a_webhook_and_threshold_and_are_opt_in() {
+        let defaults = Args::parse_from(["tell-tail"]);
+        assert!(!defaults.slack && !defaults.discord);
         let base = [
             "tell-tail",
             "--alert-webhook",
@@ -345,9 +340,26 @@ mod tests {
             "--alert-error-percent",
             "25",
         ];
-        assert!(!Args::parse_from(base).slack);
-        let args = Args::parse_from(base.into_iter().chain(["--slack"]));
-        assert!(args.slack);
-        assert!(args.validate().is_ok());
+        let generic = Args::parse_from(base);
+        assert!(!generic.slack && !generic.discord);
+        for flag in ["--slack", "--discord"] {
+            for extra in [
+                vec![],
+                vec!["--alert-error-percent", "25"],
+                vec!["--alert-webhook", "https://example.com/hook"],
+            ] {
+                assert!(
+                    Args::try_parse_from(["tell-tail", flag].into_iter().chain(extra)).is_err()
+                );
+            }
+            let args = Args::parse_from(base.into_iter().chain([flag]));
+            assert_eq!(args.slack, flag == "--slack");
+            assert_eq!(args.discord, flag == "--discord");
+            assert!(args.validate().is_ok());
+        }
+        for flags in [["--slack", "--discord"], ["--discord", "--slack"]] {
+            let error = Args::try_parse_from(base.into_iter().chain(flags)).unwrap_err();
+            assert_eq!(error.kind(), clap::error::ErrorKind::ArgumentConflict);
+        }
     }
 }

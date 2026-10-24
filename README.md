@@ -178,7 +178,31 @@ Session: 1234-1792010000000000000
 status and fixed message. Message text is displayed literally, with Slack
 formatting and link previews disabled; source names longer than 1024 characters
 are shortened. The same threshold, minimum samples, cooldown, and delivery
-limits apply. Without `--slack`, the generic JSON payload below is sent.
+limits apply.
+
+For Discord, add `--discord` and use your Discord incoming webhook URL:
+
+```sh
+tell-tail app.log --discord \
+  --alert-webhook "$DISCORD_WEBHOOK_URL" \
+  --alert-error-percent 25
+```
+
+In Discord's **Server Settings → Integrations**, [create a webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks),
+choose the destination text channel, and use **Copy Webhook URL** to set
+`DISCORD_WEBHOOK_URL`. Tell-Tail sends directly to that URL; no bot token or
+formatting relay is needed.
+
+Discord notifications use a red embed for breaches and a green embed for
+recoveries, with the message, error percentage and counts, threshold, window,
+source, and session ID. The full `--alert-message` (up to 4096 bytes) is included
+in the breach embed; recovery uses its own fixed message. Discord text formatting
+is supported, and user, role, and everyone mentions are disabled. Long source
+names are shortened to fit Discord's field limit. The same alerting and
+best-effort delivery rules below apply.
+
+Choose one of `--slack` or `--discord` for a single endpoint. Omit both to send
+the generic JSON payload below.
 
 For a quick demo from a source checkout, run:
 
@@ -213,6 +237,8 @@ stdin, files, every output mode, and a frozen dashboard display.
 - `--alert-webhook`: one HTTP(S) endpoint, up to 2048 bytes. Requires a threshold.
 - `--slack`: format notifications for a Slack incoming webhook. Requires
   `--alert-webhook` and `--alert-error-percent`.
+- `--discord`: format notifications for a Discord incoming webhook. Requires
+  `--alert-webhook` and `--alert-error-percent`; cannot be combined with `--slack`.
 - `--alert-message`: optional breach text, up to 4096 bytes, included as a JSON
   string. Recovery uses its own fixed message.
 - `--alert-min-records`: minimum records in the window; default **100**. A partial

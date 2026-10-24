@@ -12,6 +12,7 @@ pub struct Alerts {
     threshold_percent: f64,
     message: String,
     slack: bool,
+    discord: bool,
     delivery: DeliveryQueue,
 }
 
@@ -33,6 +34,7 @@ impl Alerts {
                 .clone()
                 .unwrap_or_else(|| "Tell-Tail error percentage reached its threshold.".into()),
             slack: args.slack,
+            discord: args.discord,
             delivery: DeliveryQueue::start(url.clone(), std::env::current_exe()?)?,
         }))
     }
@@ -62,6 +64,9 @@ impl Alerts {
         };
         if self.slack {
             return crate::slack::payload(snapshot, event, message, self.threshold_percent);
+        }
+        if self.discord {
+            return crate::discord::payload(snapshot, event, message, self.threshold_percent);
         }
         serde_json::json!({
             "schema_version": 1,

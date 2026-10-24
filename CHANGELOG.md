@@ -25,6 +25,9 @@
 - `--slack` formats breach and recovery notifications for a Slack incoming
   webhook, including the message, window statistics, source, and session. Use it
   with `--alert-webhook` and `--alert-error-percent`; no formatting relay is needed.
+- `--discord` sends breach and recovery embeds directly to a Discord incoming
+  webhook, including the full custom message and window statistics, with mentions
+  disabled. Use with `--alert-webhook` and `--alert-error-percent` instead of `--slack`.
 
 ### Changed
 
