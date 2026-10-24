@@ -5,7 +5,7 @@ import tarfile
 import tempfile
 import unittest
 
-from release_artifacts import TARGETS, archive_name, assemble, digest, validate_manifest, write_archive
+from release_artifacts import TARGETS, archive_name, assemble, digest, validate_manifest, verify, write_archive
 
 
 class ArtifactTests(unittest.TestCase):
@@ -21,10 +21,10 @@ class ArtifactTests(unittest.TestCase):
                       'asset': {'target': target, 'name': name, 'sha256': digest(path), 'size': path.stat().st_size}}
             (self.directory / f'manifest-{target}.json').write_text(json.dumps(record))
 
-    def test_manifest_and_checksums_cover_both_targets(self):
+    def test_manifest_and_checksums_cover_all_targets(self):
         manifest = assemble(self.directory)
         validate_manifest(manifest, self.directory)
-        self.assertEqual(3, len((self.directory / 'SHA256SUMS').read_text().splitlines()))
+        self.assertEqual(len(TARGETS) + 1, len((self.directory / 'SHA256SUMS').read_text().splitlines()))
         (self.directory / manifest['assets'][0]['name']).write_bytes(b'tampered')
         with self.assertRaises(ValueError):
             validate_manifest(manifest, self.directory)
@@ -39,6 +39,23 @@ class ArtifactTests(unittest.TestCase):
         path.unlink()
         with self.assertRaises(ValueError):
             assemble(self.directory)
+
+    def test_refuses_duplicate_architectures(self):
+        path = self.directory / f'manifest-{TARGETS[-1]}.json'
+        other = self.directory / f'manifest-{TARGETS[0]}.json'
+        path.write_bytes(other.read_bytes())
+        with self.assertRaises(ValueError):
+            assemble(self.directory)
+
+    def test_rejects_modified_checksum_file_and_manifest(self):
+        for name in ('SHA256SUMS', 'release.json'):
+            with self.subTest(name=name):
+                assemble(self.directory)
+                verify(self.directory)
+                path = self.directory / name
+                path.write_text(path.read_text() + '\n')
+                with self.assertRaisesRegex(ValueError, 'SHA256SUMS'):
+                    verify(self.directory)
 
     def test_archives_have_stable_metadata_and_executable_mode(self):
         paths = [self.directory / name for name in ('first.tar.gz', 'second.tar.gz')]

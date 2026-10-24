@@ -32,11 +32,15 @@ To install the binary locally:
 cargo install --path . --locked
 ```
 
-Release automation and Homebrew packaging are prepared, but no release has been
-published yet. Tell-Tail will join `ding` in the existing
+GitHub Releases and Homebrew packaging are prepared, but no release has been
+published yet. Planned downloads cover Apple Silicon on macOS 14+ and static
+Linux binaries for x86_64 and ARM64. Tell-Tail will join `ding` in the existing
 [Ding Labs tap](https://github.com/ding-labs/homebrew-tap) after the remaining 0.2
 validation passes. The planned command is `brew install ding-labs/tap/tell-tail`;
-it is not available yet. See the [release workflow instructions](docs/PLAN-0.2.md#release-automation).
+it is not available yet. The Cargo package is also being prepared for crates.io;
+`cargo install tell-tail --locked` will be available after registry publication.
+See the [distribution and publishing guide](docs/RELEASING.md) for checks,
+supported platforms, and the steps to make each channel available.
 
 ## Inputs and output
 

@@ -14,10 +14,13 @@ class TellTail < Formula
   end
 
   on_linux do
-    depends_on arch: :x86_64
     on_intel do
-      url "@LINUX_URL@"
-      sha256 "@LINUX_SHA@"
+      url "@LINUX_X86_URL@"
+      sha256 "@LINUX_X86_SHA@"
+    end
+    on_arm do
+      url "@LINUX_ARM_URL@"
+      sha256 "@LINUX_ARM_SHA@"
     end
   end
 

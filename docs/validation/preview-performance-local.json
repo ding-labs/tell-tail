@@ -1,0 +1,205 @@
+{
+  "comparison": "Local diagnosis; separate five-pair cohorts with unchanged mixed-input protocol",
+  "cpu_model": "Apple M3",
+  "maximum_dashboard_loss_fraction": 0.1,
+  "results": [
+    {
+      "name": "baseline",
+      "source_commit": "33f2f9ac959350bcd72332f5a62b53480361c933",
+      "harness_commit": "327d5bcb395ef3aece1786cfbc2eabf0f7fdaf38",
+      "binary_sha256": "ab2119cecfeb7672c056b69f8f55fe98347ca0d1c4315e6147d174f610a3542a",
+      "report_sha256": "e054bde76d4376e0aeda053262c9bce4f52fff37747c762394887e41618529a5",
+      "configuration": {
+        "binary": "/Users/zuchka/.codex/worktrees/rc1-preview-performance/tell-tail/work/performance/rc1-tell-tail",
+        "consumer_cpu": null,
+        "disk_limit_mib": 512,
+        "pairs": 5,
+        "pin_cpus": false,
+        "profile": "mixed",
+        "records": 1000000,
+        "repeats": 5,
+        "report": "work/performance/baseline.json",
+        "seconds": 5.0,
+        "seed": 1,
+        "source_directory": "/Users/zuchka/.codex/worktrees/rc1-preview-performance/tell-tail/work/baseline-source",
+        "suite": "stream"
+      },
+      "platform": "macOS-27.0-arm64-arm-64bit",
+      "cpu_model": "Apple M3",
+      "fixed_records_per_mode": 61798400,
+      "median_dashboard_loss_fraction": 0.573225193471234,
+      "throughput": {
+        "json": {
+          "max": 13048477,
+          "median": 12772950,
+          "min": 12693730,
+          "relative_range": 0.027773302173734336
+        },
+        "tui": {
+          "max": 5568761,
+          "median": 5555095,
+          "min": 5365484,
+          "relative_range": 0.03659289355087537
+        }
+      },
+      "measurement_qualifies_for_gate": true,
+      "max_producer_cpu_fraction": 0.14573756817853492,
+      "pairs": [
+        {
+          "order": [
+            "tui",
+            "json"
+          ],
+          "loss_fraction": 0.5773122597498573,
+          "seconds": {
+            "json": 4.868419417005498,
+            "tui": 11.517768209043425
+          }
+        },
+        {
+          "order": [
+            "tui",
+            "json"
+          ],
+          "loss_fraction": 0.5741089938618087,
+          "seconds": {
+            "json": 4.824482332973275,
+            "tui": 11.327974208048545
+          }
+        },
+        {
+          "order": [
+            "json",
+            "tui"
+          ],
+          "loss_fraction": 0.5646274808363037,
+          "seconds": {
+            "json": 4.843360292026773,
+            "tui": 11.124634833016898
+          }
+        },
+        {
+          "order": [
+            "tui",
+            "json"
+          ],
+          "loss_fraction": 0.573225193471234,
+          "seconds": {
+            "json": 4.736062374955509,
+            "tui": 11.097333541023545
+          }
+        },
+        {
+          "order": [
+            "json",
+            "tui"
+          ],
+          "loss_fraction": 0.5649617859479801,
+          "seconds": {
+            "json": 4.838224459032062,
+            "tui": 11.12137808301486
+          }
+        }
+      ]
+    },
+    {
+      "name": "fixed",
+      "source_commit": "327d5bcb395ef3aece1786cfbc2eabf0f7fdaf38",
+      "harness_commit": "327d5bcb395ef3aece1786cfbc2eabf0f7fdaf38",
+      "binary_sha256": "e65cb47b5effafe16e2a5cb9da016c46810e81dc83ef4d214fcb45cf39243714",
+      "report_sha256": "c21d2e6d31c87f9a8998ab2c845d7b2029a328ef7b516158a84a576bb8442717",
+      "configuration": {
+        "binary": "/Users/zuchka/.codex/worktrees/rc1-preview-performance/tell-tail/target/release/tell-tail",
+        "consumer_cpu": null,
+        "disk_limit_mib": 512,
+        "pairs": 5,
+        "pin_cpus": false,
+        "profile": "mixed",
+        "records": 1000000,
+        "repeats": 5,
+        "report": "work/performance/fixed.json",
+        "seconds": 5.0,
+        "seed": 1,
+        "source_directory": "/Users/zuchka/.codex/worktrees/rc1-preview-performance/tell-tail",
+        "suite": "stream"
+      },
+      "platform": "macOS-27.0-arm64-arm-64bit",
+      "cpu_model": "Apple M3",
+      "fixed_records_per_mode": 63552000,
+      "median_dashboard_loss_fraction": 0.0302239909662968,
+      "throughput": {
+        "json": {
+          "max": 12860750,
+          "median": 12850713,
+          "min": 12773106,
+          "relative_range": 0.006820166320732554
+        },
+        "tui": {
+          "max": 12550583,
+          "median": 12462313,
+          "min": 12105363,
+          "relative_range": 0.03572531038178868
+        }
+      },
+      "measurement_qualifies_for_gate": true,
+      "max_producer_cpu_fraction": 0.14888362624025953,
+      "pairs": [
+        {
+          "order": [
+            "tui",
+            "json"
+          ],
+          "loss_fraction": 0.05651951591615001,
+          "seconds": {
+            "json": 4.941547083959449,
+            "tui": 5.237572125042789
+          }
+        },
+        {
+          "order": [
+            "tui",
+            "json"
+          ],
+          "loss_fraction": 0.027170751367713963,
+          "seconds": {
+            "json": 4.943803041998763,
+            "tui": 5.0818815829698
+          }
+        },
+        {
+          "order": [
+            "json",
+            "tui"
+          ],
+          "loss_fraction": 0.05227725371207659,
+          "seconds": {
+            "json": 4.9754537920234725,
+            "tui": 5.24990437499946
+          }
+        },
+        {
+          "order": [
+            "tui",
+            "json"
+          ],
+          "loss_fraction": 0.018037036583039234,
+          "seconds": {
+            "json": 4.9723354169982485,
+            "tui": 5.063668999995571
+          }
+        },
+        {
+          "order": [
+            "json",
+            "tui"
+          ],
+          "loss_fraction": 0.0302239909662968,
+          "seconds": {
+            "json": 4.945406417013146,
+            "tui": 5.09953470795881
+          }
+        }
+      ]
+    }
+  ]
+}

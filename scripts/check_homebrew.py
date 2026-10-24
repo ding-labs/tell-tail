@@ -35,7 +35,7 @@ def main():
     args = parser.parse_args()
     record = json.loads((args.assets / f'manifest-{args.target}.json').read_text())
     # Only the native archive is installed. Other-platform URLs remain unused;
-    # the final two-platform manifest is verified separately during assembly.
+    # the final manifest is verified separately during assembly.
     assets = [record['asset']] + [
         {'target': target, 'name': archive_name(record['version'], target), 'sha256': '0' * 64}
         for target in TARGETS if target != args.target]

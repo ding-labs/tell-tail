@@ -1,0 +1,133 @@
+{
+  "run": "https://github.com/zuchka/tell-tail/actions/runs/40059139178",
+  "source_commit": "327d5bcb395ef3aece1786cfbc2eabf0f7fdaf38",
+  "harness_commit": "33f2f9ac959350bcd72332f5a62b53480361c933",
+  "binary_sha256": "1c3a0c6978fc083c8bc628c13e645f6eb1d529a717e4300bcfa809b4487c93c1",
+  "report_sha256": "5f63465805f4496935fa9396c134f8db6d72fb3a2ff9f8ce1ebc661850ebc643",
+  "host": "runnervm8k3b6",
+  "cpu_model": "AMD EPYC 7763 64-Core Processor",
+  "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+  "cpu_affinity": {
+    "available_cpus": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "consumer_cpu": 3,
+    "producer_cpu": 0
+  },
+  "cached": [
+    {
+      "fixture": "text200",
+      "records": 2000000,
+      "fixture_sha256": "2ee3dea2bb15e839638ac8295f6c96a08d00e36833164b288853aaf50ae9bc75",
+      "max": 20639636.152935576,
+      "median": 20633848.509976815,
+      "min": 20625027.00589498,
+      "relative_range": 0.0007080185275922036
+    },
+    {
+      "fixture": "json500",
+      "records": 1073741,
+      "fixture_sha256": "572623d4bfeb3796b1344484654ae4e987912c4870d0795ba84241ecd0bc8c85",
+      "max": 2991949.1525493925,
+      "median": 2991688.8195825284,
+      "min": 2986707.204297978,
+      "relative_range": 0.0017521702849249074
+    },
+    {
+      "fixture": "text16k",
+      "records": 32768,
+      "fixture_sha256": "76569ed55fef7a2980dc0bc2a9a1a7ed780b618f3a6ceb42ace3b20484e4e302",
+      "max": 576145.1266812559,
+      "median": 575806.2411998818,
+      "min": 574718.5706569907,
+      "relative_range": 0.0024774931603596855
+    },
+    {
+      "fixture": "mixed",
+      "records": 2000000,
+      "fixture_sha256": "1edea44f2a868fa4d4f7442db295b8bac13464e369605304f3c9bcd371d31b0e",
+      "max": 7473068.751002997,
+      "median": 7466901.075589599,
+      "min": 7188669.920086288,
+      "relative_range": 0.03808793340606199
+    }
+  ],
+  "fixed_records_per_mode": 400710400,
+  "median_dashboard_loss_fraction": 0.0376353823441643,
+  "throughput": {
+    "json": {
+      "max": 6711591,
+      "median": 6664019,
+      "min": 6594068,
+      "relative_range": 0.017635453920524537
+    },
+    "tui": {
+      "max": 6473565,
+      "median": 6413216,
+      "min": 6368032,
+      "relative_range": 0.016455550538138745
+    }
+  },
+  "measurement_qualifies_for_gate": true,
+  "max_producer_cpu_fraction": 0.35583749292108136,
+  "pairs": [
+    {
+      "order": [
+        "tui",
+        "json"
+      ],
+      "loss_fraction": 0.022310506664249496,
+      "seconds": {
+        "json": 60.518484426999976,
+        "tui": 61.89949348899998
+      }
+    },
+    {
+      "order": [
+        "tui",
+        "json"
+      ],
+      "loss_fraction": 0.03835564159575766,
+      "seconds": {
+        "json": 59.704231805999996,
+        "tui": 62.085563424999975
+      }
+    },
+    {
+      "order": [
+        "json",
+        "tui"
+      ],
+      "loss_fraction": 0.05005345360379254,
+      "seconds": {
+        "json": 59.77567932900001,
+        "tui": 62.92530833000001
+      }
+    },
+    {
+      "order": [
+        "tui",
+        "json"
+      ],
+      "loss_fraction": 0.0376353823441643,
+      "seconds": {
+        "json": 60.13044042800004,
+        "tui": 62.48197338600005
+      }
+    },
+    {
+      "order": [
+        "json",
+        "tui"
+      ],
+      "loss_fraction": 0.030464437844508585,
+      "seconds": {
+        "json": 60.76831056899994,
+        "tui": 62.67775308199998
+      }
+    }
+  ]
+}
