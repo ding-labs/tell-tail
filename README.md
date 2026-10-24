@@ -148,6 +148,38 @@ tell-tail app.log --window 60 \
   --alert-message "Check the service: errors reached 25%"
 ```
 
+For Slack, add `--slack` and use your Slack incoming webhook URL:
+
+```sh
+tell-tail app.log --slack \
+  --alert-webhook "$SLACK_WEBHOOK_URL" \
+  --alert-error-percent 25
+```
+
+To get a URL, [create a Slack app and enable Incoming Webhooks](https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks/),
+then choose **Add New Webhook to Workspace**, select the destination channel,
+and copy the URL into `SLACK_WEBHOOK_URL`. The webhook determines the channel;
+Tell-Tail needs no bot token or formatting relay.
+
+Slack messages include breach/recovery status, the message, error percentage,
+error/fatal and total record counts, threshold, window, source, and session ID.
+For example, a breach message looks like:
+
+```text
+🚨 Tell-Tail alert: error threshold reached
+Tell-Tail error percentage reached its threshold.
+Errors + fatal: 25.00% (25 / 100 records); threshold: 25%.
+Window: 60s (60.0s observed).
+Source: app.log
+Session: 1234-1792010000000000000
+```
+
+`--alert-message` replaces the default breach message. Recovery has its own
+status and fixed message. Message text is displayed literally, with Slack
+formatting and link previews disabled; source names longer than 1024 characters
+are shortened. The same threshold, minimum samples, cooldown, and delivery
+limits apply. Without `--slack`, the generic JSON payload below is sent.
+
 For a quick demo from a source checkout, run:
 
 ```sh
@@ -163,9 +195,8 @@ requirements. Use `--binary /path/to/tell-tail` to select a different binary.
 Recovery arrives during the default five-minute breach cooldown.
 
 For continuous testing with resource limits and optional Slack delivery, see the
-[24-hour webhook validation guide](docs/WEBHOOK-SOAK.md). Slack incoming webhooks
-require a Slack message payload; the test harness supplies a small formatting
-relay for Tell-Tail's generic alert JSON.
+[24-hour webhook validation guide](docs/WEBHOOK-SOAK.md). That harness captures
+and validates generic alert JSON, then uses its own relay for Slack delivery.
 
 The [October 22–23, 2026 run](docs/WEBHOOK-SOAK.md#reviewed-october-23-result-passed)
 passed 24 uninterrupted hours at 1,000 records/second under one CPU, 1 GiB RAM
@@ -180,6 +211,8 @@ stdin, files, every output mode, and a frozen dashboard display.
 
 - `--alert-error-percent`: inclusive threshold from 0 to 100. Requires an endpoint.
 - `--alert-webhook`: one HTTP(S) endpoint, up to 2048 bytes. Requires a threshold.
+- `--slack`: format notifications for a Slack incoming webhook. Requires
+  `--alert-webhook` and `--alert-error-percent`.
 - `--alert-message`: optional breach text, up to 4096 bytes, included as a JSON
   string. Recovery uses its own fixed message.
 - `--alert-min-records`: minimum records in the window; default **100**. A partial
@@ -198,7 +231,7 @@ the process or an input failure does not signal recovery. State resets when
 Tell-Tail restarts. There are no repeated reminders. With a threshold of 0,
 eligible windows always breach and cannot recover.
 
-The fixed payload includes your message and aggregate statistics:
+The generic webhook payload includes your message and aggregate statistics:
 
 ```json
 {

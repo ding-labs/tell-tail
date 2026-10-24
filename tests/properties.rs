@@ -119,7 +119,10 @@ proptest! {
             prop_assert_eq!(report.window.counts.records, expected.iter().sum::<u64>());
             prop_assert_eq!(report.totals.records, ledger.len() as u64);
             prop_assert_eq!(report.totals.levels.total(), report.totals.records);
-            prop_assert_eq!(report.window.observed_seconds, (millis - left) as f64 / 1000.0);
+            // Duration conversion and division of integer milliseconds can
+            // round to adjacent floats (for example, at 3119 ms).
+            let expected_seconds = (millis - left) as f64 / 1000.0;
+            prop_assert!((report.window.observed_seconds - expected_seconds).abs() < 1e-9);
         }
     }
 }

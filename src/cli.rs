@@ -68,13 +68,16 @@ pub struct Args {
     /// Text, JSON, and metrics-file publication interval in milliseconds.
     #[arg(long, default_value_t = 1000, value_parser = clap::value_parser!(u32).range(100..=60_000))]
     pub interval_ms: u32,
-    /// POST breach and recovery JSON to this HTTP(S) endpoint.
+    /// POST breach and recovery JSON to this HTTP(S) endpoint; use --slack for Slack.
     #[arg(long, requires = "alert_error_percent")]
     pub alert_webhook: Option<String>,
+    /// Format alerts for a Slack incoming webhook; requires --alert-webhook.
+    #[arg(long, requires = "alert_webhook")]
+    pub slack: bool,
     /// Alert when rolling (error + fatal) / all records is at least this percent.
     #[arg(long, requires = "alert_webhook")]
     pub alert_error_percent: Option<f64>,
-    /// Message included in breach JSON (at most 4096 bytes).
+    /// Message included in breach notifications (at most 4096 bytes).
     #[arg(long, requires = "alert_webhook")]
     pub alert_message: Option<String>,
     /// Minimum records in the rolling window to evaluate a breach or recovery.
@@ -321,5 +324,30 @@ mod tests {
                 .is_err()
             );
         }
+    }
+
+    #[test]
+    fn slack_requires_a_webhook_and_threshold_and_is_opt_in() {
+        assert!(!Args::parse_from(["tell-tail"]).slack);
+        for extra in [
+            vec![],
+            vec!["--alert-error-percent", "25"],
+            vec!["--alert-webhook", "https://example.com/hook"],
+        ] {
+            assert!(
+                Args::try_parse_from(["tell-tail", "--slack"].into_iter().chain(extra)).is_err()
+            );
+        }
+        let base = [
+            "tell-tail",
+            "--alert-webhook",
+            "https://example.com/hook",
+            "--alert-error-percent",
+            "25",
+        ];
+        assert!(!Args::parse_from(base).slack);
+        let args = Args::parse_from(base.into_iter().chain(["--slack"]));
+        assert!(args.slack);
+        assert!(args.validate().is_ok());
     }
 }
