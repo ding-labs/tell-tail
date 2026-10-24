@@ -5,7 +5,7 @@ import tarfile
 import tempfile
 import unittest
 
-from release_artifacts import TARGETS, archive_name, assemble, digest, validate_manifest, write_archive
+from release_artifacts import TARGETS, archive_name, assemble, digest, validate_manifest, verify, write_archive
 
 
 class ArtifactTests(unittest.TestCase):
@@ -46,6 +46,16 @@ class ArtifactTests(unittest.TestCase):
         path.write_bytes(other.read_bytes())
         with self.assertRaises(ValueError):
             assemble(self.directory)
+
+    def test_rejects_modified_checksum_file_and_manifest(self):
+        for name in ('SHA256SUMS', 'release.json'):
+            with self.subTest(name=name):
+                assemble(self.directory)
+                verify(self.directory)
+                path = self.directory / name
+                path.write_text(path.read_text() + '\n')
+                with self.assertRaisesRegex(ValueError, 'SHA256SUMS'):
+                    verify(self.directory)
 
     def test_archives_have_stable_metadata_and_executable_mode(self):
         paths = [self.directory / name for name in ('first.tar.gz', 'second.tar.gz')]

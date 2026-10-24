@@ -61,6 +61,19 @@ def validate_manifest(manifest, directory):
             raise ValueError(f'archive checksum/size mismatch: {asset["name"]}')
 
 
+def checksums(manifest, directory):
+    names = sorted([asset['name'] for asset in manifest['assets']] + ['release.json'])
+    return ''.join(f'{digest(directory / name)}  {name}\n' for name in names)
+
+
+def verify(directory):
+    manifest = json.loads((directory / 'release.json').read_text())
+    validate_manifest(manifest, directory)
+    if (directory / 'SHA256SUMS').read_text() != checksums(manifest, directory):
+        raise ValueError('SHA256SUMS does not match the release manifest and archives')
+    return manifest
+
+
 def assemble(directory):
     records = [json.loads(path.read_text()) for path in sorted(directory.glob('manifest-*.json'))]
     if len(records) != len(TARGETS):
@@ -71,8 +84,7 @@ def assemble(directory):
     manifest = {'schema_version': 1, **identity, 'assets': [record['asset'] for record in records]}
     validate_manifest(manifest, directory)
     (directory / 'release.json').write_text(json.dumps(manifest, indent=2) + '\n')
-    names = sorted([asset['name'] for asset in manifest['assets']] + ['release.json'])
-    (directory / 'SHA256SUMS').write_text(''.join(f'{digest(directory / name)}  {name}\n' for name in names))
+    (directory / 'SHA256SUMS').write_text(checksums(manifest, directory))
     return manifest
 
 
@@ -82,8 +94,7 @@ def main():
     parser.add_argument('--verify', action='store_true')
     args = parser.parse_args()
     if args.verify:
-        manifest = json.loads((args.directory / 'release.json').read_text())
-        validate_manifest(manifest, args.directory)
+        manifest = verify(args.directory)
     else:
         manifest = assemble(args.directory)
     print(json.dumps(manifest, indent=2))
