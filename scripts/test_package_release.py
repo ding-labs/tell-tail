@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from package_release import check_binary
+from package_release import check_binary, runtime_licenses
 
 
 class BinaryTests(unittest.TestCase):
@@ -32,6 +32,16 @@ class BinaryTests(unittest.TestCase):
     def test_rejects_cross_compiled_candidates(self):
         with self.assertRaisesRegex(ValueError, 'native OS and architecture'):
             check_binary('x86_64-unknown-linux-musl', 'host: aarch64-apple-darwin', self.binary)
+
+    def test_static_runtime_carries_upstream_license_texts(self):
+        for target in ('x86_64-unknown-linux-musl', 'aarch64-unknown-linux-musl'):
+            files, notices = runtime_licenses(target, 'rustc 1.88.0 (release)')
+            self.assertIn('Rich Felker', files['THIRD_PARTY_LICENSES/musl/musl-1.2.3.COPYRIGHT'][0].decode())
+            self.assertIn('Arm Limited', files['THIRD_PARTY_LICENSES/musl/musl-1.2.3-SOURCE-NOTICES.txt'][0].decode())
+            self.assertTrue(notices)
+        with self.assertRaisesRegex(ValueError, 'review bundled musl'):
+            runtime_licenses('x86_64-unknown-linux-musl', 'rustc 1.89.0 (release)')
+        self.assertEqual(({}, []), runtime_licenses('aarch64-apple-darwin', 'rustc 1.88.0 (release)'))
 
 
 if __name__ == '__main__':

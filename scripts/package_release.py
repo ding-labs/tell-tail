@@ -65,6 +65,18 @@ def check_binary(target, compiler, binary):
             raise ValueError('Linux archives must be static, without a dynamic loader or shared libraries')
 
 
+def runtime_licenses(target, compiler):
+    if not target.endswith('-linux-musl'):
+        return {}, []
+    if not compiler.startswith('rustc 1.88.0 '):
+        raise ValueError('review bundled musl notices when changing the release compiler')
+    directory = ROOT / 'packaging/licenses'
+    names = ('musl-1.2.3.COPYRIGHT', 'musl-1.2.3-SOURCE-NOTICES.txt')
+    files = {f'THIRD_PARTY_LICENSES/musl/{name}': ((directory / name).read_bytes(), False)
+             for name in names}
+    return files, ['- musl 1.2.3 (Rust 1.88.0 runtime): see THIRD_PARTY_LICENSES/musl/.']
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--target', choices=TARGETS, required=True)
@@ -89,6 +101,9 @@ def main():
         parser.error('native binary fixture failed')
     metadata = json.loads(run('cargo', 'metadata', '--locked', '--format-version', '1', '--filter-platform', args.target))
     files, index = licenses(metadata)
+    runtime_files, runtime_index = runtime_licenses(args.target, compiler)
+    files.update(runtime_files)
+    index.extend(runtime_index)
     sysroot = pathlib.Path(run('rustc', '--print', 'sysroot'))
     standard_library = sysroot / 'share/doc/rust/COPYRIGHT-library.html'
     files['THIRD_PARTY_LICENSES/rust/COPYRIGHT-library.html'] = (standard_library.read_bytes(), False)

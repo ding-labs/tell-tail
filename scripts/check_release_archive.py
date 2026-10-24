@@ -39,6 +39,10 @@ def check(path):
             raise ValueError('packaged binary fixture failed')
         if not (bundle / 'LICENSE').is_file() or not (bundle / 'THIRD_PARTY_NOTICES.md').is_file():
             raise ValueError('license notices missing')
+        if build['target'].endswith('-linux-musl'):
+            for name in ('musl-1.2.3.COPYRIGHT', 'musl-1.2.3-SOURCE-NOTICES.txt'):
+                if not (bundle / 'THIRD_PARTY_LICENSES/musl' / name).is_file():
+                    raise ValueError('static musl license notices missing')
         check_web_install(binary, directory)
         print(json.dumps({'archive': path.name, 'native_smoke': 'passed',
                           'embedded_web_smoke': 'passed', 'build': build}))
