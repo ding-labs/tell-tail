@@ -78,9 +78,9 @@ with open('/dev/tty', 'rb', buffering=0) as tty:
         child.stdin.write(b'INFO first\n')
         child.stdin.flush()
         ready_by = time.monotonic() + 3
-        while b'TELL-TAIL' not in output and time.monotonic() < ready_by:
+        while b'tell-tail' not in output and time.monotonic() < ready_by:
             drain(0.05)
-        assert b'TELL-TAIL' in output, output.decode(errors='replace')
+        assert b'tell-tail' in output, output.decode(errors='replace')
         os.write(master, b' ')
         drain(0.3)
         assert b'DISPLAY' in output and b'FROZEN' in output

@@ -77,6 +77,15 @@ warm text, green throughput, violet information/unknown records, amber warnings,
 and coral errors/fatals. Trace and debug records use muted text. Severity names
 remain visible, including the distinction between error and fatal.
 
-The terminal paints its own dark canvas so the palette is readable on light and
-dark terminal profiles. It uses the terminal's font and existing cell geometry;
-the alternate screen and terminal settings are restored on exit.
+In color mode, the terminal paints its own dark canvas so the palette is readable
+on light and dark terminal profiles. It respects `NO_COLOR` and uses the terminal's
+font and existing cell geometry; the alternate screen and terminal settings are
+restored on exit.
+
+The full header pairs a green `≡╱` angular log-tail text mark with a bold
+lowercase wordmark. Rounded box-drawing borders, bold panel titles, and a subtle
+table heading provide hierarchy within the existing cell layout. Reading and
+following states are violet, waiting is amber, failures are coral, and frozen
+or final states are neutral. Compact views keep their seven-line summary and
+use the same wordmark and severity colors. All keyboard shortcuts, review
+limits, chart history, and refresh behavior are preserved.

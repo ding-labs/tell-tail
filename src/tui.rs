@@ -15,7 +15,7 @@ use ratatui::{
     layout::{Constraint, Layout},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Cell, Paragraph, Row, Sparkline, Table},
+    widgets::{Block, BorderType, Borders, Cell, Paragraph, Row, Sparkline, Table},
 };
 use std::{
     cell::RefCell,
@@ -182,9 +182,14 @@ pub fn draw(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool) {
 fn panel<'a>(title: impl Into<Line<'a>>) -> Block<'a> {
     Block::default()
         .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
         .style(Style::default().fg(theme::TEXT).bg(theme::SURFACE))
         .border_style(Style::default().fg(theme::BORDER))
-        .title_style(Style::default().fg(theme::TEXT))
+        .title_style(
+            Style::default()
+                .fg(theme::TEXT)
+                .add_modifier(Modifier::BOLD),
+        )
         .title(title.into())
 }
 
@@ -196,12 +201,45 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
     );
     if area.width < 60 || area.height < 18 {
         frame.render_widget(
-            Paragraph::new(format!(
-                "Tell-Tail · {:?}\n{} records · {} bytes\nwarn {} · error {}\nUnknown: {}\nParse failures: {}\nResize to 60 × 18 for dashboard\nq quit · space freeze",
-                s.state, s.totals.records, s.bytes_read,
-                percent(s.window.warning_ratio), percent(s.window.error_ratio),
-                s.totals.levels.get(Level::Unknown), s.totals.parse_failures,
-            )),
+            Paragraph::new(vec![
+                Line::from(vec![
+                    Span::styled(
+                        "tell-tail",
+                        Style::default()
+                            .fg(theme::BRAND)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        format!(" · {:?}", s.state),
+                        Style::default().fg(theme::state(s.state)),
+                    ),
+                ]),
+                Line::raw(format!(
+                    "{} records · {} bytes",
+                    s.totals.records, s.bytes_read
+                )),
+                Line::from(vec![
+                    Span::styled(
+                        format!("warn {}", percent(s.window.warning_ratio)),
+                        Style::default().fg(theme::WARNING),
+                    ),
+                    Span::raw(" · "),
+                    Span::styled(
+                        format!("error {}", percent(s.window.error_ratio)),
+                        Style::default().fg(theme::INCIDENT),
+                    ),
+                ]),
+                Line::styled(
+                    format!("Unknown: {}", s.totals.levels.get(Level::Unknown)),
+                    Style::default().fg(theme::INFO),
+                ),
+                Line::raw(format!("Parse failures: {}", s.totals.parse_failures)),
+                Line::styled(
+                    "Resize to 60 × 18 for dashboard",
+                    Style::default().fg(theme::MUTED),
+                ),
+                Line::styled("q quit · space freeze", Style::default().fg(theme::MUTED)),
+            ]),
             area,
         );
         return;
@@ -221,18 +259,32 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
     .split(area);
     let header = Line::from(vec![
         Span::styled(
-            " TELL-TAIL ",
+            " ≡╱ ",
             Style::default()
                 .fg(theme::BRAND)
                 .add_modifier(Modifier::BOLD),
         ),
-        Span::raw(format!(
-            "{:?}{} · {}s · {}",
-            s.state,
+        Span::styled(
+            "tell-tail",
+            Style::default()
+                .fg(theme::TEXT)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            format!("  {:?}", s.state),
+            Style::default().fg(theme::state(s.state)),
+        ),
+        Span::styled(
             if frozen { " · DISPLAY FROZEN" } else { "" },
-            s.window.configured_seconds,
-            s.source.escape_debug()
-        )),
+            Style::default()
+                .fg(theme::MUTED)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            format!(" · {}s · ", s.window.configured_seconds),
+            Style::default().fg(theme::MUTED),
+        ),
+        Span::raw(s.source.escape_debug().to_string()),
     ]);
     frame.render_widget(Paragraph::new(header), regions[0]);
     let cards = Layout::horizontal([Constraint::Percentage(25); 4]).split(regions[1]);
@@ -304,8 +356,12 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
         ],
     )
     .header(
-        Row::new(["Level", "Window", "Share", "Session"])
-            .style(Style::default().add_modifier(Modifier::BOLD)),
+        Row::new(["Level", "Window", "Share", "Session"]).style(
+            Style::default()
+                .fg(theme::MUTED)
+                .bg(theme::SUBTLE)
+                .add_modifier(Modifier::BOLD),
+        ),
     )
     .block(panel(" Severity "));
     frame.render_widget(table, overview[1]);
@@ -384,7 +440,10 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
             s.skipped_bytes
         )
     };
-    frame.render_widget(Paragraph::new(footer), regions[4]);
+    frame.render_widget(
+        Paragraph::new(footer).style(Style::default().fg(theme::MUTED)),
+        regions[4],
+    );
 }
 
 #[cfg(test)]
