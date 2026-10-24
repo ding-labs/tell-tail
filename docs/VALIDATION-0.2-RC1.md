@@ -67,3 +67,13 @@ owned project, service, deployments, generated domain and volume. It must verify
 cleanup and retain the evidence. The former local-candidate follow-up was
 replaced so it cannot restart the obsolete campaign. The separate webhook
 validation remains untouched. Final Linux gate review is still pending.
+
+## Reviewed fuzz results — October 24
+
+All three sanitizer-backed targets completed 1,801 seconds on the exact clean
+RC1 source in [extended validation](https://github.com/zuchka/tell-tail/actions/runs/40055922040),
+with no finding: framing 29,621,664 executions, classification 62,162,142, and
+timed engine 2,971,822. The pinned nightly, bounded input/RSS settings and log
+hashes are retained in `docs/validation/0.2.0-rc.1/fuzz-summary.json`; full logs
+were downloaded into the ignored `work/rc1-ci/extended` evidence directory.
+The fuzzing gate passes. The dashboard-hour jobs are still running.

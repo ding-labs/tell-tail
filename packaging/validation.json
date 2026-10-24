@@ -11,8 +11,12 @@
       ]
     },
     "fuzzing": {
-      "passed": false,
-      "evidence": []
+      "passed": true,
+      "evidence": [
+        "https://github.com/zuchka/tell-tail/actions/runs/40055922040",
+        "docs/validation/0.2.0-rc.1/fuzz-summary.json",
+        "docs/VALIDATION-0.2-RC1.md: reviewed fuzz results"
+      ]
     },
     "linux_day": {
       "passed": false,

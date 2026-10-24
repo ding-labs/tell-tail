@@ -1,0 +1,31 @@
+{
+  "source_commit": "33f2f9ac959350bcd72332f5a62b53480361c933",
+  "run": "https://github.com/zuchka/tell-tail/actions/runs/40055922040",
+  "toolchain": "rustc 1.101.0-nightly (822182db4 2026-10-13)",
+  "max_len": 65536,
+  "rss_limit_mb": 512,
+  "ASAN_OPTIONS": "quarantine_size_mb=32",
+  "results": [
+    {
+      "target": "classification",
+      "executions": 62162142,
+      "seconds": 1801,
+      "log_sha256": "ec2b1fbe058216d2e1c7febd4aa1c272ff62626bac0aa8e80493543614399701",
+      "finding": false
+    },
+    {
+      "target": "framing",
+      "executions": 29621664,
+      "seconds": 1801,
+      "log_sha256": "5fe97886adf183c2d746bc5a53fbca5e53338ea80ddf5d668f5064c46aec11f2",
+      "finding": false
+    },
+    {
+      "target": "timed_engine",
+      "executions": 2971822,
+      "seconds": 1801,
+      "log_sha256": "e7ef17c9e3094deeb6c223d452ab9724114180249140360693ccc954b9a417bc",
+      "finding": false
+    }
+  ]
+}
