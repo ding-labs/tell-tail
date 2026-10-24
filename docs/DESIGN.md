@@ -69,3 +69,14 @@ source paths, counters, and log previews can wrap without widening the page.
 Diagnostics retain a native disclosure with a padded full-width header and
 an inset grid. The chart's geometry, animation, data flow, and every existing
 control remain unchanged.
+
+## Terminal palette
+
+`src/tui/theme.rs` mirrors Ding's dark colors: graphite canvas and panel surfaces,
+warm text, green throughput, violet information/unknown records, amber warnings,
+and coral errors/fatals. Trace and debug records use muted text. Severity names
+remain visible, including the distinction between error and fatal.
+
+The terminal paints its own dark canvas so the palette is readable on light and
+dark terminal profiles. It uses the terminal's font and existing cell geometry;
+the alternate screen and terminal settings are restored on exit.

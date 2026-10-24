@@ -18,7 +18,8 @@ python3 scripts/demo.py | ./target/release/tell-tail
 
 The demo changes warning and error ratios over a 20-second cycle. Press `q` to
 quit, space to freeze the display while ingestion continues, and `?` for help.
-The terminal uses an amber accent and a compact chart/severity layout. At 60 × 20
+The terminal uses Ding's graphite and green palette with a compact chart/severity
+layout, violet information, amber warnings, and coral errors/fatals. At 60 × 20
 or larger it also shows recent error and fatal previews, newest first. Arrow keys
 and Page Up/Down freeze the display and scroll the previews; `f` toggles fatal-only
 review, and space resumes live updates. The dashboard retains at most 20 previews
