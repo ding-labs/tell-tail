@@ -29,6 +29,11 @@ pub(super) fn routes() -> Router<App> {
             include_str!("../../web/render.mjs"),
         ),
         (
+            "/logo.svg",
+            "image/svg+xml",
+            include_str!("../../web/logo.svg"),
+        ),
+        (
             "/favicon.svg",
             "image/svg+xml",
             include_str!("../../web/favicon.svg"),

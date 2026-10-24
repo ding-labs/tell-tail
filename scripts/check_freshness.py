@@ -67,7 +67,7 @@ def count_is(count):
 
 
 try:
-    until(lambda text: 'TELL-TAIL' in text)
+    until(lambda text: 'tell-tail' in text)
     latencies = []
     for count in range(1, args.samples + 1):
         began = time.monotonic()

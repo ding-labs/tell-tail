@@ -45,6 +45,18 @@ Source names use DOM text APIs. The layout adapts down to 320 px; controls and
 disclosure elements are keyboard accessible with visible focus indicators. Status
 messages use text as well as color and announce connection transitions politely.
 
+The palette follows the browser's light/dark preference using Ding's shared
+color tokens: warm ivory or graphite surfaces, pine or original Ding green
+(`#7EE787`) accents, violet information and unknown states, amber warnings, and
+coral errors/fatals. A live connection uses violet; it does not claim that the
+logs are healthy. Text labels distinguish every severity, including error from
+fatal. The green angular log-tail SVG is used in the masthead and on a graphite
+favicon backing. See [the visual foundation](DESIGN.md) for palette roles.
+Typography, controls, and panels follow Ding Console's system font stacks,
+14 px body, heading hierarchy, 4 px spacing grid, 6 px control corners, and
+12 px panel corners. Panels use 24 px insets (16 px on mobile), and buttons
+provide 40 px targets with visible keyboard focus.
+
 **Freeze display** holds all displayed metrics and chart values while the live
 connection retains one latest frame. **Resume display** paints that frame on the
 next animation frame. Connection, capacity, and failure messages continue to
@@ -99,8 +111,8 @@ command, nonzero exit, and a long-running handoff without opening a real browser
 ## Implementation and checks
 
 `web/` contains the HTML, CSS, small ES modules with JSDoc frame types, and SVG
-icon. Rust embeds only fixed routes with explicit MIME types under the existing
-security headers and CSP. There is no framework, chart library, font download,
+logo/favicon. Rust embeds only fixed routes with explicit MIME types under the
+existing security headers and CSP. There is no framework, chart library, font download,
 CDN, or generated frontend bundle. Cargo includes these assets in source
 packages; development browser tooling is excluded.
 

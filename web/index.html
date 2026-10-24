@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark">
+  <meta name="color-scheme" content="light dark">
   <title>Tell-Tail · Live metrics</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/dashboard.css">
@@ -12,7 +12,7 @@
 <body>
   <div class="shell">
     <header class="masthead">
-      <a class="brand" href="/" aria-label="Tell-Tail dashboard"><span class="brand-mark" aria-hidden="true">t&gt;</span> tell-tail</a>
+      <a class="brand" href="/" aria-label="Tell-Tail dashboard"><img class="brand-mark" src="/logo.svg" width="40" height="32" alt=""> tell-tail</a>
       <span class="local-label">LOCAL METRICS <span aria-hidden="true">/</span> V1</span>
     </header>
     <main>
@@ -20,7 +20,7 @@
         <div><p class="eyebrow">LOG MONITOR</p><h1>Live metrics</h1></div>
         <div class="controls">
           <button id="freeze" type="button" aria-pressed="false" disabled>Freeze display</button>
-          <button id="retry" type="button" hidden>Retry connection</button>
+          <button class="primary" id="retry" type="button" hidden>Retry connection</button>
         </div>
       </div>
       <div class="connection" id="connection" data-tone="neutral" role="status" aria-live="polite" aria-atomic="true">Connecting to local monitor…</div>

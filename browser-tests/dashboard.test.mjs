@@ -15,7 +15,7 @@ test('recent error review is safe, frozen, filterable and bounded under a flood'
   await page.goto(server.url);
   await page.waitForFunction(() => document.querySelectorAll('#recent-errors li').length === 2);
   assert.match(await page.locator('#recent-errors li').first().textContent(), /FATAL <img/);
-  assert.equal(await page.locator('img').count(), 0);
+  assert.equal(await page.locator('#recent-errors img').count(), 0);
   assert.equal(await page.evaluate(() => window.unsafe), undefined);
   await page.locator('#fatal-only').click();
   assert.equal(await page.locator('#recent-errors li').count(), 1);
@@ -86,7 +86,7 @@ test('null values, u64 counters and untrusted sources render safely', async t =>
   await page.goto(server.url);
   await page.waitForFunction(() => document.getElementById('input-state').textContent === 'complete');
   assert.equal(await page.locator('#source').textContent(), frame.metrics.source);
-  assert.equal(await page.locator('img').count(), 0);
+  assert.equal(await page.locator('#source img').count(), 0);
   assert.equal(await page.evaluate(() => window.unsafe), undefined);
   assert.equal(await page.locator('#total-records').textContent(), '18,446,744,073,709,551,615');
   assert.equal(await page.locator('#warning-ratio').textContent(), '—');

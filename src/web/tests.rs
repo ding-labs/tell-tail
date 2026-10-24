@@ -16,6 +16,7 @@ async fn dashboard_assets_are_embedded_fixed_routes_with_local_security_headers(
         ("/dashboard.mjs", "text/javascript", "./frame.mjs"),
         ("/frame.mjs", "text/javascript", "parseFrame"),
         ("/render.mjs", "text/javascript", "textContent"),
+        ("/logo.svg", "image/svg+xml", "<svg"),
         ("/favicon.svg", "image/svg+xml", "<svg"),
     ] {
         let response = h.get(path).await;

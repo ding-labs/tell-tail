@@ -1,3 +1,5 @@
+mod theme;
+
 use crate::{
     output::percent, parse::Level, platform::StdoutWriter, runtime::Running, stats::Snapshot,
 };
@@ -11,9 +13,9 @@ use ratatui::{
     Frame, Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Layout},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Cell, Paragraph, Row, Sparkline, Table},
+    widgets::{Block, BorderType, Borders, Cell, Paragraph, Row, Sparkline, Table},
 };
 use std::{
     cell::RefCell,
@@ -177,20 +179,67 @@ pub fn draw(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool) {
     draw_review(frame, s, frozen, help, &Review::default());
 }
 
+fn panel<'a>(title: impl Into<Line<'a>>) -> Block<'a> {
+    Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .style(Style::default().fg(theme::TEXT).bg(theme::SURFACE))
+        .border_style(Style::default().fg(theme::BORDER))
+        .title_style(
+            Style::default()
+                .fg(theme::TEXT)
+                .add_modifier(Modifier::BOLD),
+        )
+        .title(title.into())
+}
+
 fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review: &Review) {
     let area = frame.area();
-    let fg = Color::Rgb(215, 225, 235);
-    let accent = Color::Rgb(234, 195, 119);
-    let muted = Color::Rgb(130, 139, 153);
-    frame.render_widget(Block::default().style(Style::default().fg(fg)), area);
+    frame.render_widget(
+        Block::default().style(Style::default().fg(theme::TEXT).bg(theme::CANVAS)),
+        area,
+    );
     if area.width < 60 || area.height < 18 {
         frame.render_widget(
-            Paragraph::new(format!(
-                "Tell-Tail · {:?}\n{} records · {} bytes\nwarn {} · error {}\nUnknown: {}\nParse failures: {}\nResize to 60 × 18 for dashboard\nq quit · space freeze",
-                s.state, s.totals.records, s.bytes_read,
-                percent(s.window.warning_ratio), percent(s.window.error_ratio),
-                s.totals.levels.get(Level::Unknown), s.totals.parse_failures,
-            )),
+            Paragraph::new(vec![
+                Line::from(vec![
+                    Span::styled(
+                        "tell-tail",
+                        Style::default()
+                            .fg(theme::BRAND)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        format!(" · {:?}", s.state),
+                        Style::default().fg(theme::state(s.state)),
+                    ),
+                ]),
+                Line::raw(format!(
+                    "{} records · {} bytes",
+                    s.totals.records, s.bytes_read
+                )),
+                Line::from(vec![
+                    Span::styled(
+                        format!("warn {}", percent(s.window.warning_ratio)),
+                        Style::default().fg(theme::WARNING),
+                    ),
+                    Span::raw(" · "),
+                    Span::styled(
+                        format!("error {}", percent(s.window.error_ratio)),
+                        Style::default().fg(theme::INCIDENT),
+                    ),
+                ]),
+                Line::styled(
+                    format!("Unknown: {}", s.totals.levels.get(Level::Unknown)),
+                    Style::default().fg(theme::INFO),
+                ),
+                Line::raw(format!("Parse failures: {}", s.totals.parse_failures)),
+                Line::styled(
+                    "Resize to 60 × 18 for dashboard",
+                    Style::default().fg(theme::MUTED),
+                ),
+                Line::styled("q quit · space freeze", Style::default().fg(theme::MUTED)),
+            ]),
             area,
         );
         return;
@@ -210,16 +259,32 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
     .split(area);
     let header = Line::from(vec![
         Span::styled(
-            " TELL-TAIL ",
-            Style::default().fg(accent).add_modifier(Modifier::BOLD),
+            " ≡╱ ",
+            Style::default()
+                .fg(theme::BRAND)
+                .add_modifier(Modifier::BOLD),
         ),
-        Span::raw(format!(
-            "{:?}{} · {}s · {}",
-            s.state,
+        Span::styled(
+            "tell-tail",
+            Style::default()
+                .fg(theme::TEXT)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            format!("  {:?}", s.state),
+            Style::default().fg(theme::state(s.state)),
+        ),
+        Span::styled(
             if frozen { " · DISPLAY FROZEN" } else { "" },
-            s.window.configured_seconds,
-            s.source.escape_debug()
-        )),
+            Style::default()
+                .fg(theme::MUTED)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            format!(" · {}s · ", s.window.configured_seconds),
+            Style::default().fg(theme::MUTED),
+        ),
+        Span::raw(s.source.escape_debug().to_string()),
     ]);
     frame.render_widget(Paragraph::new(header), regions[0]);
     let cards = Layout::horizontal([Constraint::Percentage(25); 4]).split(regions[1]);
@@ -228,36 +293,31 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
             0,
             " Entries / sec ",
             format!("{:.0}", s.window.records_per_second),
-            accent,
+            theme::BRAND,
         ),
         (
             1,
             " MiB / sec ",
             format!("{:.2}", s.window.bytes_per_second / 1_048_576.0),
-            accent,
+            theme::TEXT,
         ),
         (
             2,
             " Warnings ",
             percent(s.window.warning_ratio),
-            Color::Yellow,
+            theme::WARNING,
         ),
         (
             3,
             " Errors + fatal ",
             percent(s.window.error_ratio),
-            Color::Red,
+            theme::INCIDENT,
         ),
     ] {
         frame.render_widget(
             Paragraph::new(value)
                 .style(Style::default().fg(color).add_modifier(Modifier::BOLD))
-                .block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .border_style(Style::default().fg(muted))
-                        .title(title),
-                ),
+                .block(panel(title)),
             cards[index],
         );
     }
@@ -270,32 +330,21 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
     frame.render_widget(
         Sparkline::default()
             .data(&s.history[history_start..])
-            .style(Style::default().fg(accent))
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_style(Style::default().fg(muted))
-                    .title(" Throughput · entries/s "),
-            ),
+            .style(Style::default().fg(theme::BRAND))
+            .block(panel(" Throughput · entries/s ")),
         overview[0],
     );
     let rows = Level::ALL.into_iter().map(|level| {
         let count = s.window.counts.levels.get(level);
         let ratio =
             (s.window.counts.records != 0).then(|| count as f64 / s.window.counts.records as f64);
-        let color = match level {
-            Level::Warn => Color::Yellow,
-            Level::Error | Level::Fatal => Color::Red,
-            Level::Unknown => Color::Magenta,
-            _ => fg,
-        };
         Row::new(vec![
             Cell::from(level.name().to_uppercase()),
             Cell::from(count.to_string()),
             Cell::from(percent(ratio)),
             Cell::from(s.totals.levels.get(level).to_string()),
         ])
-        .style(Style::default().fg(color))
+        .style(Style::default().fg(theme::severity(level)))
     });
     let table = Table::new(
         rows,
@@ -307,15 +356,14 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
         ],
     )
     .header(
-        Row::new(["Level", "Window", "Share", "Session"])
-            .style(Style::default().add_modifier(Modifier::BOLD)),
+        Row::new(["Level", "Window", "Share", "Session"]).style(
+            Style::default()
+                .fg(theme::MUTED)
+                .bg(theme::SUBTLE)
+                .add_modifier(Modifier::BOLD),
+        ),
     )
-    .block(
-        Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(muted))
-            .title(" Severity "),
-    );
+    .block(panel(" Severity "));
     frame.render_widget(table, overview[1]);
     let entries = review.entries(s);
     let offset = review.offset.min(entries.len().saturating_sub(1));
@@ -335,11 +383,6 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
         .skip(offset)
         .take(visible)
         .map(|entry| {
-            let color = if entry.level == Level::Fatal {
-                Color::LightMagenta
-            } else {
-                Color::LightRed
-            };
             let prefix = format!(
                 "{:>6.1}s {:5} ",
                 entry.elapsed_seconds,
@@ -362,7 +405,7 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
                 preview = Line::from(value);
             }
             Line::from(vec![
-                Span::styled(prefix, Style::default().fg(color)),
+                Span::styled(prefix, Style::default().fg(theme::severity(entry.level))),
                 Span::raw(preview.to_string()),
             ])
         })
@@ -374,18 +417,10 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
             } else {
                 "No errors or fatal records captured."
             },
-            Style::default().fg(muted),
+            Style::default().fg(theme::MUTED),
         ));
     }
-    frame.render_widget(
-        Paragraph::new(lines).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(muted))
-                .title(title),
-        ),
-        regions[3],
-    );
+    frame.render_widget(Paragraph::new(lines).block(panel(title)), regions[3]);
     let backlog = s
         .backlog_bytes
         .map(|b| format!("{b} B"))
@@ -405,7 +440,10 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
             s.skipped_bytes
         )
     };
-    frame.render_widget(Paragraph::new(footer), regions[4]);
+    frame.render_widget(
+        Paragraph::new(footer).style(Style::default().fg(theme::MUTED)),
+        regions[4],
+    );
 }
 
 #[cfg(test)]
