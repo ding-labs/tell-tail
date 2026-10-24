@@ -46,6 +46,26 @@ The full Rust test suite, clippy with warnings denied, formatting and a release
 build pass locally. New regressions cover overwritten-slot ownership, shorter
 replacement records, invalid-UTF-8 expansion and split codepoints, alongside
 existing chunking, terminal/web rendering and preview-safety coverage.
-[Controlled Linux validation](https://github.com/zuchka/tell-tail/actions/runs/40059139178)
-of the proposed code is running. RC1's tag, Railway binary and release gates
-remain unchanged; publication stays on hold.
+## Controlled Linux confirmation
+
+[Run 40059139178](https://github.com/zuchka/tell-tail/actions/runs/40059139178)
+confirms the fix on clean source `327d5bcb395ef3aece1786cfbc2eabf0f7fdaf38`,
+using the unchanged clean RC1 harness. The report identifies reference host
+`runnervm8k3b6`, AMD EPYC 7763, with producer CPU 0 and consumer/helper CPU 3,
+matching the RC1 reference-host identifiers.
+
+Five one-minute-calibrated pairs passed exact counters and byte accounting.
+Median headless/TUI rates were 6.66M/6.41M records/s, with **3.76%** median paired
+dashboard loss (individual pairs 2.23–5.01%). Headless/TUI ranges of 1.76%/1.65%
+and maximum producer CPU use of 35.58% qualify the measurement. Cached text
+reached a 20.63M records/s median, above the 1M reference target. The unchanged
+performance limits pass for the proposed code. The [retained summary](validation/preview-performance-linux.json)
+records complete identities, fixture/report hashes and every pair's timings;
+the full report/log is retained under ignored `work/performance/controlled-linux`.
+
+Native tests and archive/Homebrew checks pass on macOS ARM64 and both Linux
+architectures. The web dashboard job hit a separate test-browser startup timeout,
+before exercising the feature; its failed check is being retried. This PR stays
+a draft until those checks are resolved. RC1's tag, Railway binary and release
+gates remain unchanged; the proposed code does not certify the frozen candidate.
+Publication stays on hold.
