@@ -30,8 +30,8 @@ its executable SHA-256 is
 
 Fresh [extended validation](https://github.com/zuchka/tell-tail/actions/runs/40055922040)
 and [performance](https://github.com/zuchka/tell-tail/actions/runs/40055923758)
-have been reviewed below. Performance fails for RC1; maximum-configuration
-terminal memory and both Linux day scenarios remain pending.
+have been reviewed below. Eight gates now pass. Performance fails for RC1,
+and both Linux day scenarios remain pending.
 The Linux day gate requires separate uninterrupted 86,400-second stdin/NDJSON
 and followed-file/Prometheus rotation scenarios, sequentially. Earlier partial
 campaigns supply no duration credit.
@@ -112,7 +112,10 @@ formatting the retained sample only during publication. Its local five-pair
 comparison reduced median dashboard loss from 57.32% to 3.02%, with qualifying
 noise/producer conditions. The full Rust tests and clippy pass. Controlled Linux
 run [40059139178](https://github.com/zuchka/tell-tail/actions/runs/40059139178)
-is validating code commit `327d5bcb395ef3aece1786cfbc2eabf0f7fdaf38`.
+passed for code commit `327d5bcb395ef3aece1786cfbc2eabf0f7fdaf38`, with
+3.76% median dashboard loss and qualifying timing/producer conditions. The
+performance fix is ready for review, with final head checks following evidence
+updates; its full measurements are retained in that PR.
 These results apply to the proposed fix, not RC1. Its source, tag, Railway soak
 and failed performance gate remain unchanged.
 
@@ -137,8 +140,8 @@ The default-memory ceiling and post-warmup plateau checks pass. The two day
 scenarios remain separate requirements; these hour runs supply no day credit.
 The maximum headless configurations (window 3600, 16 MiB record limit) also
 passed 60 seconds, peaking at 37.20 MiB and 27.72 MiB respectively. The maximum
-memory gate stays pending until the fixed-geometry terminal configuration is
-measured for this candidate.
+memory gate was held pending the fixed-geometry terminal check; the exact-source
+follow-up below now completes that requirement.
 
 The [exact-source native correctness run](https://github.com/zuchka/tell-tail/actions/runs/40055442773)
 retained 25 real write-to-visible-count observations per platform at 100 × 26.
@@ -149,3 +152,29 @@ and hour-run shutdown checks also pass. Responsiveness, default memory and the
 one-hour dashboard gates now pass. Full report hashes and compact observations
 are in `docs/validation/0.2.0-rc.1/dashboard-hour-summary.json`; downloaded raw
 reports remain under ignored `work/rc1-ci`.
+
+## Reviewed maximum settings — October 24
+
+[Resource-only run 40061097053](https://github.com/zuchka/tell-tail/actions/runs/40061097053)
+passed both output modes on native macOS ARM64 and Linux x86_64, with window
+3600 and a 16 MiB record limit. Every scenario produced 6,000 records and
+1,007,974,560 bytes over at least 60 seconds, matching all exact counters.
+Fixed-geometry TUI peaks were 31.50 MiB and 28.48 MiB respectively; the fresh
+headless peaks were 38.89 MiB and 28.12 MiB. Combined app/helper RSS was sampled
+once per second and stayed below the unchanged 128 MiB ceiling. Continuity,
+producer utilization and shutdown checks passed.
+
+The workflow definition came from metadata commit `9c38ba4`, while its explicit
+checkout built clean frozen source/harness `33f2f9a`. Both executable hashes
+match the earlier hour/resource run. The new workflow mode skips repeated fuzz,
+performance and one-hour work, adds the previously missing terminal maximum
+case, and retains the same case in ordinary future extended campaigns.
+Complete report hashes and configurations are retained in
+`docs/validation/0.2.0-rc.1/maximum-memory-summary.json`; downloaded reports are
+under ignored `work/rc1-ci/maximum-config`.
+
+Eight RC1 gates pass. The Linux day campaign is still running and RC1's
+performance failure remains a release blocker. PR #14's validated performance
+fix cannot pass a gate for the unchanged RC1 binary. The browser test launcher
+fix from that PR is also applied to this evidence branch after the same startup
+timeout occurred here; the frozen application and remote campaign are unchanged.

@@ -39,10 +39,11 @@
       ]
     },
     "maximum_memory": {
-      "passed": false,
+      "passed": true,
       "evidence": [
-        "https://github.com/zuchka/tell-tail/actions/runs/40055922040",
-        "docs/validation/0.2.0-rc.1/dashboard-hour-summary.json: headless maximum passed; terminal maximum still pending"
+        "https://github.com/zuchka/tell-tail/actions/runs/40061097053",
+        "docs/validation/0.2.0-rc.1/maximum-memory-summary.json",
+        "docs/VALIDATION-0.2-RC1.md: reviewed headless and fixed-geometry terminal maximum settings"
       ]
     },
     "responsiveness": {
