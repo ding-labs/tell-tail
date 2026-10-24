@@ -6,8 +6,15 @@ rust-version = "1.88"
 description = "Bounded-memory log throughput and severity monitor"
 license = "MIT"
 repository = "https://github.com/zuchka/tell-tail"
+homepage = "https://github.com/zuchka/tell-tail"
 readme = "README.md"
+keywords = ["logs", "monitoring", "cli", "tui", "observability"]
+categories = ["command-line-utilities", "development-tools::debugging"]
+publish = ["crates-io"]
 include = ["src/**", "tests/**", "web/**", "/Cargo.toml", "/Cargo.lock", "/LICENSE", "/README.md", "/CHANGELOG.md", "docs/**", "packaging/**", "examples/*.service", "scripts/*.py", "scripts/*.txt", "/rust-toolchain.toml"]
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu", "aarch64-apple-darwin"]
 
 [features]
 default = ["web"]
