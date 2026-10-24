@@ -244,11 +244,9 @@ fn bind_failure_precedes_input_start_and_invalid_web_arguments_exit_two() {
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(1));
-    assert!(
-        String::from_utf8_lossy(&output.stderr)
-            .to_ascii_lowercase()
-            .contains("address already in use")
-    );
+    // glibc and musl use different wording for the same occupied-port error.
+    let expected = TcpListener::bind(listener.local_addr().unwrap()).unwrap_err();
+    assert!(String::from_utf8_lossy(&output.stderr).contains(&expected.to_string()));
     assert!(String::from_utf8_lossy(&output.stderr).contains(&format!(
         "cannot bind web listener at {}",
         listener.local_addr().unwrap()
