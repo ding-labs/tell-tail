@@ -102,3 +102,15 @@ The new interactive error-preview capture path is under investigation. The
 frozen source, tag and running Railway binary remain unchanged. Linux duration
 validation continues, and publication remains blocked by performance and the
 other pending gates.
+
+### Proposed preview fix
+
+[PR #14](https://github.com/zuchka/tell-tail/pull/14) removes per-record string
+allocation/sanitization from preview capture, using reusable bounded slots and
+formatting the retained sample only during publication. Its local five-pair
+comparison reduced median dashboard loss from 57.32% to 3.02%, with qualifying
+noise/producer conditions. The full Rust tests and clippy pass. Controlled Linux
+run [40059139178](https://github.com/zuchka/tell-tail/actions/runs/40059139178)
+is validating code commit `327d5bcb395ef3aece1786cfbc2eabf0f7fdaf38`.
+These results apply to the proposed fix, not RC1. Its source, tag, Railway soak
+and failed performance gate remain unchanged.
