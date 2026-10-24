@@ -23,6 +23,12 @@ and linkage. The dashboard is embedded; users do not need Rust, Node, or Python.
 `release.json` describes all three archives and `SHA256SUMS` covers those archives
 and the manifest. The Homebrew formula installs the same tested binaries.
 
+macOS binaries currently have the linker's ad-hoc signature. Developer ID
+signing and notarization are not configured. Native and Homebrew smoke checks
+do not test a browser download carrying a quarantine attribute. Plan and test
+that installation path before advertising direct macOS downloads; see
+[Apple's distribution guidance](https://developer.apple.com/developer-id/).
+
 ## Build without publishing
 
 Source, dependency, and packaging changes run the release workflow automatically.
@@ -95,8 +101,8 @@ tooling, logs, and build output.
 
 Before uploading:
 
-1. Check availability and ownership of `tell-tail` on crates.io. No search match
-   is not a reservation; hyphen/underscore variants can also conflict. Do not
+1. Check availability and ownership of `tell-tail` on crates.io. A search without
+   matches does not reserve a name; hyphen/underscore variants can also conflict. Do not
    rename the package without updating the binary/install docs.
 2. Set up a crates.io account with a verified email and publishing credentials.
    Use `cargo login` interactively; keep credentials out of repository files and
