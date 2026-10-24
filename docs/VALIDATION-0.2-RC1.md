@@ -30,7 +30,8 @@ its executable SHA-256 is
 
 Fresh [extended validation](https://github.com/zuchka/tell-tail/actions/runs/40055922040)
 and [performance](https://github.com/zuchka/tell-tail/actions/runs/40055923758)
-were dispatched for this source. Results require review before updating gates.
+have been reviewed below. Performance fails for RC1; maximum-configuration
+terminal memory and both Linux day scenarios remain pending.
 The Linux day gate requires separate uninterrupted 86,400-second stdin/NDJSON
 and followed-file/Prometheus rotation scenarios, sequentially. Earlier partial
 campaigns supply no duration credit.
@@ -76,7 +77,7 @@ with no finding: framing 29,621,664 executions, classification 62,162,142, and
 timed engine 2,971,822. The pinned nightly, bounded input/RSS settings and log
 hashes are retained in `docs/validation/0.2.0-rc.1/fuzz-summary.json`; full logs
 were downloaded into the ignored `work/rc1-ci/extended` evidence directory.
-The fuzzing gate passes. The dashboard-hour jobs are still running.
+The fuzzing gate passes. Dashboard-hour results are reviewed below.
 
 ## Performance blocker — October 24
 
@@ -114,3 +115,37 @@ run [40059139178](https://github.com/zuchka/tell-tail/actions/runs/40059139178)
 is validating code commit `327d5bcb395ef3aece1786cfbc2eabf0f7fdaf38`.
 These results apply to the proposed fix, not RC1. Its source, tag, Railway soak
 and failed performance gate remain unchanged.
+
+## Reviewed hour and responsiveness results — October 24
+
+The exact clean RC1 source completed native one-hour burst/TUI runs on macOS
+ARM64 and Linux x86_64 in [extended validation](https://github.com/zuchka/tell-tail/actions/runs/40055922040).
+Both passed exact counters and bytes, all 360 terminal actions, continuity and
+shutdown checks. Combined app/helper RSS is sampled once per second.
+
+| Observation | macOS ARM64 | Linux x86_64 |
+| --- | ---: | ---: |
+| Production duration | 3,600.121 s | 3,600.004 s |
+| Records verified | 3,596,900 | 3,597,000 |
+| Peak sampled RSS | 7.05 MiB | 9.18 MiB |
+| First post-warmup ten-minute RSS median | 6.33 MiB | 9.16 MiB |
+| Largest later median | 6.38 MiB | 9.18 MiB |
+| Maximum observation gap | 232 ms | 30 ms |
+| Shutdown observed | 256 ms | 31 ms |
+
+The default-memory ceiling and post-warmup plateau checks pass. The two day
+scenarios remain separate requirements; these hour runs supply no day credit.
+The maximum headless configurations (window 3600, 16 MiB record limit) also
+passed 60 seconds, peaking at 37.20 MiB and 27.72 MiB respectively. The maximum
+memory gate stays pending until the fixed-geometry terminal configuration is
+measured for this candidate.
+
+The [exact-source native correctness run](https://github.com/zuchka/tell-tail/actions/runs/40055442773)
+retained 25 real write-to-visible-count observations per platform at 100 × 26.
+p95 freshness was 361 ms on macOS and 220 ms on Linux, below the 500 ms limit;
+quit completed in 290 ms and 213 ms. The controlled terminal, signal, stalled
+output and backpressure checks passed in the same run; extended loaded pipeline
+and hour-run shutdown checks also pass. Responsiveness, default memory and the
+one-hour dashboard gates now pass. Full report hashes and compact observations
+are in `docs/validation/0.2.0-rc.1/dashboard-hour-summary.json`; downloaded raw
+reports remain under ignored `work/rc1-ci`.
