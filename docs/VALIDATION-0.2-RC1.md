@@ -104,7 +104,7 @@ frozen source, tag and running Railway binary remain unchanged. Linux duration
 validation continues, and publication remains blocked by performance and the
 other pending gates.
 
-### Proposed preview fix
+### Merged preview fix
 
 [PR #14](https://github.com/zuchka/tell-tail/pull/14) removes per-record string
 allocation/sanitization from preview capture, using reusable bounded slots and
@@ -114,10 +114,13 @@ noise/producer conditions. The full Rust tests and clippy pass. Controlled Linux
 run [40059139178](https://github.com/zuchka/tell-tail/actions/runs/40059139178)
 passed for code commit `327d5bcb395ef3aece1786cfbc2eabf0f7fdaf38`, with
 3.76% median dashboard loss and qualifying timing/producer conditions. The
-performance fix is ready for review, with final head checks following evidence
-updates; its full measurements are retained in that PR.
-These results apply to the proposed fix, not RC1. Its source, tag, Railway soak
-and failed performance gate remain unchanged.
+performance fix was merged on October 24 at the user's request, using merge
+commit `ca10c1372975afb80363b27d4b66e6cfa545c0c4`. All five individual PR
+commits were preserved, and all final head checks passed. Its full measurements
+are retained in that PR. The existing Railway deployment remains healthy and
+unchanged; its results will be preserved and reviewed before cleanup.
+These results apply to the merged fix, not RC1. The RC1 source, tag, Railway
+soak and failed performance gate remain unchanged.
 
 ## Reviewed hour and responsiveness results — October 24
 
