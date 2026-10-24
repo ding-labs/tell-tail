@@ -22,6 +22,9 @@
   an eligible rolling window falls below the threshold after a queued breach.
   Recovery bypasses breach cooldown, uses a separate message, and requires the
   same minimum sample size. Empty windows and shutdown do not signal recovery.
+- `--slack` formats breach and recovery notifications for a Slack incoming
+  webhook, including the message, window statistics, source, and session. Use it
+  with `--alert-webhook` and `--alert-error-percent`; no formatting relay is needed.
 
 ### Changed
 

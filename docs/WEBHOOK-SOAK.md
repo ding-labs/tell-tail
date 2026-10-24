@@ -14,6 +14,9 @@ mixed text/JSON logs. It captures each HTTP webhook, checks its statistics and
 transition order, and optionally formats and forwards it to a Slack incoming
 webhook. The relay belongs to the test harness; the binary's generic JSON payload
 is unchanged. Slack requires its own message shape, such as a `text` field.
+For direct delivery from the current binary, use
+[`--slack --alert-webhook URL`](../README.md#webhook-alerts). The recorded campaign
+below exercised the harness relay rather than the built-in Slack formatter.
 
 ## Default 24-hour scenario
 
