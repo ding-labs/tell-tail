@@ -2,6 +2,7 @@
 """Package a tested native binary, licenses and build identity; never publish."""
 import argparse
 import json
+import os
 import pathlib
 import platform
 import subprocess
@@ -47,6 +48,23 @@ def licenses(metadata):
     return files, index
 
 
+def check_binary(target, compiler, binary):
+    host = next(line.removeprefix('host: ') for line in compiler.splitlines() if line.startswith('host: '))
+    if host != target and not (target.endswith('-linux-musl')
+                               and host == target.removesuffix('musl') + 'gnu'):
+        raise ValueError('build and test each archive on its native OS and architecture')
+    if target.endswith('-linux-musl'):
+        with binary.open('rb') as source:
+            header = source.read(20)
+        machine = 62 if target.startswith('x86_64-') else 183
+        if header[:6] != b'\x7fELF\x02\x01' or int.from_bytes(header[18:20], 'little') != machine:
+            raise ValueError('binary is not ELF64 for the advertised architecture')
+        linkage = subprocess.check_output(['readelf', '--program-headers', '--dynamic', str(binary)],
+                                          text=True, env={**os.environ, 'LC_ALL': 'C'}, timeout=10)
+        if 'INTERP' in linkage or '(NEEDED)' in linkage:
+            raise ValueError('Linux archives must be static, without a dynamic loader or shared libraries')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--target', choices=TARGETS, required=True)
@@ -58,10 +76,9 @@ def main():
     if dirty and not args.allow_dirty:
         parser.error('a clean checkout is required (or --allow-dirty for a local preview)')
     compiler = run('rustc', '-vV')
-    if f'host: {args.target}' not in compiler.splitlines():
-        parser.error('build and test each archive on its native target')
     package = tomllib.loads((ROOT / 'Cargo.toml').read_text())['package']
     version, binary = package['version'], args.binary.resolve()
+    check_binary(args.target, compiler, binary)
     if run(str(binary), '--version') != f'tell-tail {version}':
         parser.error('binary version does not match Cargo.toml')
     output = subprocess.check_output([str(binary), '--output', 'json'],
@@ -79,7 +96,8 @@ def main():
     files['THIRD_PARTY_NOTICES.md'] = ('\n'.join(index).encode(), False)
     commit = run('git', 'rev-parse', 'HEAD')
     build = {'schema_version': 1, 'version': version, 'source_commit': commit, 'dirty': dirty,
-             'target': args.target, 'compiler': compiler, 'build_platform': platform.platform()}
+             'target': args.target, 'compiler': compiler, 'build_platform': platform.platform(),
+             'linkage': 'static-musl' if args.target.endswith('-linux-musl') else 'system'}
     files['BUILD.json'] = ((json.dumps(build, indent=2) + '\n').encode(), False)
     files['tell-tail'] = (binary.read_bytes(), True)
     for name in ('LICENSE', 'README.md', 'CHANGELOG.md'):
