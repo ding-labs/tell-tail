@@ -45,3 +45,13 @@ with a 14 px body at 1.6 line height, 29 px page headings (25 px on mobile),
 eyebrows are 11 px. Paths and log previews use the shared monospace stack;
 counters use tabular numerals. Metric values are 32 px (28 px on mobile), with
 600 weight for a clear hierarchy. Fonts remain local and work offline.
+
+## Controls
+
+Buttons use Ding's 6 px control radius, 13 px system text, quiet bordered
+surfaces, and 8 × 12 px padding, with a 40 px minimum height. Freeze/resume and
+fatal filtering retain pressed-state feedback; retry uses original Ding green
+with dark text as the recovery action. Hover, disabled, and keyboard focus
+states follow the same tokens. Native disclosures keep their keyboard behavior,
+with a green text action for exact chart values. Focus rings are 2 px with a
+3 px offset, including on the scrollable error list.

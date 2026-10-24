@@ -16,6 +16,10 @@
   --ding-incident: light-dark(#a33c33, #f0a398);
   --ding-incident-soft: light-dark(#f9eae7, #3d2826);
   --ding-logo-bg: #171c19;
+  --ding-action: #7ee787;
+  --ding-on-brand: #17251c;
+  --ding-action-hover: color-mix(in srgb, var(--ding-action), #17251c 8%);
+  --ding-radius-control: 6px;
   --ding-font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --ding-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-family: var(--ding-font);
@@ -28,11 +32,13 @@
 body { margin: 0; font-size: 14px; line-height: 1.6; }
 a { color: var(--ding-brand); }
 button, summary { -webkit-tap-highlight-color: transparent; }
-button { font: inherit; font-size: 13px; font-weight: 500; padding: .7rem 1rem; border: 1px solid var(--ding-muted); border-radius: 7px; background: var(--ding-surface); color: var(--ding-text); cursor: pointer; }
-button:hover { background: var(--ding-subtle); }
-button:disabled { opacity: .55; cursor: default; }
+button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; font: inherit; font-size: 13px; font-weight: 500; padding: 8px 12px; border: 1px solid var(--ding-border); border-radius: var(--ding-radius-control); background: var(--ding-surface); color: var(--ding-text); white-space: nowrap; cursor: pointer; }
+button:enabled:hover { background: var(--ding-subtle); }
+button:disabled { opacity: .5; cursor: not-allowed; }
 button[aria-pressed="true"] { border-color: var(--ding-brand); background: var(--ding-brand-soft); color: var(--ding-brand); }
-:focus-visible { outline: 3px solid var(--ding-brand); outline-offset: 4px; }
+button.primary { border-color: transparent; background: var(--ding-action); color: var(--ding-on-brand); }
+button.primary:enabled:hover { background: var(--ding-action-hover); }
+:focus-visible { outline: 2px solid var(--ding-brand); outline-offset: 3px; }
 [hidden] { display: none !important; }
 .shell { max-width: 1360px; margin: auto; padding: 0 2rem; }
 .masthead { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--ding-border); height: 64px; gap: 1rem; }
@@ -89,7 +95,7 @@ figure { margin: 1rem 0 0; }
 .chart-dots { fill: var(--ding-brand); }
 figcaption { margin: .25rem 0 .6rem; }
 summary { cursor: pointer; font-size: 13px; line-height: 1.6; }
-.chart-data summary { color: var(--ding-muted); font-size: 12px; }
+.chart-data summary { width: fit-content; padding: 8px 0; color: var(--ding-brand); border-radius: var(--ding-radius-control); }
 .table-scroll { max-height: 240px; overflow: auto; margin-top: .7rem; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
 th { text-align: left; color: var(--ding-muted); font-size: 11px; font-weight: 600; }
@@ -105,7 +111,7 @@ td:last-child, th:last-child { text-align: right; }
 .diagnostics summary { font-weight: 600; }
 .recent-panel { margin: .75rem 0; }
 .recent-panel h2 .subtle { margin-left: .5rem; font-weight: 400; white-space: nowrap; }
-.recent-panel button { padding: .4rem .65rem; font-size: 12px; }
+.recent-panel button { flex: none; }
 .recent-empty { color: var(--ding-muted); font: 13px/1.6 var(--ding-mono); margin: 1rem 0 .25rem; }
 .recent-errors { list-style: none; margin: .75rem 0 0; padding: 0; max-height: 280px; overflow: auto; scrollbar-gutter: stable; }
 .recent-errors li { padding: .6rem 0; border-top: 1px solid var(--ding-border); }
