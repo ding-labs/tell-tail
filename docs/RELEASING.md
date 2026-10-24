@@ -25,7 +25,8 @@ and the manifest. The Homebrew formula installs the same tested binaries.
 
 ## Build without publishing
 
-Packaging changes run the release workflow automatically. To build a branch:
+Source, dependency, and packaging changes run the release workflow automatically.
+To build a branch:
 
 ```sh
 gh workflow run release.yml --repo zuchka/tell-tail --ref main -f publish=false

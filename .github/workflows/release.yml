@@ -1,9 +1,33 @@
 name: Release candidate
 on:
   push:
-    paths: ['.github/workflows/release.yml', 'packaging/tell-tail.rb.in', 'scripts/*release*.py', 'scripts/*formula.py', 'scripts/check_homebrew.py']
+    paths:
+      - '.github/workflows/release.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'src/**'
+      - 'web/**'
+      - 'tests/**'
+      - 'packaging/tell-tail.rb.in'
+      - 'scripts/*release*.py'
+      - 'scripts/*formula.py'
+      - 'scripts/check_homebrew.py'
+      - 'scripts/check_package.py'
   pull_request:
-    paths: ['.github/workflows/release.yml', 'packaging/tell-tail.rb.in', 'scripts/*release*.py', 'scripts/*formula.py', 'scripts/check_homebrew.py']
+    paths:
+      - '.github/workflows/release.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'src/**'
+      - 'web/**'
+      - 'tests/**'
+      - 'packaging/tell-tail.rb.in'
+      - 'scripts/*release*.py'
+      - 'scripts/*formula.py'
+      - 'scripts/check_homebrew.py'
+      - 'scripts/check_package.py'
   workflow_dispatch:
     inputs:
       source_commit:
