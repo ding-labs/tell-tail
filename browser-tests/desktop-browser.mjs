@@ -17,9 +17,13 @@ export async function launchDesktop() {
     `--user-data-dir=${profile}`, '--disable-background-networking',
     '--disable-backgrounding-occluded-windows', '--no-first-run',
     '--no-default-browser-check', 'about:blank',
-  ], { stdio: 'ignore' });
+  ], { stdio: ['ignore', 'ignore', 'pipe'] });
   let browser;
   let spawnError;
+  let startupDiagnostics = '';
+  child.stderr.on('data', chunk => {
+    startupDiagnostics = (startupDiagnostics + chunk.toString()).slice(-8192);
+  });
   child.once('error', error => { spawnError = error; });
   async function close() {
     await browser?.close();
@@ -34,13 +38,23 @@ export async function launchDesktop() {
   }
   try {
     let port;
-    for (let i = 0; i < 100; i++) {
+    // Cold browser startup can exceed five seconds on shared CI runners.
+    const deadline = Date.now() + 15_000;
+    while (Date.now() < deadline) {
       if (spawnError) throw spawnError;
-      if (child.exitCode !== null || child.signalCode !== null) throw new Error('desktop browser exited during startup');
-      try { port = (await readFile(join(profile, 'DevToolsActivePort'), 'utf8')).split('\n')[0]; break; }
-      catch { await delay(50); }
+      if (child.exitCode !== null || child.signalCode !== null) {
+        throw new Error(`desktop browser exited during startup: ${startupDiagnostics}`);
+      }
+      try {
+        const candidate = (await readFile(join(profile, 'DevToolsActivePort'), 'utf8')).split('\n')[0];
+        if (/^\d+$/.test(candidate) && Number(candidate) > 0 && Number(candidate) <= 65535) {
+          port = candidate;
+          break;
+        }
+      } catch { /* The browser creates the file after initialization. */ }
+      await delay(50);
     }
-    if (!port) throw new Error('desktop browser did not expose its local debugging port');
+    if (!port) throw new Error(`desktop browser did not expose its local debugging port within 15s: ${startupDiagnostics}`);
     browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`, { noDefaults: true });
     return { browser, close };
   } catch (error) { await close(); throw error; }
