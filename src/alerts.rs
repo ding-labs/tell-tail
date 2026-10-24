@@ -40,19 +40,28 @@ impl Alerts {
             return;
         }
         let at = Duration::from_secs_f64(snapshot.elapsed_seconds);
-        if self.rule.should_fire(&snapshot.window.counts, at)
-            && self.delivery.try_send(self.payload(snapshot))
-        {
-            self.rule.mark_sent(at);
+        if let Some(event) = self.rule.next_event(&snapshot.window.counts, at) {
+            if self.delivery.try_send(self.payload(snapshot, event)) {
+                // Both transitions commit on enqueue, not HTTP acknowledgement.
+                // A full queue leaves the event eligible on a later snapshot.
+                self.rule.commit(event, at);
+            }
         }
     }
 
-    fn payload(&self, snapshot: &Snapshot) -> String {
+    fn payload(&self, snapshot: &Snapshot, event: AlertEvent) -> String {
         let counts = &snapshot.window.counts;
+        let (event, message) = match event {
+            AlertEvent::Breach => ("error_threshold_met", self.message.as_str()),
+            AlertEvent::Recovery => (
+                "error_threshold_recovered",
+                "Tell-Tail error percentage recovered below its threshold.",
+            ),
+        };
         serde_json::json!({
             "schema_version": 1,
-            "event": "error_threshold_met",
-            "message": self.message,
+            "event": event,
+            "message": message,
             "session_id": snapshot.session_id,
             "source": snapshot.source,
             "observed_at_unix_seconds": snapshot.observed_at_unix_seconds,
@@ -67,12 +76,18 @@ impl Alerts {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AlertEvent {
+    Breach,
+    Recovery,
+}
+
 pub struct Rule {
     threshold_percent: f64,
     min_records: u64,
     cooldown: Duration,
     latched: bool,
-    last_sent: Option<Duration>,
+    last_breach: Option<Duration>,
 }
 
 impl Rule {
@@ -84,32 +99,33 @@ impl Rule {
             min_records,
             cooldown,
             latched: false,
-            last_sent: None,
+            last_breach: None,
         }
     }
 
-    /// Insufficient samples leave the latch unchanged. Rearming requires an
-    /// eligible window below the threshold; idle time is not evidence of recovery.
-    /// A breach during cooldown can fire later if it remains above the threshold.
-    pub fn should_fire(&mut self, counts: &Counts, at: Duration) -> bool {
+    /// Insufficient samples do not change state; idle time is not recovery.
+    /// Recovery bypasses cooldown. A breach during cooldown can fire later if
+    /// it remains above the threshold. Evaluation never consumes an event.
+    pub fn next_event(&self, counts: &Counts, at: Duration) -> Option<AlertEvent> {
         if counts.records < self.min_records {
-            return false;
+            return None;
         }
         if error_percent(counts) < self.threshold_percent {
-            self.latched = false;
-            return false;
+            return self.latched.then_some(AlertEvent::Recovery);
         }
-        !self.latched
+        (!self.latched
             && self
-                .last_sent
-                .is_none_or(|last| at.saturating_sub(last) >= self.cooldown)
+                .last_breach
+                .is_none_or(|last| at.saturating_sub(last) >= self.cooldown))
+        .then_some(AlertEvent::Breach)
     }
 
-    /// Commit only after the bounded delivery queue accepts the event. Delivery
-    /// failure still consumes the breach; retries would require receiver deduping.
-    pub fn mark_sent(&mut self, at: Duration) {
-        self.latched = true;
-        self.last_sent = Some(at);
+    /// Apply an accepted transition. Only breaches advance the cooldown clock.
+    pub fn commit(&mut self, event: AlertEvent, at: Duration) {
+        self.latched = event == AlertEvent::Breach;
+        if self.latched {
+            self.last_breach = Some(at);
+        }
     }
 }
 
@@ -137,21 +153,39 @@ mod tests {
 
     #[test]
     fn inclusive_threshold_counts_fatal_and_unknown_denominator() {
-        let mut rule = Rule::new(25.0, 100, Duration::from_secs(300));
-        assert!(!rule.should_fire(&counts(24, 0, 26, 50), Duration::ZERO));
-        assert!(rule.should_fire(&counts(24, 1, 25, 50), Duration::ZERO));
+        let rule = Rule::new(25.0, 100, Duration::from_secs(300));
+        assert_eq!(
+            rule.next_event(&counts(24, 0, 26, 50), Duration::ZERO),
+            None
+        );
+        assert_eq!(
+            rule.next_event(&counts(24, 1, 25, 50), Duration::ZERO),
+            Some(AlertEvent::Breach)
+        );
         assert_eq!(error_percent(&counts(24, 1, 25, 50)), 25.0);
     }
 
     #[test]
     fn minimum_sample_and_empty_windows_never_fire() {
         let mut rule = Rule::new(0.0, 100, Duration::ZERO);
-        assert!(!rule.should_fire(&Counts::default(), Duration::ZERO));
-        assert!(!rule.should_fire(&counts(99, 0, 0, 0), Duration::ZERO));
-        assert!(rule.should_fire(&counts(0, 0, 100, 0), Duration::ZERO));
-        let mut all_errors = Rule::new(100.0, 1, Duration::ZERO);
-        assert!(!all_errors.should_fire(&counts(99, 0, 1, 0), Duration::ZERO));
-        assert!(all_errors.should_fire(&counts(99, 1, 0, 0), Duration::ZERO));
+        assert_eq!(rule.next_event(&Counts::default(), Duration::ZERO), None);
+        assert_eq!(rule.next_event(&counts(99, 0, 0, 0), Duration::ZERO), None);
+        assert_eq!(
+            rule.next_event(&counts(0, 0, 100, 0), Duration::ZERO),
+            Some(AlertEvent::Breach)
+        );
+        rule.commit(AlertEvent::Breach, Duration::ZERO);
+        // An inclusive zero threshold cannot recover, even at zero errors.
+        assert_eq!(rule.next_event(&counts(0, 0, 100, 0), Duration::ZERO), None);
+        let all_errors = Rule::new(100.0, 1, Duration::ZERO);
+        assert_eq!(
+            all_errors.next_event(&counts(99, 0, 1, 0), Duration::ZERO),
+            None
+        );
+        assert_eq!(
+            all_errors.next_event(&counts(99, 1, 0, 0), Duration::ZERO),
+            Some(AlertEvent::Breach)
+        );
     }
 
     #[test]
@@ -159,19 +193,64 @@ mod tests {
         let mut rule = Rule::new(25.0, 100, Duration::from_secs(300));
         let high = counts(25, 0, 75, 0);
         let low = counts(24, 0, 76, 0);
-        assert!(rule.should_fire(&high, Duration::ZERO));
-        // A full queue does not consume the alert.
-        assert!(rule.should_fire(&high, Duration::from_secs(1)));
-        rule.mark_sent(Duration::from_secs(1));
-        assert!(!rule.should_fire(&high, Duration::from_secs(500)));
-        assert!(!rule.should_fire(&Counts::default(), Duration::from_secs(501)));
-        assert!(!rule.should_fire(&high, Duration::from_secs(502)));
-        assert!(!rule.should_fire(&low, Duration::from_secs(503)));
-        assert!(rule.should_fire(&high, Duration::from_secs(504)));
-        rule.mark_sent(Duration::from_secs(504));
-        assert!(!rule.should_fire(&low, Duration::from_secs(505)));
-        assert!(!rule.should_fire(&high, Duration::from_secs(506)));
-        assert!(!rule.should_fire(&high, Duration::from_secs(803)));
-        assert!(rule.should_fire(&high, Duration::from_secs(804)));
+        assert_eq!(
+            rule.next_event(&high, Duration::ZERO),
+            Some(AlertEvent::Breach)
+        );
+        // A full queue does not consume either kind of event.
+        assert_eq!(
+            rule.next_event(&high, Duration::from_secs(1)),
+            Some(AlertEvent::Breach)
+        );
+        rule.commit(AlertEvent::Breach, Duration::from_secs(1));
+        assert_eq!(rule.next_event(&high, Duration::from_secs(500)), None);
+        assert_eq!(
+            rule.next_event(&Counts::default(), Duration::from_secs(501)),
+            None
+        );
+        assert_eq!(rule.next_event(&high, Duration::from_secs(502)), None);
+        assert_eq!(
+            rule.next_event(&low, Duration::from_secs(503)),
+            Some(AlertEvent::Recovery)
+        );
+        assert_eq!(
+            rule.next_event(&low, Duration::from_secs(504)),
+            Some(AlertEvent::Recovery)
+        );
+        rule.commit(AlertEvent::Recovery, Duration::from_secs(504));
+        assert_eq!(rule.next_event(&low, Duration::from_secs(504)), None);
+        assert_eq!(
+            rule.next_event(&high, Duration::from_secs(504)),
+            Some(AlertEvent::Breach)
+        );
+        rule.commit(AlertEvent::Breach, Duration::from_secs(504));
+        assert_eq!(
+            rule.next_event(&low, Duration::from_secs(505)),
+            Some(AlertEvent::Recovery)
+        );
+        rule.commit(AlertEvent::Recovery, Duration::from_secs(505));
+        assert_eq!(rule.next_event(&high, Duration::from_secs(506)), None);
+        assert_eq!(rule.next_event(&high, Duration::from_secs(803)), None);
+        assert_eq!(
+            rule.next_event(&high, Duration::from_secs(804)),
+            Some(AlertEvent::Breach)
+        );
+    }
+
+    #[test]
+    fn recovery_requires_a_prior_breach_and_enough_records_strictly_below_threshold() {
+        let mut rule = Rule::new(25.0, 100, Duration::from_secs(300));
+        let low = counts(0, 0, 100, 0);
+        assert_eq!(rule.next_event(&low, Duration::ZERO), None);
+        rule.commit(AlertEvent::Breach, Duration::ZERO);
+        for counts in [Counts::default(), counts(0, 0, 99, 0), counts(25, 0, 75, 0)] {
+            assert_eq!(rule.next_event(&counts, Duration::from_secs(1)), None);
+        }
+        assert_eq!(
+            rule.next_event(&low, Duration::from_secs(1)),
+            Some(AlertEvent::Recovery)
+        );
+        rule.commit(AlertEvent::Recovery, Duration::from_secs(1));
+        assert_eq!(rule.next_event(&low, Duration::from_secs(2)), None);
     }
 }

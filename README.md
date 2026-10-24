@@ -18,6 +18,12 @@ python3 scripts/demo.py | ./target/release/tell-tail
 
 The demo changes warning and error ratios over a 20-second cycle. Press `q` to
 quit, space to freeze the display while ingestion continues, and `?` for help.
+The terminal uses an amber accent and a compact chart/severity layout. At 60 × 20
+or larger it also shows recent error and fatal previews, newest first. Arrow keys
+and Page Up/Down freeze the display and scroll the previews; `f` toggles fatal-only
+review, and space resumes live updates. The dashboard retains at most 20 previews
+of 512 bytes each in memory; long previews are marked with an ellipsis. These
+previews are omitted from CLI JSON, text, Prometheus, and webhook payloads.
 
 To install the binary locally:
 
@@ -90,6 +96,9 @@ It shows rolling rates and ratios, exact session totals, a 60-second throughput
 chart, severity counts, and ingestion diagnostics. Freeze/resume affects only
 the display; connection and failure status stay live. Hidden tabs release their
 stream and reconnect when shown. The binary works offline without Node or a CDN.
+The compact layout also shows the latest 20 error/fatal previews with a fatal-only
+filter. Freeze holds these previews for review; each is capped at 512 bytes and
+retained only in memory.
 
 `--open` optionally launches the default browser. Use
 `--web-port 8765` for a fixed port; otherwise the OS selects one. It writes no
@@ -128,7 +137,9 @@ CLI-only binary. See the [dashboard guide](docs/WEB-DASHBOARD.md),
 
 ## Webhook alerts
 
-Send a JSON message when errors reach 25% of records in the rolling window:
+Send a JSON message when errors reach 25% of records in the rolling window,
+and a recovery notification when they fall below it. Configure these options
+when starting Tell-Tail; the receiver must accept JSON POSTs and return HTTP 2xx:
 
 ```sh
 tell-tail app.log --window 60 \
@@ -136,6 +147,20 @@ tell-tail app.log --window 60 \
   --alert-webhook https://example.com/hooks/tell-tail \
   --alert-message "Check the service: errors reached 25%"
 ```
+
+For a quick demo from a source checkout, run:
+
+```sh
+cargo build --locked
+python3 scripts/demo_webhooks.py
+```
+
+The [demo](scripts/demo_webhooks.py) starts a temporary local webhook receiver
+and runs the real binary through healthy logs (0% errors), a breach (50%), and
+recovery (20%). It prints excerpts from both received JSON payloads, acknowledges
+them with HTTP 204, and exits. Python 3 and the built binary are the only runtime
+requirements. Use `--binary /path/to/tell-tail` to select a different binary.
+Recovery arrives during the default five-minute breach cooldown.
 
 For continuous testing with resource limits and optional Slack delivery, see the
 [24-hour webhook validation guide](docs/WEBHOOK-SOAK.md). Slack incoming webhooks
@@ -155,16 +180,23 @@ stdin, files, every output mode, and a frozen dashboard display.
 
 - `--alert-error-percent`: inclusive threshold from 0 to 100. Requires an endpoint.
 - `--alert-webhook`: one HTTP(S) endpoint, up to 2048 bytes. Requires a threshold.
-- `--alert-message`: optional text, up to 4096 bytes, included as a JSON string.
+- `--alert-message`: optional breach text, up to 4096 bytes, included as a JSON
+  string. Recovery uses its own fixed message.
 - `--alert-min-records`: minimum records in the window; default **100**. A partial
   startup window can qualify. Set this to 1 for very small test streams.
 - `--alert-cooldown`: minimum seconds between new breaches; default **300**.
   Accepts 0 through 86400.
 
-A sustained breach fires once. An eligible window below the threshold rearms the
-rule; a subsequent breach can fire once the cooldown expires. Empty or undersized
-windows do not count as recovery. State resets when Tell-Tail restarts. There are
-no repeated reminders or recovery notifications in this version.
+A sustained breach fires once. After a breach is queued, the first eligible
+window strictly below the threshold sends one recovery notification and rearms
+the rule when that notification is queued. Recovery requires the same minimum
+record count as a breach. It bypasses the cooldown and does not restart it;
+subsequent breaches can fire once the cooldown since the last queued breach
+expires. A breach suppressed by cooldown does not produce a recovery notification.
+Initially healthy, empty, and undersized windows do not send recovery. Stopping
+the process or an input failure does not signal recovery. State resets when
+Tell-Tail restarts. There are no repeated reminders. With a threshold of 0,
+eligible windows always breach and cannot recover.
 
 The fixed payload includes your message and aggregate statistics:
 
@@ -185,8 +217,14 @@ The fixed payload includes your message and aggregate statistics:
 }
 ```
 
+Recovery uses the same payload shape with `event: "error_threshold_recovered"`
+and `message: "Tell-Tail error percentage recovered below its threshold."`.
+Its statistics describe the recovered window; `session_id` and `source` identify
+the same monitoring session as the breach. Receivers should distinguish the two
+event values rather than treating every message as a breach.
+
 Webhook schema 1 is separate from the existing snapshot schema. Percentages are
-on a 0–100 scale. No raw log records or endpoint URL are included in the payload.
+on a 0–100 scale. No raw log records or endpoint URL are included in either payload.
 
 Delivery uses `POST` with `Content-Type: application/json`; any HTTP 2xx response
 counts as success. HTTPS verifies certificates. Redirects are not followed, and
@@ -194,9 +232,12 @@ URL userinfo/fragment syntax is rejected. Custom headers and arbitrary JSON
 templates are outside this first version.
 
 Delivery is best effort: one active request and one queued event, with a
-five-second request deadline. A full queue leaves the current breach eligible
-for evaluation on the next snapshot. There are no automatic retries or durable
-storage, so transient breaches or failed deliveries can be lost. Failures write a
+five-second request deadline. A full queue leaves the current transition eligible
+for evaluation on a later qualifying snapshot without changing the rule state.
+There are no automatic retries or durable storage, so transient breaches,
+recoveries, or failed deliveries can be lost. State changes when a notification
+is queued, even if delivery later fails; a recovery can therefore arrive when
+the receiver missed its breach. Failures write a
 sanitized diagnostic to stderr and do not change log counts or the exit status.
 Shutdown allows 250 ms for delivery, then cancels pending work; even a finite scan
 can exit before a slow receiver acknowledges its final alert. Network I/O never

@@ -25,7 +25,7 @@ an intermediate JSON object. Its output owns its strings and outlives the snapsh
 
 ## JSON shape and types
 
-Every payload has exactly these envelope fields:
+Every payload has these required envelope fields:
 
 ```json
 {"web_schema_version":1,"sequence":"0","metrics":{}}
@@ -36,6 +36,16 @@ The example abbreviates `metrics`; see the complete
 `web_schema_version` is the numeric web protocol version, independent of CLI JSON
 schema 2. `metrics` preserves the snapshot's field names and meanings and omits
 its CLI `schema_version`. Benchmark timing and padding are absent.
+
+An optional top-level `recent_errors` array adds dashboard previews to version 1.
+It is omitted when empty; older clients can ignore it. Each full frame replaces
+the array with at most 20 entries, newest first. Entries have `record` (an exact
+decimal u64 string), `elapsed_seconds` (nonnegative processing time), `level`
+(`error` or `fatal`), `preview` (at most 512 UTF-8 bytes of the input record), and
+`truncated` (boolean). Control characters are replaced with spaces. Capture is
+enabled only for terminal and web dashboards, remains in memory, and is omitted
+from CLI JSON and webhook payloads. This array is a recent sample, with no replay
+or persistence guarantee. It shares the existing 64 KiB frame limit.
 
 | Field | JSON representation |
 | --- | --- |

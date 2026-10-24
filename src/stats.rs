@@ -111,6 +111,9 @@ pub struct Snapshot {
     pub window: Window,
     /// Completed per-second record counts, oldest first, at most 60 points.
     pub history: Vec<u64>,
+    /// Dashboard-only previews; the CLI JSON and webhook contracts omit logs.
+    #[serde(skip)]
+    pub recent_errors: Vec<crate::recent::RecentError>,
 }
 #[derive(Clone, Copy, Default)]
 struct Bucket {
@@ -272,6 +275,7 @@ impl Stats {
                 error_ratio: counts.levels.error_ratio(),
             },
             history,
+            recent_errors: Vec::new(),
         }
     }
 }

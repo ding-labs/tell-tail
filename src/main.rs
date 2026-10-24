@@ -36,7 +36,11 @@ fn run(args: &Args) -> io::Result<i32> {
     if args.output == Output::Web {
         return tell_tail::web::run(args, &signals);
     }
-    let mut running = Running::start(args, signals.requested.clone())?;
+    let mut resolved_args = args.clone();
+    if use_tui {
+        resolved_args.output = Output::Tui;
+    }
+    let mut running = Running::start(&resolved_args, signals.requested.clone())?;
     if use_tui {
         let writer = StdoutWriter::new(signals.requested.clone())?;
         let snapshot = tui::run(&mut running, writer, signals.requested.clone())?;

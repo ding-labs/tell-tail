@@ -5,6 +5,7 @@
 //! (including zero); gaps are expected when a subscriber coalesces publications.
 use crate::{
     parse::Level,
+    recent::{MAX_PREVIEW_BYTES, MAX_RECENT_ERRORS, RecentError},
     stats::{Counts, Levels, Snapshot, State, Window},
 };
 use serde::{Serialize, Serializer, ser::SerializeMap};
@@ -32,6 +33,16 @@ impl WebFrame {
         if snapshot.history.len() > 60 {
             return Err(EncodeError::InvalidHistory);
         }
+        if snapshot.recent_errors.len() > MAX_RECENT_ERRORS
+            || snapshot.recent_errors.iter().any(|entry| {
+                entry.preview.len() > MAX_PREVIEW_BYTES
+                    || !matches!(entry.level, Level::Error | Level::Fatal)
+                    || !entry.elapsed_seconds.is_finite()
+                    || entry.elapsed_seconds < 0.0
+            })
+        {
+            return Err(EncodeError::InvalidRecentErrors);
+        }
         let mut writer = FrameWriter {
             bytes: Vec::with_capacity(MAX_FRAME_BYTES),
             too_large: false,
@@ -42,6 +53,8 @@ impl WebFrame {
                 web_schema_version: WEB_SCHEMA_VERSION,
                 sequence: Decimal(sequence),
                 metrics: Metrics::from(snapshot),
+                recent_errors: (!snapshot.recent_errors.is_empty())
+                    .then_some(Recent(&snapshot.recent_errors)),
             },
         );
         if writer.too_large {
@@ -77,6 +90,7 @@ pub enum EncodeError {
     TooLarge,
     InvalidSessionId,
     InvalidHistory,
+    InvalidRecentErrors,
     Serialization(serde_json::Error),
 }
 
@@ -88,6 +102,7 @@ impl fmt::Display for EncodeError {
                 f.write_str("web session ID is empty or contains CR, LF, or NUL")
             }
             Self::InvalidHistory => f.write_str("web history exceeds 60 completed seconds"),
+            Self::InvalidRecentErrors => f.write_str("invalid bounded error previews"),
             Self::Serialization(error) => write!(f, "cannot encode web frame: {error}"),
         }
     }
@@ -144,6 +159,30 @@ struct Envelope<'a> {
     web_schema_version: u32,
     sequence: Decimal,
     metrics: Metrics<'a>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    recent_errors: Option<Recent<'a>>,
+}
+
+struct Recent<'a>(&'a [RecentError]);
+impl Serialize for Recent<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_seq(self.0.iter().map(|entry| RecentEntry {
+            record: Decimal(entry.record),
+            elapsed_seconds: Finite(entry.elapsed_seconds),
+            level: entry.level.name(),
+            preview: &entry.preview,
+            truncated: entry.truncated,
+        }))
+    }
+}
+
+#[derive(Serialize)]
+struct RecentEntry<'a> {
+    record: Decimal,
+    elapsed_seconds: Finite,
+    level: &'static str,
+    preview: &'a str,
+    truncated: bool,
 }
 
 #[derive(Serialize)]

@@ -153,6 +153,40 @@ fn history_contains_completed_seconds_oldest_first_and_replaces_each_frame() {
 }
 
 #[test]
+fn dashboard_previews_are_optional_bounded_and_preserve_exact_record_numbers() {
+    use clap::Parser;
+    use tell_tail::{cli::Args, engine::Engine, recent::MAX_RECENT_ERRORS};
+    let mut engine = Engine::new(&Args::parse_from(["tell-tail", "--output", "tui"]));
+    for _ in 0..25 {
+        engine.feed(b"ERROR example\n", Duration::ZERO);
+    }
+    engine.feed(b"FATAL last\n", Duration::from_secs(1));
+    let mut snapshot = engine.snapshot(Duration::from_secs(1), State::Following, None);
+    snapshot.recent_errors[0].record = u64::MAX;
+    let value = json(1, &snapshot);
+    assert_eq!(
+        value["recent_errors"].as_array().unwrap().len(),
+        MAX_RECENT_ERRORS
+    );
+    assert_eq!(value["recent_errors"][0]["record"], u64::MAX.to_string());
+    assert_eq!(value["recent_errors"][0]["level"], "fatal");
+    assert_eq!(value["recent_errors"][0]["preview"], "FATAL last");
+    assert!(
+        serde_json::to_value(&snapshot)
+            .unwrap()
+            .get("recent_errors")
+            .is_none()
+    );
+    snapshot.recent_errors[0].preview = "é".repeat(257).into();
+    assert!(matches!(
+        WebFrame::encode(1, &snapshot),
+        Err(EncodeError::InvalidRecentErrors)
+    ));
+    snapshot.recent_errors.clear();
+    assert!(json(2, &snapshot).get("recent_errors").is_none());
+}
+
+#[test]
 fn size_limit_counts_serialized_utf8_and_escaping_and_accepts_exact_boundary() {
     let mut snapshot = snapshot(Duration::ZERO, State::Reading);
     snapshot.source.clear();

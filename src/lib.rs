@@ -14,6 +14,7 @@ pub mod output;
 pub mod input;
 pub mod platform;
 
+pub mod recent;
 pub mod runtime;
 
 pub mod snapshots;

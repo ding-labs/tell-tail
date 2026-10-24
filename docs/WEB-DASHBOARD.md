@@ -12,7 +12,8 @@ my-app 2>&1 | tell-tail --output web
 The printed `http://127.0.0.1:<port>/` URL works in a browser without Node, an
 internet connection, or a frontend server. `--web-port 8765` selects a fixed port;
 the default lets the OS choose. Normal stdin EOF retains final metrics until
-Ctrl+C. Browser closure never stops ingestion. Raw logs are not captured or shown.
+Ctrl+C. Browser closure never stops ingestion. Only a bounded set of recent
+error/fatal previews is retained; this is not a persistent log archive.
 The [Apple unified source](APPLE-UNIFIED.md) starts and owns native live capture;
 it does not need piped stdin or `jq`.
 
@@ -28,6 +29,12 @@ it does not need piped stdin or `jq`.
   values** for a table with exact counts and elapsed intervals.
 - Severity counts and distribution for the entire session. Session ratios are
   separate from the rolling ratios above.
+- The latest 20 error/fatal previews, newest first, with processing time and
+  exact session entry numbers. **Fatal only** filters this retained sample;
+  **Freeze display** holds the list for review. Each preview is capped at
+  512 UTF-8 bytes with shortened records marked, and controls are replaced with
+  spaces. JSON inputs show a preview of the original record. Previews stay in
+  memory and are absent from CLI JSON, text, Prometheus, and webhook payloads.
 - Expandable ingestion diagnostics: parse failures, oversized and discarded
   partial records, skipped/pending/backlog bytes, and rolling entries/bytes.
 

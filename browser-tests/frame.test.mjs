@@ -30,6 +30,26 @@ test('completed-second history replaces snapshots and retains exact labels', () 
   assert.deepEqual(historyPoints(m), [{ second: 63, count: '2', value: 2 }]);
 });
 
+test('optional error previews validate bounds and exact record numbers', () => {
+  const frame = JSON.parse(fixture);
+  const entry = { record: '18446744073709551615', elapsed_seconds: 1.5, level: 'fatal', preview: '<script>text</script>', truncated: false };
+  frame.recent_errors = [entry];
+  assert.deepEqual(parseFrame(JSON.stringify(frame)).recent_errors, [entry]);
+  for (const change of [
+    f => f.recent_errors = null,
+    f => f.recent_errors = Array(21).fill(entry),
+    f => f.recent_errors[0].preview = 'é'.repeat(257),
+    f => f.recent_errors[0].record = 1,
+    f => f.recent_errors[0].level = 'warn',
+    f => f.recent_errors[0].elapsed_seconds = -1,
+    f => f.recent_errors[0].truncated = 'false',
+  ]) {
+    const bad = structuredClone(frame);
+    change(bad);
+    assert.throws(() => parseFrame(JSON.stringify(bad)), /Unsupported or invalid/);
+  }
+});
+
 test('invalid versions, states, numbers, counter encodings and sizes fail clearly', () => {
   const mutations = [
     f => f.web_schema_version = 2,

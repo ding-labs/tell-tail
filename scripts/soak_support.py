@@ -56,6 +56,8 @@ class Counts:
 
 
 def make_batch(seed, profile, limit):
+    if profile == 'alerting':
+        return make_alert_batch(seed, False)
     rng = random.Random(seed)
     levels = ['info'] * 90 + ['warn'] * 9 + ['error']
     rng.shuffle(levels)
@@ -88,6 +90,27 @@ def make_batch(seed, profile, limit):
     payload = b''.join(records)
     counts.bytes_read = len(payload)
     return payload, counts, hashlib.sha256(payload).hexdigest()
+
+
+def make_alert_batch(seed, breached):
+    """A repeatable 100-record mix of JSON/text, with 1% or 50% error/fatal."""
+    levels = (['info'] * 50 + ['error'] * 40 + ['fatal'] * 10 if breached else
+              ['info'] * 89 + ['warn'] * 10 + ['error'])
+    random.Random(seed).shuffle(levels)
+    counts = Counts()
+    lines = []
+    for index, level in enumerate(levels):
+        line = (json.dumps({'level': level, 'message': 'x' * 160}, separators=(',', ':'))
+                if index % 2 else f'[{level.upper()}] ' + 'x' * 192)
+        lines.append(line.encode() + b'\n')
+        counts.levels[level] += 1
+    payload = b''.join(lines)
+    counts.bytes_read = len(payload)
+    return payload, counts, hashlib.sha256(payload).hexdigest()
+
+
+def alert_phase(elapsed, cycle, start, duration):
+    return start <= elapsed % cycle < start + duration
 
 
 def cpu_seconds(value):

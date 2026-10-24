@@ -1,0 +1,9 @@
+{
+  "name": "tell-tail-chart-benchmark",
+  "private": true,
+  "type": "module",
+  "scripts": { "benchmark": "node benchmark.mjs" },
+  "dependencies": {
+    "chart.js": "4.5.1"
+  }
+}

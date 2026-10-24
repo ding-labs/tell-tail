@@ -25,8 +25,6 @@ impl Monitor {
                 "25",
                 "--alert-min-records",
                 "4",
-                "--alert-cooldown",
-                "0",
                 "--alert-message",
                 "Check \"service\"\nnow",
             ])
@@ -149,6 +147,96 @@ fn exact_threshold_posts_a_custom_message_at_finite_eof() {
     assert!(!payload.to_string().contains("secret-endpoint"));
     let snapshot: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(payload["session_id"], snapshot["session_id"]);
+}
+
+#[test]
+fn recovery_at_finite_eof_bypasses_breach_cooldown() {
+    let server = listener();
+    let mut monitor = Monitor::start(&server, &[]);
+    monitor.write(INPUT);
+    let (mut stream, breach) = receive(&server);
+    assert_eq!(breach["event"], "error_threshold_met");
+    stream
+        .write_all(b"HTTP/1.1 204 No Content\r\nContent-Length: 0\r\n\r\n")
+        .unwrap();
+
+    // The default five-minute cooldown must not delay recovery at EOF.
+    monitor.write(b"INFO healthy\n");
+    monitor.close_input();
+    let (mut stream, recovery) = receive(&server);
+    stream
+        .write_all(b"HTTP/1.1 204 No Content\r\nContent-Length: 0\r\n\r\n")
+        .unwrap();
+    let output = monitor.finish();
+    assert!(output.status.success());
+    assert!(output.stderr.is_empty(), "{:?}", output.stderr);
+    assert_eq!(recovery["schema_version"], 1);
+    assert_eq!(recovery["event"], "error_threshold_recovered");
+    assert_eq!(
+        recovery["message"],
+        "Tell-Tail error percentage recovered below its threshold."
+    );
+    assert_eq!(breach["message"], "Check \"service\"\nnow");
+    for field in [
+        "session_id",
+        "source",
+        "window_seconds",
+        "threshold_percent",
+    ] {
+        assert_eq!(recovery[field], breach[field], "{field}");
+    }
+    assert_eq!(recovery["records"], 5);
+    assert_eq!(recovery["error_records"], 1);
+    assert_eq!(recovery["error_percent"], 20.0);
+    assert!(
+        recovery["observed_at_unix_seconds"].as_f64().unwrap()
+            >= breach["observed_at_unix_seconds"].as_f64().unwrap()
+    );
+    assert!(
+        recovery["observed_seconds"].as_f64().unwrap()
+            >= breach["observed_seconds"].as_f64().unwrap()
+    );
+    assert!(!recovery.to_string().contains("raw log secret"));
+    assert!(!recovery.to_string().contains("secret-endpoint"));
+    assert!(server.accept().is_err(), "recovery must not repeat at EOF");
+}
+
+#[test]
+fn each_new_breach_can_recover_once() {
+    let server = listener();
+    let mut monitor = Monitor::start(&server, &["--alert-cooldown", "0"]);
+    let mut session_id = None;
+    for (input, event, records) in [
+        (INPUT, "error_threshold_met", 4),
+        (&b"INFO healthy\n"[..], "error_threshold_recovered", 5),
+        (&b"ERROR again\n"[..], "error_threshold_met", 6),
+        (
+            &b"INFO healthy\nINFO healthy\nINFO healthy\n"[..],
+            "error_threshold_recovered",
+            9,
+        ),
+    ] {
+        monitor.write(input);
+        let (mut stream, payload) = receive(&server);
+        assert_eq!(payload["event"], event);
+        assert_eq!(payload["records"], records);
+        assert_eq!(
+            payload["session_id"],
+            *session_id.get_or_insert(payload["session_id"].clone())
+        );
+        stream
+            .write_all(b"HTTP/1.1 204 No Content\r\nContent-Length: 0\r\n\r\n")
+            .unwrap();
+    }
+    // Allow several healthy publications, then a final EOF evaluation.
+    std::thread::sleep(Duration::from_millis(350));
+    let output = monitor.finish();
+    assert!(output.status.success());
+    assert!(output.stderr.is_empty(), "{:?}", output.stderr);
+    assert!(
+        server.accept().is_err(),
+        "healthy windows must not repeat recovery"
+    );
 }
 
 #[test]
