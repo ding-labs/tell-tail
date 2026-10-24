@@ -52,6 +52,10 @@ coral errors/fatals. A live connection uses violet; it does not claim that the
 logs are healthy. Text labels distinguish every severity, including error from
 fatal. The green angular log-tail SVG is used in the masthead and on a graphite
 favicon backing. See [the visual foundation](DESIGN.md) for palette roles.
+Typography, controls, and panels follow Ding Console's system font stacks,
+14 px body, heading hierarchy, 4 px spacing grid, 6 px control corners, and
+12 px panel corners. Panels use 24 px insets (16 px on mobile), and buttons
+provide 40 px targets with visible keyboard focus.
 
 **Freeze display** holds all displayed metrics and chart values while the live
 connection retains one latest frame. **Resume display** paints that frame on the

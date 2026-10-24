@@ -55,3 +55,17 @@ with dark text as the recovery action. Hover, disabled, and keyboard focus
 states follow the same tokens. Native disclosures keep their keyboard behavior,
 with a green text action for exact chart values. Focus rings are 2 px with a
 3 px offset, including on the scrollable error list.
+
+## Spacing and panels
+
+Spacing follows Ding's 4 px grid, using 8/12/16/24/32 px steps. Source, metric,
+and detail panels share a flat bordered surface, 12 px corners, and 24 px inner
+padding (16 px on mobile). Major sections use 24 px gaps; metric cards use
+16 px gaps. Page gutters step from 32 to 24 to 16 px with the viewport.
+
+Table headings use muted uppercase labels on subtle surfaces, with consistent
+row padding and a quiet hover state. Panel headings wrap on narrow screens;
+source paths, counters, and log previews can wrap without widening the page.
+Diagnostics retain a native disclosure with a padded full-width header and
+an inset grid. The chart's geometry, animation, data flow, and every existing
+control remain unchanged.
