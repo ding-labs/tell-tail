@@ -66,6 +66,7 @@ def check_web_install(binary, directory):
             ('/frame.mjs', 'text/javascript', b'parseFrame'),
             ('/render.mjs', 'text/javascript', b'textContent'),
             ('/favicon.svg', 'image/svg+xml', b'<svg'),
+            ('/logo.svg', 'image/svg+xml', b'<svg'),
         ]:
             connection = http.client.HTTPConnection(location.hostname, location.port, timeout=1)
             try:
@@ -112,7 +113,7 @@ with tempfile.TemporaryDirectory(prefix='tell-tail-package-') as directory:
                        or '/browser-tests/' in name or '__pycache__' in name for name in names)
         assert package_name + '/src/web/mod.rs' in names
         assert package_name + '/tests/fixtures/output/empty-web-v1.json' in names
-        for asset in ['index.html', 'dashboard.css', 'dashboard.mjs', 'frame.mjs', 'render.mjs', 'favicon.svg']:
+        for asset in ['index.html', 'dashboard.css', 'dashboard.mjs', 'frame.mjs', 'render.mjs', 'logo.svg', 'favicon.svg']:
             assert package_name + '/web/' + asset in names
         # Copy only the validated regular files/directories. This also supports
         # Python 3.11 builds without tarfile's newer extraction-filter API.

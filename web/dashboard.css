@@ -12,7 +12,7 @@ button[aria-pressed="true"] { border-color: #eac377; color: #f2ce87; }
 .shell { max-width: 1360px; margin: auto; padding: 0 2rem; }
 .masthead { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #30343c; height: 64px; gap: 1rem; }
 .brand { display: inline-flex; align-items: center; gap: .8rem; color: #f2f3f5; font: 600 1.25rem ui-monospace, "SFMono-Regular", Consolas, monospace; text-decoration: none; letter-spacing: -.04em; }
-.brand-mark { padding: .35rem .5rem; background: #eac377; color: #17191e; border-radius: 5px; font-size: 1rem; }
+.brand-mark { display: block; flex: none; width: 40px; height: 32px; }
 .local-label, .label, .eyebrow { color: #a6adb9; font-size: .65rem; font-weight: 600; letter-spacing: .12em; }
 .local-label span { color: #606875; margin: 0 .7rem; }
 main { padding: 1.25rem 0 1rem; }
