@@ -21,10 +21,10 @@ class ArtifactTests(unittest.TestCase):
                       'asset': {'target': target, 'name': name, 'sha256': digest(path), 'size': path.stat().st_size}}
             (self.directory / f'manifest-{target}.json').write_text(json.dumps(record))
 
-    def test_manifest_and_checksums_cover_both_targets(self):
+    def test_manifest_and_checksums_cover_all_targets(self):
         manifest = assemble(self.directory)
         validate_manifest(manifest, self.directory)
-        self.assertEqual(3, len((self.directory / 'SHA256SUMS').read_text().splitlines()))
+        self.assertEqual(len(TARGETS) + 1, len((self.directory / 'SHA256SUMS').read_text().splitlines()))
         (self.directory / manifest['assets'][0]['name']).write_bytes(b'tampered')
         with self.assertRaises(ValueError):
             validate_manifest(manifest, self.directory)
@@ -37,6 +37,13 @@ class ArtifactTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             assemble(self.directory)
         path.unlink()
+        with self.assertRaises(ValueError):
+            assemble(self.directory)
+
+    def test_refuses_duplicate_architectures(self):
+        path = self.directory / f'manifest-{TARGETS[-1]}.json'
+        other = self.directory / f'manifest-{TARGETS[0]}.json'
+        path.write_bytes(other.read_bytes())
         with self.assertRaises(ValueError):
             assemble(self.directory)
 

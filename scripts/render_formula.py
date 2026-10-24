@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Generate a Homebrew formula from a verified two-platform release manifest."""
+"""Generate a Homebrew formula from a verified release manifest."""
 import argparse
 import json
 import pathlib
 
-from release_artifacts import TARGETS, validate_manifest
+from release_artifacts import FORMULA_TARGETS, validate_manifest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 def render(manifest, template):
     values = {'VERSION': manifest['version']}
-    for target, prefix in zip(TARGETS, ('MAC', 'LINUX')):
+    for target, prefix in FORMULA_TARGETS.items():
         asset = next(asset for asset in manifest['assets'] if asset['target'] == target)
         values[f'{prefix}_URL'] = (f'https://github.com/zuchka/tell-tail/releases/download/'
                                     f'v{manifest["version"]}/{asset["name"]}')
