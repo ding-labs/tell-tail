@@ -1,3 +1,6 @@
+> Current candidate: [0.2.0 RC1 validation](VALIDATION-0.2-RC1.md).
+> This document preserves historical candidate results and interrupted attempts.
+
 # Tell-Tail 0.2 implementation validation
 
 October 14, 2026. Implementation steps 1–12 are complete. Release validation

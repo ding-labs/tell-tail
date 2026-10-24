@@ -39,3 +39,31 @@ The user selected Railway for the new Linux campaign and authorized removal of
 its temporary infrastructure after collecting the results. Apple signing is
 tracked in [#9](https://github.com/zuchka/tell-tail/issues/9); the user's crates.io
 account and publishing setup is tracked in [#12](https://github.com/zuchka/tell-tail/issues/12).
+
+## Railway campaign started
+
+The [temporary Railway service](https://railway.com/project/e4d336bc-70a2-4c56-9f34-18f173f86d82/service/8b961134-82c8-4a11-ba0b-32e6c5d78b89)
+started the stdin/NDJSON day phase on October 24, 2026 at 03:03:39 UTC
+(October 23, 8:03:39 pm Pacific). If both phases remain uninterrupted, the
+campaign should finish around October 26 at 03:04 UTC (October 25, 8:04 pm
+Pacific). This is a start record, not a duration pass.
+
+Deployment `a475e266-ec95-4f14-956f-93120cd92780` uses pinned Debian 12/Python
+3.11 and the verified x86_64 musl executable above. Runtime cgroup evidence
+confirms a one-CPU quota, 999,997,440-byte memory ceiling and zero swap.
+The service has one replica, restart policy NEVER, sleep disabled and no
+GitHub source connection. Its `/results` volume retains the journal/reports.
+
+Both three-second preflights passed exact counts and bytes, clean source and
+harness provenance, binary identity, resource limits and responsiveness.
+Sampled app/helper RSS was 4.93 MiB for stdin and 3.20 MiB for the followed file;
+maximum observation gaps were below 32 ms. These checks earn no day-run credit.
+The initial journal, runtime limits and complete preflight reports are under
+`docs/validation/0.2.0-rc.1/`.
+
+A follow-up checks this campaign every 30 minutes, reports meaningful changes,
+and collects/checksums final or failed evidence before deleting the exact
+owned project, service, deployments, generated domain and volume. It must verify
+cleanup and retain the evidence. The former local-candidate follow-up was
+replaced so it cannot restart the obsolete campaign. The separate webhook
+validation remains untouched. Final Linux gate review is still pending.
