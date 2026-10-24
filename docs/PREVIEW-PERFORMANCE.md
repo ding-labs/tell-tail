@@ -64,8 +64,9 @@ records complete identities, fixture/report hashes and every pair's timings;
 the full report/log is retained under ignored `work/performance/controlled-linux`.
 
 Native tests and archive/Homebrew checks pass on macOS ARM64 and both Linux
-architectures. The web dashboard job hit a separate test-browser startup timeout,
-before exercising the feature; its failed check is being retried. This PR stays
-a draft until those checks are resolved. RC1's tag, Railway binary and release
+architectures. All 21 web dashboard checks also pass after the test launcher
+allowed 15 seconds for cold startup, required a complete port record and retained
+bounded launch diagnostics. The previous five-second timeout also affected the
+unchanged release-record branch; product responsiveness thresholds are unchanged. RC1's tag, Railway binary and release
 gates remain unchanged; the proposed code does not certify the frozen candidate.
 Publication stays on hold.
