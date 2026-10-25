@@ -30,8 +30,8 @@ its executable SHA-256 is
 
 Fresh [extended validation](https://github.com/zuchka/tell-tail/actions/runs/40055922040)
 and [performance](https://github.com/zuchka/tell-tail/actions/runs/40055923758)
-have been reviewed below. Eight gates now pass. Performance fails for RC1,
-and both Linux day scenarios remain pending.
+have been reviewed below. Eight gates now pass. Performance fails for RC1.
+The stdin Linux day has passed; the followed-file day remains pending.
 The Linux day gate requires separate uninterrupted 86,400-second stdin/NDJSON
 and followed-file/Prometheus rotation scenarios, sequentially. Earlier partial
 campaigns supply no duration credit.
@@ -181,3 +181,28 @@ performance failure remains a release blocker. PR #14's validated performance
 fix cannot pass a gate for the unchanged RC1 binary. The browser test launcher
 fix from that PR is also applied to this evidence branch after the same startup
 timeout occurred here; the frozen application and remote campaign are unchanged.
+
+## Reviewed Linux stdin day — October 25
+
+The stdin/mixed/NDJSON scenario completed 86,400.000 seconds on the unchanged
+RC1 deployment. Independent review reconstructed the frozen fixture's expected
+counters and bytes: all 86,400,000 records and 925,288,704,000 bytes match, with
+no pending data. Clean source/harness provenance, the executable hash and the
+completed report's journal hash were verified.
+
+Combined app/helper RSS peaked at 4.95 MiB across 85,347 resource samples.
+All 142 complete post-warmup ten-minute medians pass the plateau check: the
+baseline was 4.48 MiB and the largest later median was 2.29 MiB. The maximum
+observation gap was 231 ms, p95 snapshot age was 140 ms, and producer CPU use
+was 0.75%. The configured one-CPU/1 GB limits and runtime cgroup limits match;
+a read-only cgroup check after the phase found zero OOM or OOM-kill events.
+The same deployment continues with restart disabled and sleep disabled.
+
+The evidence bundle, journal, complete report/stdout/progress, runtime evidence
+and all 1,445 platform log lines spanning this phase were preserved locally.
+Their checksums and reviewed measurements are retained in
+`docs/validation/0.2.0-rc.1/stdin-day-summary.json`. The followed-file/rotation/
+Prometheus scenario began October 25 at 03:03:39 UTC and remains healthy.
+The Linux day gate stays pending until this second full 86,400-second scenario
+finishes and passes independent review. No infrastructure has been removed;
+final evidence collection and authorized cleanup remain outstanding.
