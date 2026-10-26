@@ -240,3 +240,48 @@ only after this evidence is verified safe.
 Nine of ten RC1 gates pass. The performance gate remains failed for frozen
 `33f2f9a`; PR #14's separately validated fix does not change this candidate's
 identity or approve its release. No new candidate or publication is started.
+
+## Cleanup awaiting Railway account confirmation
+
+The complete archive and journal passed independent review before cleanup.
+The explicit project-delete command for `e4d336bc-70a2-4c56-9f34-18f173f86d82`
+(`telltale-rc1-soak`) was rejected: Railway requires the account's two-factor
+confirmation in interactive mode, or a two-factor code. No deletion was
+accepted, and the project, service, deployments, domain and volume remain.
+The user has been asked to complete that account confirmation for this exact
+temporary project. The monitor will verify resource removal before claiming
+cleanup is complete; it must not bypass the authentication requirement.
+The saved `cleanup-status.json` records the rejected attempt. Full evidence,
+the initial failed build, and source/binary context remain preserved locally.
+
+## What remains before 0.2.0 publication
+
+- Freeze a candidate containing the merged performance fix and finish the
+  required validation for that exact source and its binaries. RC1 now passes
+  nine gates, but its qualifying 51.83% dashboard loss remains a failure.
+  The fix's 3.76% Linux result covers a different source and cannot approve
+  RC1 or replace the new candidate's complete release record. Finalize its
+  versioned changelog/release notes and review its clean source package.
+- Record every passing gate with reviewed evidence for the selected candidate
+  on `main`. The release workflow must still reject this RC1 record because
+  performance is false. The protected `release` environment is configured to
+  require `zuchka`'s approval; publication remains a separate authorized action.
+- For crates.io, complete the intended owner account, verified email, package
+  name/ownership check and interactive publishing authentication in
+  [#12](https://github.com/zuchka/tell-tail/issues/12), which remains open with
+  setup unconfirmed. Repeat the package dry run on the validated candidate
+  before the separately authorized first upload, then test a clean registry
+  install. Manual first publication needs no GitHub Actions token. This account
+  setup applies to the crate upload; GitHub Releases and Homebrew use their own
+  prepared workflows.
+- After an approved stable GitHub release is public, import and verify its
+  formula through the shared tap workflow. Native three-platform archives,
+  static Linux compatibility checks, checksums/notices and temporary Homebrew
+  installation are already prepared and tested.
+
+Developer ID signing and notarization remain the explicitly deferred follow-up
+[#9](https://github.com/zuchka/tell-tail/issues/9). Homebrew is the primary Mac
+installation path. Signing and the clean browser/quarantine installation check
+must be addressed before promoting direct macOS downloads; this is not an
+additional Linux or Homebrew release gate. No extra campaign, new tag, crate,
+release or formula has been published by this monitoring work.
