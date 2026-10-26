@@ -26,12 +26,12 @@ The x86_64 Linux archive SHA-256 is
 its executable SHA-256 is
 `a977f38fb27f54ffc7bfff36fa5c8c626090949e3bd86249d594cafe4343f678`.
 
-## Pending checks
+## Release status
 
 Fresh [extended validation](https://github.com/zuchka/tell-tail/actions/runs/40055922040)
 and [performance](https://github.com/zuchka/tell-tail/actions/runs/40055923758)
-have been reviewed below. Eight gates now pass. Performance fails for RC1.
-The stdin Linux day has passed; the followed-file day remains pending.
+have been reviewed below. Nine gates now pass, including both Linux days.
+Performance fails for RC1, so publication remains blocked.
 The Linux day gate requires separate uninterrupted 86,400-second stdin/NDJSON
 and followed-file/Prometheus rotation scenarios, sequentially. Earlier partial
 campaigns supply no duration credit.
@@ -206,3 +206,37 @@ Prometheus scenario began October 25 at 03:03:39 UTC and remains healthy.
 The Linux day gate stays pending until this second full 86,400-second scenario
 finishes and passes independent review. No infrastructure has been removed;
 final evidence collection and authorized cleanup remain outstanding.
+
+## Reviewed Linux followed-file day — October 25
+
+The followed-file/rotation/Prometheus scenario completed 86,400.041 seconds
+on October 26 at 03:03:40 UTC (October 25, 8:03:40 pm Pacific). Independent
+review reconstructed the frozen fixture and its rotation boundaries: all
+1,002,700 records and 10,738,294,067 bytes match, including 1,253 discarded
+partial records and 18,795 skipped bytes across 1,253 rotations. Pending bytes
+are zero. The final report matches stdout and its journal checksum. A final
+read-only runtime inspection confirms clean frozen source/harness and the
+unchanged executable hash.
+
+Combined app/helper RSS peaked at 3.28 MiB across 85,347 resource samples.
+All 142 complete post-warmup ten-minute medians pass: the baseline was
+3.21 MiB and the largest later median was 1.88 MiB. Maximum observation gap
+was 242 ms, p95 snapshot age was 110 ms, and producer CPU use was 0.13%.
+Final cgroup counters show zero OOM or OOM-kill events; the one-CPU,
+999,997,440-byte runtime memory ceiling and zero swap match the configured
+one-CPU/1 GB service. The deployment stayed unchanged, with one replica,
+restart disabled, sleep disabled and no GitHub autodeploy.
+
+Both separate uninterrupted 86,400-second scenarios now pass the Linux day
+gate. The complete 15-file archive, final source/binary inspection, runtime
+limits, journal and all 2,889 platform log lines were preserved in ignored
+`work/rc1-railway-evidence/20261026T032137Z-final/`. Archive SHA-256 is
+`34723c078ca86b85054931d7bc92031a64b47f00117b026623c12c1730efc0fb`.
+Reviewed measurements and evidence hashes are retained in
+`docs/validation/0.2.0-rc.1/file-day-summary.json`; the unchanged first report
+was checked again against its previously reviewed checksum. Cleanup follows
+only after this evidence is verified safe.
+
+Nine of ten RC1 gates pass. The performance gate remains failed for frozen
+`33f2f9a`; PR #14's separately validated fix does not change this candidate's
+identity or approve its release. No new candidate or publication is started.

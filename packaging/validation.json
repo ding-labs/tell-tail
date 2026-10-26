@@ -19,8 +19,12 @@
       ]
     },
     "linux_day": {
-      "passed": false,
-      "evidence": []
+      "passed": true,
+      "evidence": [
+        "docs/validation/0.2.0-rc.1/stdin-day-summary.json",
+        "docs/validation/0.2.0-rc.1/file-day-summary.json",
+        "docs/VALIDATION-0.2-RC1.md: independently reviewed separate uninterrupted 86400-second Linux scenarios"
+      ]
     },
     "dashboard_hour": {
       "passed": true,
