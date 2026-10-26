@@ -285,3 +285,21 @@ installation path. Signing and the clean browser/quarantine installation check
 must be addressed before promoting direct macOS downloads; this is not an
 additional Linux or Homebrew release gate. No extra campaign, new tag, crate,
 release or formula has been published by this monitoring work.
+
+## Browser check follow-up — October 25
+
+The evidence branch's automatic [PR check](https://github.com/zuchka/tell-tail/actions/runs/40264211982)
+failed the chart interruption assertion; its other checks and the concurrent
+branch check passed. A local reproduction confirmed that native compositor
+animation time advances even while Playwright's page clock is paused. A
+200 ms delay between browser calls moved the dot 3.41 pixels, exceeding the
+assertion's 0.5-pixel continuity tolerance without an application discontinuity.
+
+The test now pauses each newly created native animation at its initial frame
+before returning to Node, then seeks it explicitly for the existing motion
+assertions. Application code is unchanged. Six delayed interruption probes
+retain the same visible position, and all 21 browser tests pass, including
+native hidden-tab behavior. Raw failed CI output, the clock reproduction,
+delayed probes and the passing suite log are preserved under ignored
+`work/rc1-railway-evidence/`. This test-only change supplies no new release
+gate or candidate approval; the completed frozen Linux evidence is unchanged.
