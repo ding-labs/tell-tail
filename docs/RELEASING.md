@@ -1,7 +1,9 @@
 # Distribution and publishing
 
-Tell-Tail's first public release is pending. Passing package checks does not
-publish a GitHub release, update the Homebrew formula, or upload a crate.
+Tell-Tail 0.2.0 was published to crates.io from commit
+`02a6476f9921ba45c59a6ce98bd68b317bac79b6` on October 28, 2026.
+The first GitHub release and Homebrew publication remain pending. Passing
+package checks does not publish to any channel.
 
 ## Supported release artifacts
 
@@ -93,7 +95,7 @@ Users can then run `brew install ding-labs/tap/tell-tail` and upgrade with
 `brew upgrade ding-labs/tap/tell-tail`. Direct downloads live on GitHub Releases.
 Present the minimum macOS version and architecture beside download links.
 
-## Prepare the first crates.io publication
+## Publish to crates.io
 
 The package is named `tell-tail` and installs the `tell-tail` command. Publishing
 is limited to `crates-io`. Metadata includes the license, repository, homepage,

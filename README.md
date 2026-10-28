@@ -37,8 +37,9 @@ published yet. Planned downloads cover Apple Silicon on macOS 14+ and static
 Linux binaries for x86_64 and ARM64. Tell-Tail will join `ding` in the existing
 [Ding Labs tap](https://github.com/ding-labs/homebrew-tap) after the remaining 0.2
 validation passes. The planned command is `brew install ding-labs/tap/tell-tail`;
-it is not available yet. The Cargo package is also being prepared for crates.io;
-`cargo install tell-tail --locked` will be available after registry publication.
+it is not available yet. Version 0.2.0 is available on
+[crates.io](https://crates.io/crates/tell-tail); install it with
+`cargo install tell-tail --locked` (requires Rust 1.88 or later).
 See the [distribution and publishing guide](docs/RELEASING.md) for checks,
 supported platforms, and the steps to make each channel available.
 
