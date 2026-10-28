@@ -1,0 +1,82 @@
+{
+  "reviewed_at": "2026-10-25T07:39:15.363116+00:00",
+  "source_commit": "33f2f9ac959350bcd72332f5a62b53480361c933",
+  "harness_commit": "33f2f9ac959350bcd72332f5a62b53480361c933",
+  "source_clean": true,
+  "harness_clean": true,
+  "binary_sha256": "a977f38fb27f54ffc7bfff36fa5c8c626090949e3bd86249d594cafe4343f678",
+  "deployment_id": "a475e266-ec95-4f14-956f-93120cd92780",
+  "phase": "stdin-ndjson",
+  "status": "passed",
+  "production_seconds": 86400.00012116507,
+  "records": 86400000,
+  "bytes": 925288704000,
+  "counters": {
+    "levels": {
+      "debug": 8640000,
+      "error": 8640000,
+      "fatal": 8640000,
+      "info": 8640000,
+      "trace": 8640000,
+      "unknown": 34560000,
+      "warn": 8640000
+    },
+    "oversized_records": 864000,
+    "parse_failures": 17280000,
+    "records": 86400000
+  },
+  "pending_bytes": 0,
+  "fixture_sha256": "9f452e5bf193a2db216c9728f44019000bab37f3be3a94f10cec24bb2b12f539",
+  "exact_counts_and_bytes_verified": true,
+  "review_method": "Reconstructed counts and bytes from verified frozen fixture helper; compared all final counters, bytes and pending data. Checked report/journal hashes, clean source and harness, binary identity, full duration, continuity, resource limits, memory medians, producer CPU, freshness and cgroup OOM counters.",
+  "max_observation_gap_seconds": 0.23076176643371582,
+  "peak_sampled_app_helper_rss_mib": 4.94921875,
+  "resource_samples": 85347,
+  "complete_ten_minute_blocks": 143,
+  "post_warmup_blocks": 142,
+  "first_post_warmup_median_mib": 4.484375,
+  "largest_later_median_mib": 2.28515625,
+  "allowed_growth_mib": 4,
+  "memory_plateau_passed": true,
+  "producer_cpu_fraction": 0.007464041384127533,
+  "producer_saturated": false,
+  "snapshot_age_p95_upper_ms": 140,
+  "shutdown_observed_seconds": 0.01334521546959877,
+  "configured_limits": {
+    "cpus": 1,
+    "memory_bytes": 1000000000,
+    "replicas": 1,
+    "restart": "NEVER",
+    "sleep": false
+  },
+  "runtime": {
+    "platform": "Linux-6.18.15+deb13-cloud-amd64-x86_64-with-glibc2.36",
+    "cpu_max": "100000 100000",
+    "memory_max": "999997440",
+    "memory_swap_max": "0",
+    "runner_sha256": "a4b65b4df123f564cd6e29e465b0f4aad63a1a83ca4b1ce04af0e993454b6f9e"
+  },
+  "post_phase_cgroup_memory_events": {
+    "low": "0",
+    "high": "0",
+    "max": "0",
+    "oom": "0",
+    "oom_kill": "0",
+    "oom_group_kill": "0"
+  },
+  "archive_sha256": "0d045c16e4c661b2a25008b190e44651c9c89778214ab43e6c6ba738e2c32f43",
+  "raw_evidence_directory": "work/rc1-railway-evidence/20261025T073636Z-stdin-complete",
+  "evidence_sha256": {
+    "evidence.tar.gz": "0d045c16e4c661b2a25008b190e44651c9c89778214ab43e6c6ba738e2c32f43",
+    "platform-deployments.json": "43d5fc08b3b7da937ca12aaebe33865b00828a690becfa3ffefb085786e00ab8",
+    "platform-stdin-day.ndjson": "79f640c76f72f98f9995960eec447d5e2cd4d648e0b80641f577511d9af1612a",
+    "runtime-after-stdin.txt": "29e430fe7abdf6f7f8a1becd16740e59282190e9d10e1bcbd35494cbf207c371",
+    "raw/campaign.json": "294ed6b48f54c40f6b535f3b6fb8cf6c374c9cc013262667f9379de3ed5fdc16",
+    "raw/stdin-ndjson.json": "cc4f0b6a2622eb661793626a28f1d19485af546b3dcc1d93bf2d470362d9917e",
+    "raw/stdin-ndjson.stdout": "cc4f0b6a2622eb661793626a28f1d19485af546b3dcc1d93bf2d470362d9917e",
+    "raw/stdin-ndjson.progress": "7ced26a440179d572b1ad6be203850027ebbee8c8dfb2b7e7d4e57dfcfb1220c",
+    "raw/runtime.json": "8c411134e6fc6222aa5b6f4c331188969765fd5029cf9b1ecd92ce3f7ea12f5e"
+  },
+  "remaining_phase": "file-prometheus",
+  "linux_day_gate": "pending: second uninterrupted 86400-second phase must finish and be reviewed"
+}

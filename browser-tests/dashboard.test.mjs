@@ -113,6 +113,12 @@ test('chart curves stay bounded and animate between seconds with motion controls
     const frame = structuredClone(fixture);
     Object.assign(frame.metrics, { elapsed_seconds: end, history, session_id: session, state });
     render(frame);
+    // The mocked page clock does not pause native compositor animations.
+    // Hold the initial frame before returning across the browser/Node boundary.
+    for (const animation of document.getElementById('chart-motion').getAnimations()) {
+      animation.pause();
+      animation.currentTime = 0;
+    }
   }, { fixture, end, history, session, state });
   const path = () => page.locator('#chart-line').getAttribute('d');
   await update(60, Array.from({ length: 60 }, (_, i) => i % 2 ? '100' : '0'));

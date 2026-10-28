@@ -4,6 +4,14 @@ on:
     - cron: '23 4 * * 0'
   workflow_dispatch:
     inputs:
+      maximum_only:
+        description: Run only the maximum-configuration memory checks
+        type: boolean
+        default: false
+      source_commit:
+        description: Full frozen source SHA (required for maximum_only)
+        type: string
+        default: ''
       release_soaks:
         description: Run two sequential 24-hour Linux soaks on a dedicated runner
         type: boolean
@@ -15,6 +23,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   fuzz:
+    if: ${{ !inputs.maximum_only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 50
     strategy:
@@ -54,14 +63,22 @@ jobs:
       matrix:
         os: [ubuntu-24.04, macos-14]
     steps:
+      - name: Require an exact source for resource-only validation
+        if: inputs.maximum_only
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+        run: '[[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]'
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
+          ref: ${{ inputs.maximum_only && inputs.source_commit || github.sha }}
           persist-credentials: false
       - run: rustup toolchain install 1.88.0 --profile minimal
       - run: cargo build --release --locked
       - run: mkdir -p work
-      - run: python3 scripts/soak.py --seconds 3600 --profile burst --tui --exercise-terminal --report work/dashboard-hour.json 2> work/dashboard-progress.ndjson
+      - if: ${{ !inputs.maximum_only }}
+        run: python3 scripts/soak.py --seconds 3600 --profile burst --tui --exercise-terminal --report work/dashboard-hour.json 2> work/dashboard-progress.ndjson
       - run: python3 scripts/soak.py --seconds 60 --profile mixed --window 3600 --max-record-bytes 16777216 --rate 100 --rss-limit-mib 128 --report work/maximum.json
+      - run: python3 scripts/soak.py --seconds 60 --profile mixed --tui --window 3600 --max-record-bytes 16777216 --rate 100 --rss-limit-mib 128 --report work/maximum-tui.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
@@ -71,6 +88,7 @@ jobs:
             work/*progress.ndjson
           retention-days: 30
   performance:
+    if: ${{ !inputs.maximum_only }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -95,7 +113,7 @@ jobs:
             work/performance-progress.log
           retention-days: 30
   linux-release-soak:
-    if: github.event_name == 'workflow_dispatch' && inputs.release_soaks
+    if: github.event_name == 'workflow_dispatch' && inputs.release_soaks && !inputs.maximum_only
     # Explicitly provision this runner; hosted jobs cannot supply a 24-hour run.
     runs-on: [self-hosted, linux, tell-tail-validation]
     timeout-minutes: 1500

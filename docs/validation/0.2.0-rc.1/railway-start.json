@@ -1,0 +1,59 @@
+{
+  "campaign": {
+    "schema_version": 1,
+    "status": "running",
+    "started_at": 1792811013.2871132,
+    "phases": [],
+    "preflight": [
+      {
+        "phase": "preflight-stdin-ndjson",
+        "status": "passed",
+        "report": "preflight-stdin-ndjson.json",
+        "sha256": "f1ed2923a025e5789c5755a0f5ef006488df37e37026fa70e6506760c32cadeb",
+        "production_seconds": 3.000158878043294
+      },
+      {
+        "phase": "preflight-file-prometheus",
+        "status": "passed",
+        "report": "preflight-file-prometheus.json",
+        "sha256": "cadbbc96edaac583c7dfe27a35450007f513f5c889dac46d260f9d22e9d16061",
+        "production_seconds": 3.005536461248994
+      }
+    ],
+    "deployment_id": "a475e266-ec95-4f14-956f-93120cd92780",
+    "identity": {
+      "source_commit": "33f2f9ac959350bcd72332f5a62b53480361c933",
+      "binary_sha256": "a977f38fb27f54ffc7bfff36fa5c8c626090949e3bd86249d594cafe4343f678",
+      "archive_sha256": "5e8d892e4772edbf180736f8bd028fc39a15d2990c4a738e69d937aef8cc05e4",
+      "artifact_run": "https://github.com/zuchka/tell-tail/actions/runs/40055442749",
+      "candidate_tag": "v0.2.0-rc.1",
+      "orchestration_commit": "c018017c1fc3b2aa82b2a3c1965af6560e1016d5"
+    },
+    "production_started_at": 1792811019.7108,
+    "phase": "stdin-ndjson",
+    "phase_started_at": 1792811019.7108045
+  },
+  "runtime": {
+    "platform": "Linux-6.18.15+deb13-cloud-amd64-x86_64-with-glibc2.36",
+    "cpu_max": "100000 100000",
+    "memory_max": "999997440",
+    "memory_swap_max": "0",
+    "runner_sha256": "a4b65b4df123f564cd6e29e465b0f4aad63a1a83ca4b1ce04af0e993454b6f9e"
+  },
+  "project_id": "e4d336bc-70a2-4c56-9f34-18f173f86d82",
+  "service_id": "8b961134-82c8-4a11-ba0b-32e6c5d78b89",
+  "environment_id": "bebfab58-cb4d-4f5a-b615-3035cb4942d2",
+  "volume_id": "f63aa5c0-a232-4d74-8b7e-88e4a760a49f",
+  "endpoint": "https://linux-days-production.up.railway.app",
+  "image_digest": "sha256:9741176c328f0926970d3b10c9031f5b4c7545d34a2d96883a6107d3ddcd6595",
+  "initial_evidence_bundle_sha256": "d919528b8dabdb109fd6782429b9831af78cfcd10b369c27c4099ba52ed23721",
+  "configured_limits": {
+    "vCPUs": 1,
+    "memoryGB": 1,
+    "restart_policy": "NEVER",
+    "sleep": false,
+    "replicas": 1
+  },
+  "cleanup_authorized": true,
+  "cleanup_status": "pending_after_evidence_collection"
+}

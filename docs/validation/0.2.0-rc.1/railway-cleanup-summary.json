@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-10-28T23:00:47.461845+00:00",
+  "status": "manual-deletion-reported-resources-present",
+  "cleanup_verified": false,
+  "unrelated_original_projects_preserved": true,
+  "unrelated_original_project_count": 3,
+  "preserved_archive_sha256": "34723c078ca86b85054931d7bc92031a64b47f00117b026623c12c1730efc0fb",
+  "evidence_directory": "/Users/zuchka/.codex/worktrees/distribution-review/tell-tail/work/rc1-railway-evidence/20261026T032137Z-final",
+  "dashboard_observation": "Exact project settings/danger page still shows linux-days and Delete Project; no pending deletion confirmation was visible.",
+  "action_taken": "Read-only verification only; no deletion, redeployment or restart was attempted.",
+  "owned_project_id": "e4d336bc-70a2-4c56-9f34-18f173f86d82",
+  "resources_still_present": [
+    "project",
+    "service",
+    "environment",
+    "three deployment records",
+    "generated domain",
+    "volume and /results volume instance"
+  ]
+}
