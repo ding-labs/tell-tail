@@ -1,0 +1,65 @@
+{
+  "source_commit": "02a6476f9921ba45c59a6ce98bd68b317bac79b6",
+  "checks_run": "https://github.com/ding-labs/tell-tail/actions/runs/40619394057",
+  "archive_run": "https://github.com/ding-labs/tell-tail/actions/runs/40619393915",
+  "platforms": {
+    "linux": {
+      "freshness": {
+        "samples": 25,
+        "p95_seconds": 0.21546298100000172,
+        "max_seconds": 0.2156897259999937,
+        "shutdown_seconds": 0.21245262100001128,
+        "input": "one record per visible acknowledgment",
+        "geometry": "100x26"
+      },
+      "package": {
+        "package": "tell-tail-0.2.0",
+        "files": 132,
+        "bytes": 260800,
+        "sha256": "f54e9ee32a10b400475df34c16eb2807a75298ce0f70d7d14d0e8ab48b719112",
+        "allow_dirty": false,
+        "publish_dry_run": "passed",
+        "clean_install_smoke": "passed",
+        "offline_install": true,
+        "installed_web_smoke": "passed",
+        "installed_dashboard_assets": "passed"
+      },
+      "report_sha256": {
+        "freshness.json": "861253b39ce6461526a0eaaad81d326168593fc6009ea748f65643a2a56a8eb4",
+        "package.json": "e357b389d4ba4812df3ab063fb109939b5e3b86fb537aea3ca9c7c2bbedd206b",
+        "rotation.json": "c0c0c3e67865be2564157bc1b98dda8a3baf541d0897d596e972fe9f0810a092",
+        "stdin.json": "ad7bfd5d1a4503abbbd7117b4c5d7abaa2c6049be8f260014ee98452b76064e9",
+        "tui.json": "6b113644884d92552715a049aa9ae36b0854440697a25ba93ea0d3a959525eda"
+      }
+    },
+    "macos": {
+      "freshness": {
+        "samples": 25,
+        "p95_seconds": 0.3990140409999867,
+        "max_seconds": 0.4027082499999324,
+        "shutdown_seconds": 0.3827072499999531,
+        "input": "one record per visible acknowledgment",
+        "geometry": "100x26"
+      },
+      "package": {
+        "package": "tell-tail-0.2.0",
+        "files": 132,
+        "bytes": 260800,
+        "sha256": "f54e9ee32a10b400475df34c16eb2807a75298ce0f70d7d14d0e8ab48b719112",
+        "allow_dirty": false,
+        "publish_dry_run": "passed",
+        "clean_install_smoke": "passed",
+        "offline_install": true,
+        "installed_web_smoke": "passed",
+        "installed_dashboard_assets": "passed"
+      },
+      "report_sha256": {
+        "freshness.json": "076d356f8f16221c0fa80617e07cb35437456985c4b305deb6178039340b06aa",
+        "package.json": "e357b389d4ba4812df3ab063fb109939b5e3b86fb537aea3ca9c7c2bbedd206b",
+        "rotation.json": "91a960782f098ab1bb7d39a3b58f2ee2112d5c00f02c9bb9b2248ab1e1ce558a",
+        "stdin.json": "e1d7c4b4aa3d25ecb8e8d96eedb88017c6736a7a0c36e46eb2718c15d78b8d09",
+        "tui.json": "d896891dde62210290a9b32849a06a6cbdaa88bdbf41d5e8daf6b6499e96dccc"
+      }
+    }
+  }
+}
