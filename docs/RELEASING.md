@@ -85,6 +85,16 @@ first automated publication:
    maintainer review. The workflow has `contents: write` for GitHub Releases and
    `id-token: write` for crates.io only in the protected publication job.
 
+If the frozen candidate's `.github/workflows/` differs from current main,
+GitHub requires Workflows write permission to create its release tag, which the
+built-in `GITHUB_TOKEN` cannot supply. For this older-candidate case only, add a
+fine-grained token scoped to **only** `tell-tail`, with **Contents: read and
+write** and **Workflows: read and write**, as the `release` environment secret
+`RELEASE_GITHUB_TOKEN`. Only the GitHub publication step uses it. Remove this
+temporary secret after the older candidate is released so future releases use
+the built-in token. Do not broaden the Homebrew token's repository or permissions.
+See [GitHub's release API permission rules](https://docs.github.com/en/rest/releases/releases#create-a-release).
+
 No CI publication credentials are needed for build-only runs. A missing tap
 secret, an inaccessible import workflow, or a failed crates.io authentication
 stops the publication job before it creates a GitHub release.

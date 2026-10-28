@@ -209,6 +209,9 @@ jobs:
         uses: rust-lang/crates-io-auth-action@3268eb413133e2960fa4ae0e963ca76380c54cd9 # v1.0.6
       - name: Publish or verify the GitHub release
         id: github
+        env:
+          # Frozen candidates predating workflow changes need Workflows write for tag creation.
+          GH_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN || github.token }}
         run: python3 scripts/release_publish.py github --version "$VERSION" --commit "$CANDIDATE"
       - name: Publish the candidate to crates.io
         if: steps.crate.outputs.exists == 'false'
