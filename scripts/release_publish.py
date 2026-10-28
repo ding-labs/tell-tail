@@ -15,6 +15,7 @@ import urllib.error
 import urllib.request
 
 from release_artifacts import verify
+from release_gate import validate
 
 TAP = 'ding-labs/homebrew-tap'
 API_VERSION = '2026-03-10'
@@ -75,7 +76,17 @@ def check_release(release, commit, tag):
         raise ValueError('published release has no commit tag')
 
 
-def github_release(directory, version, commit):
+def release_body(record, version, commit):
+    validate(record, version, commit)
+    waiver = record.get('waivers', {}).get('linux_day')
+    if not waiver:
+        return ''
+    return (f"Validation exception for {version}: the two 24-hour Linux soak scenarios "
+            f"were explicitly waived by {waiver['approved_by']}. These scenarios were not passed.\n\n"
+            f"Reason: {waiver['reason']}\n\n")
+
+
+def github_release(directory, version, commit, notes=''):
     manifest = verify(directory)
     check_identity(manifest, version, commit)
     repo = os.environ['GITHUB_REPOSITORY']
@@ -86,7 +97,7 @@ def github_release(directory, version, commit):
         if optional_api(f'repos/{repo}/git/ref/tags/{tag}') is not None:
             raise ValueError('tag already exists without a release; inspect it before publishing')
         release = api(f'repos/{repo}/releases', {'tag_name': tag, 'target_commitish': commit,
-                      'draft': True, 'name': f'Tell-Tail {version}', 'generate_release_notes': True})
+                      'draft': True, 'name': f'Tell-Tail {version}', 'generate_release_notes': True, 'body': notes})
     check_release(release, commit, tag)
     if release['draft']:
         # A draft without a tag must still name our full candidate SHA.
@@ -177,6 +188,7 @@ def main():
     parser.add_argument('--version', required=True)
     parser.add_argument('--commit', required=True)
     parser.add_argument('--assets', type=pathlib.Path, default=pathlib.Path('dist'))
+    parser.add_argument('--validation', type=pathlib.Path, default=pathlib.Path('packaging/validation.json'))
     args = parser.parse_args()
     # Validate inputs even when invoked independently from the workflow.
     from release_gate import VERSION
@@ -184,7 +196,8 @@ def main():
     if not re.fullmatch(VERSION, args.version) or not re.fullmatch(r'[0-9a-f]{40}', args.commit):
         parser.error('a stable version and full source SHA are required')
     if args.channel == 'github':
-        github_release(args.assets, args.version, args.commit)
+        notes = release_body(json.loads(args.validation.read_text()), args.version, args.commit)
+        github_release(args.assets, args.version, args.commit, notes)
     elif args.channel == 'homebrew':
         publish_tap(args.version)
     else:

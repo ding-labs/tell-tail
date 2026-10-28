@@ -12,6 +12,8 @@ import unittest
 import urllib.error
 from unittest.mock import patch
 
+from release_gate import GATES
+
 import release_publish as publish
 
 SHA = 'a' * 40
@@ -60,6 +62,21 @@ class CrateTests(unittest.TestCase):
 
 
 class GithubTests(unittest.TestCase):
+    def test_release_notes_disclose_the_waiver_and_still_require_other_gates(self):
+        record = {'schema_version': 1, 'version': VERSION, 'source_commit': SHA,
+                  'gates': {name: {'passed': True, 'evidence': ['result']} for name in GATES}}
+        self.assertEqual(publish.release_body(record, VERSION, SHA), '')
+        record['gates']['linux_day']['passed'] = False
+        record['waivers'] = {'linux_day': {'version': VERSION, 'source_commit': SHA,
+            'approved_by': 'maintainer', 'approved_at': '2026-10-28T23:50:00+00:00',
+            'reason': 'Explicitly skip the two full-day scenarios.'}}
+        notes = publish.release_body(record, VERSION, SHA)
+        self.assertIn('explicitly waived by maintainer', notes)
+        self.assertIn('were not passed', notes)
+        record['gates']['fuzzing']['passed'] = False
+        with self.assertRaises(ValueError):
+            publish.release_body(record, VERSION, SHA)
+
     def test_discovers_drafts_across_pages_and_rejects_duplicate_tags(self):
         draft = {'tag_name': 'v0.2.0', 'draft': True}
         for pages, expected in [([[], [draft]], draft), ([[{'tag_name': 'v0.1.0'}]], None)]:
