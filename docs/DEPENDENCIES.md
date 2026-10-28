@@ -85,6 +85,6 @@ is at most 64 KiB, and each helper request is at most 128 KiB. The fuzz workspac
 lockfile includes the same new dependencies.
 
 Tell-Tail is licensed under the [MIT License](../LICENSE), with source hosted at
-[zuchka/tell-tail](https://github.com/zuchka/tell-tail). Before public binary
+[ding-labs/tell-tail](https://github.com/ding-labs/tell-tail). Before public binary
 redistribution, prepare the selected dependency notices and verify the archive's
 contents. No registry publication or binary release has been performed.

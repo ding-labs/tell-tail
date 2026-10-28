@@ -48,7 +48,7 @@ def main():
     server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(
         Handler, directory=str(args.assets.resolve())))
     threading.Thread(target=server.serve_forever, daemon=True).start()
-    public_url = (f'https://github.com/zuchka/tell-tail/releases/download/'
+    public_url = (f'https://github.com/ding-labs/tell-tail/releases/download/'
                   f'v{record["version"]}/{record["asset"]["name"]}')
     local_url = f'http://127.0.0.1:{server.server_port}/{record["asset"]["name"]}'
     with tempfile.TemporaryDirectory(prefix='tell-tail-brew-config-') as config:

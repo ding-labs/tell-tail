@@ -10,7 +10,7 @@ a local HTTP/SSE metrics API.
 The repository pins Rust 1.88.0. With rustup installed:
 
 ```sh
-git clone https://github.com/zuchka/tell-tail.git
+git clone https://github.com/ding-labs/tell-tail.git
 cd tell-tail
 cargo build --release --locked
 python3 scripts/demo.py | ./target/release/tell-tail

@@ -37,7 +37,7 @@ publication runs remain serialized and are never cancelled by a new build.
 To build a branch:
 
 ```sh
-gh workflow run release.yml --repo zuchka/tell-tail --ref main -f publish=false
+gh workflow run release.yml --repo ding-labs/tell-tail --ref main -f publish=false
 ```
 
 Replace `main` with the branch to check. Omit `source_commit` to use that
@@ -71,7 +71,7 @@ the report records it. Native release packaging requires a clean checkout.
 3. Commit the evidence on `main`, then dispatch with the candidate's full SHA:
 
    ```sh
-   gh workflow run release.yml --repo zuchka/tell-tail --ref main \
+   gh workflow run release.yml --repo ding-labs/tell-tail --ref main \
      -f publish=true -f source_commit=FULL_CANDIDATE_SHA
    ```
 

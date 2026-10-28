@@ -13,7 +13,7 @@ def render(manifest, template):
     values = {'VERSION': manifest['version']}
     for target, prefix in FORMULA_TARGETS.items():
         asset = next(asset for asset in manifest['assets'] if asset['target'] == target)
-        values[f'{prefix}_URL'] = (f'https://github.com/zuchka/tell-tail/releases/download/'
+        values[f'{prefix}_URL'] = (f'https://github.com/ding-labs/tell-tail/releases/download/'
                                     f'v{manifest["version"]}/{asset["name"]}')
         values[f'{prefix}_SHA'] = asset['sha256']
     for name, value in values.items():

@@ -1,6 +1,6 @@
 class TellTail < Formula
   desc "Bounded-memory log throughput and severity monitor"
-  homepage "https://github.com/zuchka/tell-tail"
+  homepage "https://github.com/ding-labs/tell-tail"
   version "@VERSION@"
   license "MIT"
 
