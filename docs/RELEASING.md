@@ -133,6 +133,22 @@ Present the minimum macOS version and architecture beside download links.
 Developer ID signing and browser quarantine validation remain separate from this
 workflow; the unsigned direct Mac download path is not certified by these checks.
 
+### Explicit Linux day exception
+
+A maintainer may explicitly waive the two full-day Linux scenarios for a named
+release. This does not record a test pass: `gates.linux_day.passed` stays false,
+with a nonempty evidence reference and a `waivers.linux_day` object containing
+`version`, `source_commit`, `approved_by`, timezone-qualified `approved_at` and
+`reason`. Both version and full source SHA must match the release. The gate
+rejects missing metadata, inherited waivers for another source, waivers for any
+other gate, and simultaneous claims that the waived gate passed. Publication
+logs and generated release notes disclose this exception. Every other gate
+still requires a reviewed pass.
+
+The user explicitly authorized this exception for the already-published 0.2.0
+source in [the release validation record](VALIDATION-0.2-RELEASE.md). Do not carry
+that authorization into another release.
+
 ### Recover a partial publication
 
 Publication across services is sequential, not atomic. A later channel can fail

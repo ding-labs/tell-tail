@@ -31,21 +31,29 @@ checksums were reverified before selecting the Linux binary for the new soak.
   producer/consumer CPU placement. The report's candidate and harness identities
   must both be retained. A green run alone is not a qualifying performance result;
   inspect all noise, producer, cached-rate and paired-loss measurements.
-- Two sequential uninterrupted 24-hour Linux scenarios run in the dedicated
-  Railway project `tell-tail-020-release-validation`. Their
-  [startup record](validation/0.2.0-release/linux-start.json) contains the exact
-  owned resource IDs, binary/archive/source hashes, both passing three-second
-  preflights and actual cgroup limits. Neither preflight earns duration credit.
+## Explicit maintainer waiver of the two full-day scenarios
 
-The remote production run started October 28 at about 4:45 p.m. Pacific. If
-uninterrupted, stdin/NDJSON finishes October 29 and followed-file/rotation/
-Prometheus finishes October 30 at about 4:45 p.m. Pacific. Both require 86,400
-seconds of production, exact final accounting, observation gaps at most five
-seconds, default RSS below 64 MiB and stable complete post-warmup medians.
-The service has one replica, 1 vCPU, 1 GB RAM, zero swap and restart policy NEVER;
-no GitHub source connection or autodeploy is configured. Its volume journal
-rejects restarts instead of crediting partial duration. Only synthetic evidence
-is served; no credentials are deployed.
+On October 28, 2026, the user explicitly instructed: “Skip the two 24 hour soaks
+and just move forward.” This waives only the `linux_day` gate for version 0.2.0,
+source `02a6476f9921ba45c59a6ce98bd68b317bac79b6`. The gate remains `passed: false`;
+its candidate-specific `waivers.linux_day` record carries the maintainer, time,
+reason, version and full source SHA. No other gate is waived. The release notes
+will disclose the exception instead of claiming a full validation pass.
+
+The temporary Railway campaign was stopped after preserving its partial
+synthetic reports and checksums under `work/release-0.2.0/waived-linux-campaign/`.
+The service has no active deployment; its result volume is retained. Neither
+startup preflights nor the short partial run supply any 24-hour duration credit.
+The historical [startup record](validation/0.2.0-release/linux-start.json) retains
+resource/source/binary identities; it does not describe the current stopped state.
+The canceled day scenarios will not be restarted for this release.
+
+The shorter, still-required checks continue. The exact-source maximum-configuration
+macOS TUI run passed for 60 seconds at window 3600 and a 16 MiB record limit:
+6,000 exact records, 26.70 MiB sampled app/helper RSS, 109 ms maximum observation
+gap. Its [full report](validation/0.2.0-release/maximum-tui-macos.json) retains
+configuration, source/harness/binary identity and resource observations. It does
+not replace the one-hour default dashboard memory runs.
 
 Full startup evidence, uploaded deployment context, original native archives,
 and downloaded CI reports are preserved under ignored `work/release-0.2.0/`.
@@ -61,11 +69,12 @@ Do not shorten a required run or combine interrupted durations. Resolve a genuin
 failure and repeat the affected validation; never mark it passed from another
 candidate's results.
 
-After all gates pass, merge the reviewed evidence onto main and dispatch the
+After all nine unwaived gates pass and the explicit day waiver is recorded,
+merge the reviewed evidence onto main and dispatch the
 unified `release.yml` workflow with `publish=true` and the full frozen source SHA.
 The user authorized publication after validation in this chat on October 28.
 The protected release environment still applies. The already published crates.io
 version must be verified and reused; GitHub Releases and Homebrew are the remaining
 channels. Verify successful tap import and user installation commands before
-reporting completion. Stop only this campaign's deployment after evidence is
-safely collected; preserve the result volume and unrelated projects.
+reporting completion. The canceled day deployment is already stopped; preserve its result volume
+and unrelated projects.

@@ -16,7 +16,9 @@
     },
     "linux_day": {
       "passed": false,
-      "evidence": []
+      "evidence": [
+        "docs/VALIDATION-0.2-RELEASE.md: explicit maintainer waiver; no full-day duration credit"
+      ]
     },
     "dashboard_hour": {
       "passed": false,
@@ -55,6 +57,15 @@
         "https://github.com/ding-labs/tell-tail/actions/runs/40619394057",
         "docs/validation/0.2.0-release/ci-summary.json"
       ]
+    }
+  },
+  "waivers": {
+    "linux_day": {
+      "version": "0.2.0",
+      "source_commit": "02a6476f9921ba45c59a6ce98bd68b317bac79b6",
+      "approved_by": "zuchka",
+      "approved_at": "2026-10-28T23:50:36.225732+00:00",
+      "reason": "User explicitly instructed in this release chat: Skip the two 24 hour soaks and just move forward."
     }
   }
 }
