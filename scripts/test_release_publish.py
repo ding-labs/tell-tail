@@ -60,6 +60,15 @@ class CrateTests(unittest.TestCase):
 
 
 class GithubTests(unittest.TestCase):
+    def test_discovers_drafts_across_pages_and_rejects_duplicate_tags(self):
+        draft = {'tag_name': 'v0.2.0', 'draft': True}
+        for pages, expected in [([[], [draft]], draft), ([[{'tag_name': 'v0.1.0'}]], None)]:
+            with patch.object(publish, 'gh', return_value=json.dumps(pages)):
+                self.assertEqual(publish.find_release(REPO, 'v0.2.0'), expected)
+        with patch.object(publish, 'gh', return_value=json.dumps([[draft], [draft]])), \
+                self.assertRaises(ValueError):
+            publish.find_release(REPO, 'v0.2.0')
+
     def test_only_confirmed_404_is_absent(self):
         for status in ['404', '403', '500', None]:
             with self.subTest(status=status), patch.object(publish.subprocess, 'run', return_value=
@@ -82,8 +91,8 @@ class GithubTests(unittest.TestCase):
     def test_public_release_is_verified_without_upload_or_edit(self):
         manifest = {'dirty': False, 'version': VERSION, 'source_commit': SHA}
         release = {'tag_name': 'v0.2.0', 'prerelease': False, 'draft': False}
-        with patch.object(publish, 'verify', return_value=manifest), patch.object(publish, 'optional_api',
-                side_effect=[release, {'object': {'type': 'commit', 'sha': SHA}}]), \
+        with patch.object(publish, 'verify', return_value=manifest), patch.object(publish, 'find_release', return_value=release), \
+                patch.object(publish, 'optional_api', return_value={'object': {'type': 'commit', 'sha': SHA}}), \
                 patch.object(publish, 'gh') as gh:
             publish.github_release(pathlib.Path('dist'), VERSION, SHA)
         self.assertEqual(len(gh.call_args_list), 1)
@@ -98,8 +107,8 @@ class GithubTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)
             (root / 'native.tar.gz').write_bytes(b'archive')
-            with patch.object(publish, 'verify', return_value=manifest), patch.object(publish, 'optional_api',
-                    side_effect=[release, None]), patch.object(publish, 'gh') as gh, \
+            with patch.object(publish, 'verify', return_value=manifest), patch.object(publish, 'find_release', return_value=release), \
+                    patch.object(publish, 'optional_api', return_value=None), patch.object(publish, 'gh') as gh, \
                     patch.object(publish.subprocess, 'check_output', return_value=b'archive'):
                 publish.github_release(root, VERSION, SHA)
             uploads = [call.args[3] for call in gh.call_args_list if call.args[:2] == ('release', 'upload')]
@@ -112,16 +121,16 @@ class GithubTests(unittest.TestCase):
                     'assets': [{'name': 'native.tar.gz'}]}
         release = {'tag_name': 'v0.2.0', 'prerelease': False, 'draft': True,
                    'target_commitish': 'b' * 40, 'assets': []}
-        with patch.object(publish, 'verify', return_value=manifest), patch.object(publish, 'optional_api',
-                side_effect=[release, None]), patch.object(publish, 'gh') as gh, self.assertRaises(ValueError):
+        with patch.object(publish, 'verify', return_value=manifest), patch.object(publish, 'find_release', return_value=release), \
+                patch.object(publish, 'optional_api', return_value=None), patch.object(publish, 'gh') as gh, self.assertRaises(ValueError):
             publish.github_release(pathlib.Path('dist'), VERSION, SHA)
         gh.assert_not_called()
 
     @patch.dict(os.environ, GITHUB_REPOSITORY=REPO)
     def test_existing_tag_without_release_is_never_taken_over(self):
         manifest = {'dirty': False, 'version': VERSION, 'source_commit': SHA}
-        with patch.object(publish, 'verify', return_value=manifest), patch.object(publish, 'optional_api',
-                side_effect=[None, {'object': {'sha': SHA}}]), patch.object(publish, 'gh') as gh, \
+        with patch.object(publish, 'verify', return_value=manifest), patch.object(publish, 'find_release', return_value=None), \
+                patch.object(publish, 'optional_api', return_value={'object': {'sha': SHA}}), patch.object(publish, 'gh') as gh, \
                 self.assertRaises(ValueError):
             publish.github_release(pathlib.Path('dist'), VERSION, SHA)
         gh.assert_not_called()

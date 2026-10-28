@@ -47,6 +47,17 @@ def optional_api(path):
     raise RuntimeError(f'GitHub API request failed: {path}: {result.stderr.strip()}')
 
 
+def find_release(repo, tag):
+    # The tag endpoint promises published releases only. Authenticated listings
+    # also include drafts, which are essential for resuming an interrupted upload.
+    pages = json.loads(gh('api', '--paginate', '--slurp', '-H',
+                          f'X-GitHub-Api-Version: {API_VERSION}', f'repos/{repo}/releases?per_page=100'))
+    matches = [release for page in pages for release in page if release['tag_name'] == tag]
+    if len(matches) > 1:
+        raise ValueError('multiple releases use this tag; inspect them before retrying')
+    return matches[0] if matches else None
+
+
 def check_identity(manifest, version, commit):
     if manifest['dirty'] or manifest['version'] != version or manifest['source_commit'] != commit:
         raise ValueError('published artifacts do not identify the approved candidate')
@@ -69,14 +80,13 @@ def github_release(directory, version, commit):
     check_identity(manifest, version, commit)
     repo = os.environ['GITHUB_REPOSITORY']
     tag = f'v{version}'
-    release = optional_api(f'repos/{repo}/releases/tags/{tag}')
+    release = find_release(repo, tag)
     if release is None:
         # Never take over a tag created outside this workflow.
         if optional_api(f'repos/{repo}/git/ref/tags/{tag}') is not None:
             raise ValueError('tag already exists without a release; inspect it before publishing')
-        gh('release', 'create', tag, '--repo', repo, '--target', commit, '--draft',
-           '--title', f'Tell-Tail {version}', '--generate-notes')
-        release = api(f'repos/{repo}/releases/tags/{tag}')
+        release = api(f'repos/{repo}/releases', {'tag_name': tag, 'target_commitish': commit,
+                      'draft': True, 'name': f'Tell-Tail {version}', 'generate_release_notes': True})
     check_release(release, commit, tag)
     if release['draft']:
         # A draft without a tag must still name our full candidate SHA.
