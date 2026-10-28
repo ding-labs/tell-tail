@@ -254,6 +254,25 @@ cleanup is complete; it must not bypass the authentication requirement.
 The saved `cleanup-status.json` records the rejected attempt. Full evidence,
 the initial failed build, and source/binary context remain preserved locally.
 
+### Manual deletion verification — October 28
+
+The user reported deleting `telltale-rc1-soak`. Independent authenticated CLI
+and API checks still return the exact project, service, environment, all three
+deployment records, generated domain and volume. The project has no deletion
+timestamp; its `/results` volume instance is READY with `isPendingDeletion`
+false. The dashboard still offers Delete Project, with no pending deletion
+confirmation visible. Cleanup therefore remains unverified; no further
+deletion or campaign mutation was attempted. All three unrelated original
+projects remain present.
+
+The original 38-file checksum manifest and complete archive were verified
+unchanged. Read-only verification output is retained beside that evidence;
+the compact result is in
+`docs/validation/0.2.0-rc.1/railway-cleanup-summary.json`. The follow-up stays
+active only to verify actual removal and deliver the final report. PR #13,
+now at [ding-labs/tell-tail](https://github.com/ding-labs/tell-tail/pull/13),
+remains a draft. Its existing 14 automatic head checks still pass.
+
 ## What remains before 0.2.0 publication
 
 - Freeze a candidate containing the merged performance fix and finish the
