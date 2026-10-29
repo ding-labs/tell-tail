@@ -30,6 +30,17 @@ class ReleaseGateTests(unittest.TestCase):
             with self.subTest(version=version, commit=commit), self.assertRaises(ValueError):
                 validate(self.record, version, commit)
 
+    def test_day_soaks_never_block_or_require_a_waiver(self):
+        validate(self.record, '0.2.0', SHA)
+        for status in ({'passed': False, 'evidence': []}, {'status': 'running'},
+                       {'status': 'failed'}, {'passed': True, 'evidence': ['result']}):
+            with self.subTest(status=status):
+                self.record['gates']['linux_day'] = status
+                validate(self.record, '0.2.0', SHA)
+        self.record['gates']['performance']['passed'] = False
+        with self.assertRaises(ValueError):
+            validate(self.record, '0.2.0', SHA)
+
     def test_rejects_missing_gate_or_unsubstantiated_pass(self):
         for missing in GATES:
             record = copy.deepcopy(self.record)

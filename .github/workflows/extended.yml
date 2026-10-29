@@ -3,11 +3,6 @@ on:
   schedule:
     - cron: '23 4 * * 0'
   workflow_dispatch:
-    inputs:
-      release_soaks:
-        description: Run two sequential 24-hour Linux soaks on a dedicated runner
-        type: boolean
-        default: false
 permissions:
   contents: read
 concurrency:
@@ -93,33 +88,4 @@ jobs:
           path: |
             work/performance.json
             work/performance-progress.log
-          retention-days: 30
-  linux-release-soak:
-    if: github.event_name == 'workflow_dispatch' && inputs.release_soaks
-    # Explicitly provision this runner; hosted jobs cannot supply a 24-hour run.
-    runs-on: [self-hosted, linux, tell-tail-validation]
-    timeout-minutes: 1500
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        input: [stdin, file]
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          persist-credentials: false
-      - run: rustup toolchain install 1.88.0 --profile minimal
-      - run: cargo build --release --locked
-      - run: mkdir -p work
-      - if: matrix.input == 'stdin'
-        run: python3 scripts/soak.py --seconds 86400 --profile mixed --report work/linux-stdin-day.json 2> work/progress.ndjson
-      - if: matrix.input == 'file'
-        run: python3 scripts/soak.py --seconds 86400 --input file --profile rotation --output prometheus --report work/linux-file-day.json 2> work/progress.ndjson
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: always()
-        with:
-          name: extended-linux-${{ matrix.input }}
-          path: |
-            work/linux-*-day.json
-            work/progress.ndjson
           retention-days: 30

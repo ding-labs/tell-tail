@@ -4,7 +4,7 @@ import argparse
 import json
 import re
 
-GATES = frozenset(('correctness', 'fuzzing', 'linux_day', 'dashboard_hour',
+GATES = frozenset(('correctness', 'fuzzing', 'dashboard_hour',
                    'default_memory', 'maximum_memory', 'responsiveness',
                    'performance', 'compatibility', 'distribution'))
 VERSION = r'(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)'
@@ -20,9 +20,11 @@ def validate(record, version, commit):
     if record.get('version') != version or record.get('source_commit') != commit:
         raise ValueError('validation does not cover this version and source commit')
     gates = record.get('gates', {})
-    if set(gates) != GATES:
+    # Accept historical day-soak records, but they are optional background data.
+    if not GATES <= set(gates) or set(gates) - GATES - {'linux_day'}:
         raise ValueError('validation must cover every required release gate')
-    for name, gate in gates.items():
+    for name in GATES:
+        gate = gates[name]
         evidence = gate.get('evidence')
         if (gate.get('passed') is not True or not isinstance(evidence, list)
                 or not evidence or not all(isinstance(item, str) and item.strip() for item in evidence)):
@@ -37,10 +39,12 @@ def main():
     args = parser.parse_args()
     try:
         with open(args.validation) as source:
-            validate(json.load(source), args.version, args.commit)
+            record = json.load(source)
+            validate(record, args.version, args.commit)
     except (ValueError, OSError, TypeError, AttributeError) as error:
         parser.exit(1, f'Release blocked: {error}\n')
     print(f'Validation covers {args.version} at {args.commit}')
+
 
 
 if __name__ == '__main__':

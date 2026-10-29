@@ -1,17 +1,83 @@
 {
   "schema_version": 1,
   "version": "0.2.0",
-  "source_commit": "ffda8eaebec5e3f08115e622423bd8a30e7d673c",
+  "source_commit": "02a6476f9921ba45c59a6ce98bd68b317bac79b6",
   "gates": {
-    "correctness": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671783912", "docs/VALIDATION-0.2.md: reviewed candidate results"]},
-    "fuzzing": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671823099", "docs/VALIDATION-0.2.md: 1,801 seconds per target, no finding"]},
-    "linux_day": {"passed": false, "evidence": []},
-    "dashboard_hour": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671823099", "docs/VALIDATION-0.2.md: one-hour native dashboard results"]},
-    "default_memory": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671823099", "docs/VALIDATION-0.2.md: default dashboard RSS peaks and post-warmup medians; day-run memory monitoring continues"]},
-    "maximum_memory": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671823099", "docs/VALIDATION-0.2.md: maximum configuration in headless and TUI modes"]},
-    "responsiveness": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671783912", "https://github.com/zuchka/tell-tail/actions/runs/38671823099", "docs/VALIDATION-0.2.md: controlled cancellation and freshness results"]},
-    "performance": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38677628380", "docs/validation/0.2-performance.json", "docs/VALIDATION-0.2.md: controlled Linux reference result"]},
-    "compatibility": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671783912", "Schema 2, CLI/exit-status fixtures and promtool checks passed on both native platforms"]},
-    "distribution": {"passed": true, "evidence": ["https://github.com/zuchka/tell-tail/actions/runs/38671826035", "https://github.com/zuchka/tell-tail/actions/runs/38671783912", "docs/VALIDATION-0.2.md: reviewed candidate results and archive checksums"]}
+    "correctness": {
+      "passed": true,
+      "evidence": [
+        "https://github.com/ding-labs/tell-tail/actions/runs/40619394057",
+        "docs/validation/0.2.0-release/ci-summary.json"
+      ]
+    },
+    "fuzzing": {
+      "passed": true,
+      "evidence": [
+        "https://github.com/ding-labs/tell-tail/actions/runs/40789256596",
+        "docs/validation/0.2.0-release/extended-summary.json"
+      ]
+    },
+    "dashboard_hour": {
+      "passed": true,
+      "evidence": [
+        "https://github.com/ding-labs/tell-tail/actions/runs/40789256596",
+        "docs/validation/0.2.0-release/extended-summary.json"
+      ]
+    },
+    "default_memory": {
+      "passed": true,
+      "evidence": [
+        "https://github.com/ding-labs/tell-tail/actions/runs/40789256596",
+        "docs/validation/0.2.0-release/extended-summary.json"
+      ]
+    },
+    "maximum_memory": {
+      "passed": true,
+      "evidence": [
+        "https://github.com/ding-labs/tell-tail/actions/runs/40789256596",
+        "docs/validation/0.2.0-release/extended-summary.json"
+      ]
+    },
+    "responsiveness": {
+      "passed": true,
+      "evidence": [
+        "https://github.com/ding-labs/tell-tail/actions/runs/40619394057",
+        "docs/validation/0.2.0-release/ci-summary.json"
+      ]
+    },
+    "performance": {
+      "passed": true,
+      "evidence": [
+        "https://github.com/ding-labs/tell-tail/actions/runs/40789260268",
+        "https://github.com/ding-labs/tell-tail/actions/runs/40789256596",
+        "docs/validation/0.2.0-release/extended-summary.json"
+      ]
+    },
+    "compatibility": {
+      "passed": true,
+      "evidence": [
+        "https://github.com/ding-labs/tell-tail/actions/runs/40619394057",
+        "docs/validation/0.2.0-release/ci-summary.json"
+      ]
+    },
+    "distribution": {
+      "passed": true,
+      "evidence": [
+        "https://github.com/ding-labs/tell-tail/actions/runs/40619393915",
+        "https://github.com/ding-labs/tell-tail/actions/runs/40619394057",
+        "docs/validation/0.2.0-release/ci-summary.json"
+      ]
+    }
+  },
+  "background_checks": {
+    "linux_day": {
+      "status": "not_run",
+      "blocking": false,
+      "reason": "Standing user policy: the two 24-hour scenarios are optional background validation and never require a release waiver.",
+      "evidence": [
+        "AGENTS.md",
+        "docs/validation/0.2.0-release/linux-cancelled.json"
+      ]
+    }
   }
 }

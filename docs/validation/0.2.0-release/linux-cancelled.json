@@ -1,0 +1,12 @@
+{
+  "source_commit": "02a6476f9921ba45c59a6ce98bd68b317bac79b6",
+  "project_id": "c2ede46f-fdee-47be-9ede-fa07a7b0187f",
+  "service_id": "9c211029-cc13-4884-940b-90c5955ccf9b",
+  "environment_id": "3ecc4589-9d65-4efc-93e4-0368af4ad8df",
+  "volume_id": "bccf973f-0d6b-4768-9c55-3233ad9e1320",
+  "deployment_id": "3bd308bf-7540-40d8-aadc-464ffd5f0ee1",
+  "status": "linux-days-waived-by-user",
+  "waiver_reason": "User explicitly instructed: Skip the two 24 hour soaks and just move forward.",
+  "deployment_stopped": true,
+  "stopped_at": "2026-10-28T23:52:27.401755+00:00"
+}

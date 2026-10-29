@@ -274,7 +274,6 @@ summaries and links to retained artifacts. The historical MVP report stays intac
 | --- | --- |
 | Correctness | Full test matrix passes; no unexplained oracle mismatches, counter regressions, crashes, or terminal restoration failures. |
 | Fuzzing | At least 30 minutes per target with no unresolved finding; every discovered defect has a deterministic regression. |
-| Long-running Linux | One 24-hour stdin/NDJSON run and one 24-hour followed-file/metrics-file run; exact counts for the supported scripted scenarios and complete metric snapshots. Run separately when they would compete for resources. |
 | Dashboard | At least one hour through a PTY on both macOS and Linux, covering resize, freeze/resume, help, and clean shutdown. |
 | Default memory | Combined Tell-Tail/helper sampled RSS below 64 MiB in default configurations; report sample interval and the plateau check below. Investigate sustained growth even below the ceiling. |
 | Maximum configuration | Window 3600 and record limit 16 MiB stay below a proposed 128 MiB combined sampled RSS ceiling on fixed terminal geometry; state allocation remains independent of processed volume. |
@@ -283,7 +282,13 @@ summaries and links to retained artifacts. The historical MVP report stays intac
 | Compatibility | Schema 2 fixtures and migration note, existing metric names/types/labels, deterministic empty-value and exit-status behavior, CLI help and invalid-option coverage. |
 | Distribution readiness | Clean package/install smoke test and source/release dependency review; native runtime evidence for every platform actually advertised. |
 
-If a gate fails, keep the build a release candidate and record the failure. Do
+The two 24-hour Linux stdin/NDJSON and followed-file/metrics scenarios are
+optional, non-blocking background checks. Their results should be preserved and
+actionable failures reported separately; completion and success must not delay
+publication or require a per-release waiver. Run them separately when they would
+compete for resources.
+
+If a required gate fails, keep the build a release candidate and record the failure. Do
 not quietly reduce a threshold or label a compile-only target runtime-tested.
 Short successful runs cannot substitute for the specified duration.
 

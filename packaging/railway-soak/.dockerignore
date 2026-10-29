@@ -1,0 +1,6 @@
+*
+!Dockerfile
+!runner.py
+!tell-tail
+!BUILD.json
+!identity.json

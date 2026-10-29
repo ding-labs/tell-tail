@@ -85,6 +85,16 @@ first automated publication:
    maintainer review. The workflow has `contents: write` for GitHub Releases and
    `id-token: write` for crates.io only in the protected publication job.
 
+If the frozen candidate's `.github/workflows/` differs from current main,
+GitHub requires Workflows write permission to create its release tag, which the
+built-in `GITHUB_TOKEN` cannot supply. For this older-candidate case only, add a
+fine-grained token scoped to **only** `tell-tail`, with **Contents: read and
+write** and **Workflows: read and write**, as the `release` environment secret
+`RELEASE_GITHUB_TOKEN`. Only the GitHub publication step uses it. Remove this
+temporary secret after the older candidate is released so future releases use
+the built-in token. Do not broaden the Homebrew token's repository or permissions.
+See [GitHub's release API permission rules](https://docs.github.com/en/rest/releases/releases#create-a-release).
+
 No CI publication credentials are needed for build-only runs. A missing tap
 secret, an inaccessible import workflow, or a failed crates.io authentication
 stops the publication job before it creates a GitHub release.
@@ -132,6 +142,19 @@ Users can then install using `cargo install tell-tail --locked` or
 Present the minimum macOS version and architecture beside download links.
 Developer ID signing and browser quarantine validation remain separate from this
 workflow; the unsigned direct Mac download path is not certified by these checks.
+
+### Optional background day soaks
+
+The stdin/NDJSON and followed-file/metrics 24-hour scenarios are optional,
+non-blocking background validation. They are not release gates or required CI
+statuses, and no per-release waiver is needed. The separate
+`background-soaks.yml` workflow has its own concurrency group and no dependency
+in the publication or short-validation workflows. It requires a provisioned
+long-running Linux runner only when someone chooses to run it. Preserve results
+and report actionable failures separately without delaying continuous delivery.
+Historical `linux_day` gate fields are accepted as background data and do not
+block publication, whether missing, pending, failed or complete. Every one of the
+nine actual release gates still needs reviewed evidence.
 
 ### Recover a partial publication
 

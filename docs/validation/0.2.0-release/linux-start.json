@@ -1,0 +1,54 @@
+{
+  "project_id": "c2ede46f-fdee-47be-9ede-fa07a7b0187f",
+  "service_id": "9c211029-cc13-4884-940b-90c5955ccf9b",
+  "environment_id": "3ecc4589-9d65-4efc-93e4-0368af4ad8df",
+  "volume_id": "bccf973f-0d6b-4768-9c55-3233ad9e1320",
+  "endpoint": "https://linux-days-production-3362.up.railway.app",
+  "campaign": {
+    "schema_version": 1,
+    "status": "running",
+    "started_at": 1793231114.1708152,
+    "phases": [],
+    "preflight": [
+      {
+        "phase": "preflight-stdin-ndjson",
+        "status": "passed",
+        "report": "preflight-stdin-ndjson.json",
+        "sha256": "92347f15ee2f6cc0c92310a36281ffbee1b0908280eae5cf08229127c436795e",
+        "production_seconds": 3.0001249611377716
+      },
+      {
+        "phase": "preflight-file-prometheus",
+        "status": "passed",
+        "report": "preflight-file-prometheus.json",
+        "sha256": "50b789dc8f15b8813082b07cfa179ce2ad0fa3b05b5bc55d5d0dc976bd99c835",
+        "production_seconds": 3.0103423800319433
+      }
+    ],
+    "deployment_id": "3bd308bf-7540-40d8-aadc-464ffd5f0ee1",
+    "identity": {
+      "source_commit": "02a6476f9921ba45c59a6ce98bd68b317bac79b6",
+      "binary_sha256": "7c259fd458eb5fb0d69ce5f1a26d150350d1aa1402ceec97a4724489a23df5e9",
+      "archive_sha256": "bba2b92598530746d48689fe2b702a8400adda6a123a686e8b24d1186df48729",
+      "artifact_run": "https://github.com/ding-labs/tell-tail/actions/runs/40619393915",
+      "orchestration_commit": "f3bd309b873cf2357e2b1ff18471336ec81f71bd"
+    },
+    "production_started_at": 1793231120.5723546,
+    "phase": "stdin-ndjson",
+    "phase_started_at": 1793231120.5723574
+  },
+  "runtime": {
+    "platform": "Linux-6.18.15+deb13-cloud-amd64-x86_64-with-glibc2.36",
+    "cpu_max": "100000 100000",
+    "memory_max": "999997440",
+    "memory_swap_max": "0",
+    "runner_sha256": "a4b65b4df123f564cd6e29e465b0f4aad63a1a83ca4b1ce04af0e993454b6f9e"
+  },
+  "configured_limits": {
+    "vCPUs": 1,
+    "memoryGB": 1,
+    "restart_policy": "NEVER",
+    "replicas": 1,
+    "sleep": false
+  }
+}
