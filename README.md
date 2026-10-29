@@ -26,22 +26,22 @@ review, and space resumes live updates. The dashboard retains at most 20 preview
 of 512 bytes each in memory; long previews are marked with an ellipsis. These
 previews are omitted from CLI JSON, text, Prometheus, and webhook payloads.
 
-To install the binary locally:
+Version 0.2.0 is available through Homebrew and
+[crates.io](https://crates.io/crates/tell-tail):
 
 ```sh
-cargo install --path . --locked
+brew install ding-labs/tap/tell-tail
+# Or build with Cargo (requires Rust 1.88 or later):
+cargo install tell-tail --locked
 ```
 
-GitHub Releases and Homebrew packaging are prepared, but no release has been
-published yet. Planned downloads cover Apple Silicon on macOS 14+ and static
-Linux binaries for x86_64 and ARM64. Tell-Tail will join `ding` in the existing
-[Ding Labs tap](https://github.com/ding-labs/homebrew-tap) after the remaining 0.2
-validation passes. The planned command is `brew install ding-labs/tap/tell-tail`;
-it is not available yet. Version 0.2.0 is available on
-[crates.io](https://crates.io/crates/tell-tail); install it with
-`cargo install tell-tail --locked` (requires Rust 1.88 or later).
-See the [distribution and publishing guide](docs/RELEASING.md) for checks,
-supported platforms, and the steps to make each channel available.
+[GitHub Releases](https://github.com/ding-labs/tell-tail/releases/tag/v0.2.0)
+provides native archives for Apple Silicon on macOS 14+ and static Linux binaries
+for x86_64 and ARM64. The dashboard is embedded; the archives need no Rust, Node,
+or Python. See the [distribution and publishing guide](docs/RELEASING.md) for
+platform details and macOS download/signing limitations.
+
+To install from a local source checkout, use `cargo install --path . --locked`.
 
 ## Inputs and output
 

@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "source_commit": "02a6476f9921ba45c59a6ce98bd68b317bac79b6",
+  "github_release": "https://github.com/ding-labs/tell-tail/releases/tag/v0.2.0",
+  "published_at_utc": "2026-10-29T01:19:50Z",
+  "published_date_pacific": "2026-10-28",
+  "workflow": "https://github.com/ding-labs/tell-tail/actions/runs/40798996154",
+  "workflow_conclusion": "success",
+  "homebrew_import": "https://github.com/ding-labs/homebrew-tap/actions/runs/40799854455",
+  "homebrew_import_conclusion": "success",
+  "homebrew_formula_commit": "61dc7fd5e1fe7e5dcc0652679e3874ad349bf516",
+  "homebrew_formula_blob": "89ae56fc1b5e4f35a3a3b1c3f463c6f1d513d360",
+  "formula_matches_release_manifest": true,
+  "release_manifest_sha256": "0c7cae3532e3661255073f7aabe10e3ad4189b04a3fed3abc1d64ba84515eb7c",
+  "native_macos_archive_smoke": "passed",
+  "crates_io": "existing exact-source 0.2.0 verified and installed by unified workflow; no replacement",
+  "background_linux_day": "optional, non-blocking, not completed"
+}

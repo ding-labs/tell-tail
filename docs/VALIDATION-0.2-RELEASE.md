@@ -86,9 +86,25 @@ review script and SHA256SUMS are retained under ignored `work/release-0.2.0/`.
 Original native archives are under `work/distribution/0.2.0-02a6476/`. The previous
 candidate record remains in [previous-validation.json](validation/0.2.0-release/previous-validation.json).
 
-After this evidence PR's CI passes, merge it preserving commits and dispatch
-`release.yml` on main with `publish=true` and the frozen full source SHA. The
-user authorized publication in this chat. Retain main-only and protected release
-environment approval. The workflow must reuse the existing exact-source crate,
-publish GitHub archives and checksums, and finish the Homebrew importer before
-publication is reported complete. Update current installation docs afterward.
+## Publication completed
+
+[PR #16](https://github.com/ding-labs/tell-tail/pull/16) merged preserving commits
+after all of its checks passed. The
+[unified release run](https://github.com/ding-labs/tell-tail/actions/runs/40798996154)
+then completed successfully under the existing protected environment approval.
+The stable `v0.2.0` commit tag identifies the immutable candidate. Its three
+published archives and manifest/checksums were independently downloaded and
+verified; the macOS archive passed a fresh native CLI and embedded-web smoke.
+
+The workflow verified and installed the existing exact-source crate without
+republishing it. The
+[Homebrew import](https://github.com/ding-labs/homebrew-tap/actions/runs/40799854455)
+passed native installation tests on macOS ARM64 and both Linux architectures
+before committing the formula. The formula on the tap's main branch exactly
+matches the published release manifest. The
+[publication receipt](validation/0.2.0-release/publication.json) records run links,
+source identity, publication time, manifest hash and tap commit.
+
+Publication occurred October 28, 2026, Pacific (October 29 UTC). Current main
+installation docs and changelog record availability; the frozen source's
+historical files remain immutable.

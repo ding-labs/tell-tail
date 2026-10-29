@@ -2,8 +2,11 @@
 
 Tell-Tail 0.2.0 was published to crates.io from commit
 `02a6476f9921ba45c59a6ce98bd68b317bac79b6` on October 28, 2026.
-The first GitHub release and Homebrew publication remain pending. Passing
-package checks does not publish to any channel.
+[GitHub Releases](https://github.com/ding-labs/tell-tail/releases/tag/v0.2.0)
+and Homebrew were published by the
+[unified release workflow](https://github.com/ding-labs/tell-tail/actions/runs/40798996154)
+on the same Pacific date. All three channels identify the same source. Passing
+package checks alone does not publish to any channel.
 
 ## Supported release artifacts
 
