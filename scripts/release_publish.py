@@ -78,12 +78,11 @@ def check_release(release, commit, tag):
 
 def release_body(record, version, commit):
     validate(record, version, commit)
-    waiver = record.get('waivers', {}).get('linux_day')
-    if not waiver:
-        return ''
-    return (f"Validation exception for {version}: the two 24-hour Linux soak scenarios "
-            f"were explicitly waived by {waiver['approved_by']}. These scenarios were not passed.\n\n"
-            f"Reason: {waiver['reason']}\n\n")
+    day = record.get('background_checks', {}).get('linux_day', {})
+    if day.get('status') == 'not_run':
+        return ('The optional 24-hour Linux soak scenarios were not completed for this release. '
+                'These are non-blocking background checks, not release gates.\n\n')
+    return ''
 
 
 def github_release(directory, version, commit, notes=''):

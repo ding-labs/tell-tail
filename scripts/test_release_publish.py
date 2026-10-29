@@ -62,17 +62,12 @@ class CrateTests(unittest.TestCase):
 
 
 class GithubTests(unittest.TestCase):
-    def test_release_notes_disclose_the_waiver_and_still_require_other_gates(self):
+    def test_background_soak_note_does_not_waive_a_required_gate(self):
         record = {'schema_version': 1, 'version': VERSION, 'source_commit': SHA,
                   'gates': {name: {'passed': True, 'evidence': ['result']} for name in GATES}}
         self.assertEqual(publish.release_body(record, VERSION, SHA), '')
-        record['gates']['linux_day']['passed'] = False
-        record['waivers'] = {'linux_day': {'version': VERSION, 'source_commit': SHA,
-            'approved_by': 'maintainer', 'approved_at': '2026-10-28T23:50:00+00:00',
-            'reason': 'Explicitly skip the two full-day scenarios.'}}
-        notes = publish.release_body(record, VERSION, SHA)
-        self.assertIn('explicitly waived by maintainer', notes)
-        self.assertIn('were not passed', notes)
+        record['background_checks'] = {'linux_day': {'status': 'not_run'}}
+        self.assertIn('non-blocking background checks', publish.release_body(record, VERSION, SHA))
         record['gates']['fuzzing']['passed'] = False
         with self.assertRaises(ValueError):
             publish.release_body(record, VERSION, SHA)

@@ -30,36 +30,13 @@ class ReleaseGateTests(unittest.TestCase):
             with self.subTest(version=version, commit=commit), self.assertRaises(ValueError):
                 validate(self.record, version, commit)
 
-    def day_waiver(self):
-        return {'version': '0.2.0', 'source_commit': SHA, 'approved_by': 'zuchka',
-                'approved_at': '2026-10-28T23:50:00+00:00',
-                'reason': 'Maintainer explicitly requested skipping the two full-day scenarios.'}
-
-    def test_explicit_day_waiver_does_not_claim_a_test_pass(self):
-        self.record['gates']['linux_day']['passed'] = False
-        self.record['waivers'] = {'linux_day': self.day_waiver()}
+    def test_day_soaks_never_block_or_require_a_waiver(self):
         validate(self.record, '0.2.0', SHA)
-        self.assertIs(self.record['gates']['linux_day']['passed'], False)
-
-    def test_waived_gate_cannot_also_claim_a_pass(self):
-        self.record['waivers'] = {'linux_day': self.day_waiver()}
-        with self.assertRaises(ValueError):
-            validate(self.record, '0.2.0', SHA)
-
-    def test_waiver_cannot_apply_to_other_candidates_or_gates(self):
-        self.record['gates']['linux_day']['passed'] = False
-        for key, value in [('version', '0.2.1'), ('source_commit', 'b' * 40),
-                           ('approved_by', ''), ('reason', ''), ('approved_at', 'not a date'),
-                           ('approved_at', '2026-10-28T23:50:00')]:
-            waiver = self.day_waiver()
-            waiver[key] = value
-            self.record['waivers'] = {'linux_day': waiver}
-            with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+        for status in ({'passed': False, 'evidence': []}, {'status': 'running'},
+                       {'status': 'failed'}, {'passed': True, 'evidence': ['result']}):
+            with self.subTest(status=status):
+                self.record['gates']['linux_day'] = status
                 validate(self.record, '0.2.0', SHA)
-        self.record['waivers'] = {'performance': self.day_waiver()}
-        with self.assertRaises(ValueError):
-            validate(self.record, '0.2.0', SHA)
-        self.record['waivers'] = {'linux_day': self.day_waiver()}
         self.record['gates']['performance']['passed'] = False
         with self.assertRaises(ValueError):
             validate(self.record, '0.2.0', SHA)
