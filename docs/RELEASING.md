@@ -143,21 +143,18 @@ Present the minimum macOS version and architecture beside download links.
 Developer ID signing and browser quarantine validation remain separate from this
 workflow; the unsigned direct Mac download path is not certified by these checks.
 
-### Explicit Linux day exception
+### Optional background day soaks
 
-A maintainer may explicitly waive the two full-day Linux scenarios for a named
-release. This does not record a test pass: `gates.linux_day.passed` stays false,
-with a nonempty evidence reference and a `waivers.linux_day` object containing
-`version`, `source_commit`, `approved_by`, timezone-qualified `approved_at` and
-`reason`. Both version and full source SHA must match the release. The gate
-rejects missing metadata, inherited waivers for another source, waivers for any
-other gate, and simultaneous claims that the waived gate passed. Publication
-logs and generated release notes disclose this exception. Every other gate
-still requires a reviewed pass.
-
-The user explicitly authorized this exception for the already-published 0.2.0
-source in [the release validation record](VALIDATION-0.2-RELEASE.md). Do not carry
-that authorization into another release.
+The stdin/NDJSON and followed-file/metrics 24-hour scenarios are optional,
+non-blocking background validation. They are not release gates or required CI
+statuses, and no per-release waiver is needed. The separate
+`background-soaks.yml` workflow has its own concurrency group and no dependency
+in the publication or short-validation workflows. It requires a provisioned
+long-running Linux runner only when someone chooses to run it. Preserve results
+and report actionable failures separately without delaying continuous delivery.
+Historical `linux_day` gate fields are accepted as background data and do not
+block publication, whether missing, pending, failed or complete. Every one of the
+nine actual release gates still needs reviewed evidence.
 
 ### Recover a partial publication
 

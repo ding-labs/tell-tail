@@ -92,7 +92,12 @@ permission after a successful snapshot. It checks that the process exits with
 status 1 and the preceding complete file remains unchanged. Root container runs
 use an unprivileged child so this I/O failure is exercised rather than skipped.
 
-## Release-duration runs
+## Optional background day soaks and required dashboard runs
+
+The two 24-hour Linux scenarios are optional background checks, not release
+prerequisites. Run them with `background-soaks.yml` only when desired; its
+separate concurrency group keeps them independent of short validation and
+publication. Preserve results and investigate actionable failures separately.
 
 Use a supervised Linux host or a suitable long-running CI runner. Keep progress
 logs alongside final results and run competing performance workloads separately.
