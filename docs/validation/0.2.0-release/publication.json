@@ -14,5 +14,8 @@
   "release_manifest_sha256": "0c7cae3532e3661255073f7aabe10e3ad4189b04a3fed3abc1d64ba84515eb7c",
   "native_macos_archive_smoke": "passed",
   "crates_io": "existing exact-source 0.2.0 verified and installed by unified workflow; no replacement",
-  "background_linux_day": "optional, non-blocking, not completed"
+  "background_linux_day": "optional, non-blocking, not completed",
+  "temporary_release_secret_removed": true,
+  "temporary_release_token_revoked": true,
+  "homebrew_dispatch_token_retained": true
 }
