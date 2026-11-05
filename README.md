@@ -47,6 +47,9 @@ or Python. See the [distribution guide](docs/RELEASING.md) for platform details.
 **Current main, not yet released:** the built-in demo, parsing coverage, severity
 history, and activity ages described below are not in the 0.2.0 packages.
 
+Read [Understanding a live log stream](docs/MONITORING.md) for a complete guide
+to interpreting coverage, history, activity ages, controls, and their limits.
+
 ### Built-in demo (unreleased)
 
 Current main includes an offline demo; it is not in the published 0.2.0 packages.
