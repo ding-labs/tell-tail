@@ -5,26 +5,7 @@ Logs pass through; Tell-Tail keeps counters and bounded rolling statistics. It
 follows one file or reads stdin, and supports plain text, NDJSON, Prometheus, and
 a local HTTP/SSE metrics API.
 
-## Try it
-
-The repository pins Rust 1.88.0. With rustup installed:
-
-```sh
-git clone https://github.com/ding-labs/tell-tail.git
-cd tell-tail
-cargo build --release --locked
-python3 scripts/demo.py | ./target/release/tell-tail
-```
-
-The demo changes warning and error ratios over a 20-second cycle. Press `q` to
-quit, space to freeze the display while ingestion continues, and `?` for help.
-The terminal uses Ding's graphite and green palette with a compact chart/severity
-layout, violet information, amber warnings, and coral errors/fatals. At 60 × 20
-or larger it also shows recent error and fatal previews, newest first. Arrow keys
-and Page Up/Down freeze the display and scroll the previews; `f` toggles fatal-only
-review, and space resumes live updates. The dashboard retains at most 20 previews
-of 512 bytes each in memory; long previews are marked with an ellipsis. These
-previews are omitted from CLI JSON, text, Prometheus, and webhook payloads.
+## Install and try it
 
 Version 0.2.0 is available through Homebrew and
 [crates.io](https://crates.io/crates/tell-tail):
@@ -35,20 +16,46 @@ brew install ding-labs/tap/tell-tail
 cargo install tell-tail --locked
 ```
 
+Follow your application's log file in the terminal or browser:
+
+```sh
+tell-tail app.log
+tell-tail app.log --output web --open
+```
+
+Following starts at the end of the file. If nothing new is being written, an
+empty display is expected; add `--from start` to include existing contents.
+For a quick example without a log file, this command leaves its final report
+open in the browser until Ctrl+C:
+
+```sh
+printf 'INFO ready\nWARN upstream slow\nERROR upstream timeout\n' | tell-tail --output web --open
+```
+
+Press `q` to quit the terminal dashboard, space to freeze its display while
+counting continues, and `?` for help. Arrow keys and Page Up/Down freeze and
+scroll recent errors; `f` toggles fatal-only review. At 60 × 20 or larger, the
+terminal shows up to 20 error/fatal previews, each capped at 512 bytes and kept
+only in memory. Long previews are marked with an ellipsis. Previews are omitted
+from CLI JSON, text, Prometheus, and webhook payloads.
+
 [GitHub Releases](https://github.com/ding-labs/tell-tail/releases/tag/v0.2.0)
 provides native archives for Apple Silicon on macOS 14+ and static Linux binaries
 for x86_64 and ARM64. The dashboard is embedded; the archives need no Rust, Node,
-or Python. See the [distribution and publishing guide](docs/RELEASING.md) for
-platform details and macOS download/signing limitations.
+or Python. See the [distribution guide](docs/RELEASING.md) for platform details.
 
-To install from a local source checkout, use `cargo install --path . --locked`.
+**Current main, not yet released:** the built-in demo, parsing coverage, severity
+history, and activity ages described below are not in the 0.2.0 packages.
 
 ### Built-in demo (unreleased)
 
 Current main includes an offline demo; it is not in the published 0.2.0 packages.
-From this checkout, try either dashboard without a log file or generator:
+Clone the repository (it pins Rust 1.88.0), then try either dashboard without a
+log file or generator:
 
 ```sh
+git clone https://github.com/ding-labs/tell-tail.git
+cd tell-tail
 cargo run --locked -- --demo --window 5
 cargo run --locked -- --demo --window 5 --output web --open
 ```
@@ -59,6 +66,31 @@ of recovery. Active phases generate approximately 100 records/second. The
 five-second rolling window makes the transitions easy to see; histories still
 cover 60 completed seconds. Press `q` in the terminal or Ctrl+C to stop. The demo
 uses the normal ingestion path and does not read stdin or create log files.
+To install the checkout, use `cargo install --path . --locked`; then run
+`tell-tail --demo --window 5` directly.
+
+## Everyday workflows
+
+Replace the example filenames and commands with your own:
+
+```sh
+# Watch a service while deploying or debugging it
+tell-tail app.log --window 10 --output web --open
+
+# Observe a Python worker with unbuffered stdout and stderr
+python3 -u worker.py 2>&1 | tell-tail
+
+# Read JSON logs whose string severity lives in a different top-level field
+tell-tail worker.ndjson --level-field severity
+
+# Review a completed capture and print its final counts
+tell-tail capture.ndjson --once
+```
+
+If a piped program buffers its output, configure that program to flush promptly;
+Tell-Tail can only measure records once they arrive. A fast scan of an old file
+shows processing throughput, not its original event rate. No recent logs alone
+cannot establish whether the application is healthy or stalled.
 
 ## Inputs and output
 

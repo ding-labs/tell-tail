@@ -20,13 +20,23 @@ it does not need piped stdin or `jq`.
 ## Display
 
 - Source, input state, elapsed time, and exact session entry/byte totals.
+- Last complete record and last error/fatal ages, measured at the displayed
+  snapshot. They freeze with the view; none observed and unavailable are distinct.
+  Empty input explains file-following, missing files, or buffered partial lines.
 - Rolling entries/s, MiB/s, warning ratio, and error-plus-fatal ratio. The observed
   window duration is shown alongside the configured duration during warmup.
+- Rolling severity recognition coverage, with separate malformed, oversized, and
+  otherwise unrecognized counts and guidance for supported fields and prefixes.
 - Throughput for up to 60 completed process-elapsed seconds, including idle
   seconds. A monotone cubic curve connects samples without overshooting them;
   one-second transitions animate at the display refresh rate (typically 60 fps).
   Each snapshot replaces the chart history. Expand **View exact chart
   values** for a table with exact counts and elapsed intervals.
+- Warning and error-plus-fatal counts per completed second, sharing a scale and
+  using different line styles. Exact values are available in a separate table.
+  After 60 seconds, error counts and ratios compare the last 30 completed seconds
+  with the preceding 30. This comparison is independent of `--window` and retains
+  no raw logs. Empty intervals have no ratio.
 - Severity counts and distribution for the entire session. Session ratios are
   separate from the rolling ratios above.
 - The latest 20 error/fatal previews, newest first, with processing time and
