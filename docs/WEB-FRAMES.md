@@ -8,21 +8,6 @@ implemented, along with the [embedded dashboard](WEB-DASHBOARD.md).
 
 ## API and ownership
 
-The optional top-level `severity_history` array is an additive dashboard field.
-Each entry contains decimal-string `warn` and `error` (error plus fatal) counts,
-aligned one-for-one with `metrics.history`. It is omitted before the first
-completed second. Both histories retain at most 60 completed seconds and include
-idle zeroes; their interval is independent of the rolling `--window` duration.
-The browser accepts older frames without this field and shows history as
-unavailable. CLI JSON schema 2 and webhook payloads are unchanged.
-
-The additive top-level `activity` object has `last_record_age_seconds` and
-`last_error_age_seconds` (including fatal). Each is null until observed, or a
-finite nonnegative age at the snapshot, no larger than session elapsed time.
-Partial bytes and skipped metadata do not count as records. Ages use monotonic
-processing time, persist beyond rolling expiry, and freeze with the displayed
-snapshot. Older frames without `activity` display unavailable ages.
-
 After obtaining an owned publication through the [snapshot API](SNAPSHOTS.md):
 
 ```rust
@@ -97,8 +82,109 @@ History contains counts for completed process-elapsed seconds, not rolling rates
 or wall-clock timestamps. With `end = floor(elapsed_seconds)` and `n = history.length`,
 point `i` covers `[end - n + i, end - n + i + 1)`. Startup history is empty until
 the first second completes. Idle seconds contain zero. Replace history from each
-frame; appending on each approximately 100 ms update would repeat seconds. Warning
-and error histories are not retained by the engine and are not present here.
+frame; appending on each approximately 100 ms update would repeat seconds.
+The additive severity history uses these same intervals, as described below.
+
+## Coverage, severity history, and activity (unreleased)
+
+These additions on current main are not in the published 0.2.0 packages. They
+retain web schema version 1: existing `metrics` fields keep their meanings, and
+clients may ignore unknown envelope fields. The embedded browser accepts older
+version 1 frames that omit the additions. CLI JSON remains schema 2.
+
+| Field | Current encoder | Meaning |
+| --- | --- | --- |
+| `severity_history` | Omitted when empty; otherwise an array of at most 60 objects | Completed seconds aligned one-for-one with `metrics.history`, oldest first |
+| `severity_history[i].warn` | Decimal u64 string | Warning records in that second |
+| `severity_history[i].error` | Decimal u64 string | Error **plus fatal** records in that second |
+| `activity` | Always an object | Ages measured at this snapshot |
+| `activity.last_record_age_seconds` | Finite nonnegative number or `null` | Seconds since the last counted complete record |
+| `activity.last_error_age_seconds` | Finite nonnegative number or `null` | Seconds since the last counted error/fatal record |
+
+For example, this **excerpt** describes two completed seconds at elapsed time
+2.4 seconds. Other required metrics and envelope fields are omitted here; it is
+not a standalone frame:
+
+```json
+{
+  "metrics": {
+    "elapsed_seconds": 2.4,
+    "history": ["4", "2"]
+  },
+  "severity_history": [
+    {"warn": "1", "error": "1"},
+    {"warn": "0", "error": "2"}
+  ],
+  "activity": {
+    "last_record_age_seconds": 0.1,
+    "last_error_age_seconds": 0.4
+  }
+}
+```
+
+The first point covers `[0, 1)` and the second `[1, 2)`. The in-progress interval
+`[2, 2.4]` is absent from history even though its records already contribute to
+session and rolling metrics. Histories retain idle zeroes, expire after 60
+completed seconds, and are independent of `--window`. Replace both arrays on
+each accepted frame. Do not append, carry old severity points forward when the
+field is absent, or infer zero errors from an older frame without that field.
+Before the first second completes, the current encoder emits `metrics.history:
+[]` and omits `severity_history`.
+
+Activity uses monotonic **processing time**, not log event timestamps or browser
+wall time. Unknown and oversized completed records reset the record age; skipped
+Apple metadata and partial bytes do not. A final nonempty unterminated line at
+finite EOF counts. Ages survive rolling-window expiry and are no greater than
+`metrics.elapsed_seconds`. `null` means no matching record observed in this
+session. Missing `activity` in a legacy frame means unavailable, which is a
+different state. A zero age is a valid observation.
+
+Render these ages as snapshot values. Frozen, disconnected, or final displays
+must not advance them with a local clock and imply fresh measurements. A client
+may separately show how old its last received snapshot is. Restarting the
+monitor creates a new session and resets observations.
+
+### Deriving coverage and interval comparisons
+
+Coverage has no new serialized field. Derive it from `metrics.window.counts`:
+
+```javascript
+const counts = frame.metrics.window.counts;
+const records = BigInt(counts.records);
+const recognized = records - BigInt(counts.levels.unknown);
+// Exact numerator and denominator; do not round until formatting for display.
+const coverage = records === 0n ? null : { recognized, records };
+const malformed = BigInt(counts.parse_failures);
+const oversized = BigInt(counts.oversized_records);
+const otherUnknown = BigInt(counts.levels.unknown) - malformed - oversized;
+```
+
+This measures recognized severity, not application health or a probabilistic
+confidence estimate. Unknowns remain in the denominator of warning/error ratios.
+Malformed and oversized records are disjoint subsets of unknowns. An empty
+window has unavailable coverage, not 0% or 100%. The
+[monitoring guide](MONITORING.md#parsing-coverage-what-the-percentage-means) explains supported
+parsing conventions and a worked example.
+
+The browser's comparison requires 60 points in both histories. Sum error counts
+and total counts separately over indices `[30, 60)` and `[0, 30)`, then divide
+each error sum by its corresponding total sum. Do not average per-second
+percentages. A zero total has no ratio. At elapsed 75.6 seconds, these intervals
+are `[45, 75)` and `[15, 45)`; neither includes the current partial second.
+This is a display comparison, not an anomaly detector or an alert rule.
+
+### Output compatibility
+
+| Output | Coverage | Warning/error history | Activity ages |
+| --- | --- | --- | --- |
+| Terminal dashboard | Shown for the rolling window | Sparklines | Shown at the displayed snapshot |
+| Web dashboard / web schema 1 | Shown / derived from existing counters | Additive `severity_history` field | Additive `activity` field |
+| CLI JSON schema 2 | Derivable from existing `window.counts` | Not serialized | Not serialized |
+| Text, Prometheus, webhook payloads | No new coverage field | No new history field | No new activity field |
+
+The CLI's existing total-record `history` is unchanged. Raw error previews use
+the separate bounded `recent_errors` field described above. None of these
+additions enable retention, log forwarding, or new webhook triggers.
 
 ## Sessions, sequence numbers, and final state
 
@@ -127,9 +213,14 @@ one additional byte fails. The encoder writes into a buffer with a fixed 64 KiB
 capacity and stops at the cap, without first allocating a larger serialized value.
 The event ID is bounded by the session ID already admitted inside that JSON.
 
-Encoding fails with a bounded diagnostic for an oversized frame, more than 60
-history points, an empty session ID or one containing CR/LF/NUL, or a non-finite
-metric. Non-finite numbers must not silently turn into JSON `null`. Error messages
+Encoding fails with a bounded diagnostic for an oversized frame, an empty
+session ID or one containing CR/LF/NUL, or a non-finite metric. `InvalidHistory`
+rejects more than 60 history points, unequal total/severity history lengths, or
+a point whose warning-plus-error count overflows u64 or exceeds the total count.
+`InvalidActivity` rejects any supplied age that is non-finite, negative, or
+greater than session elapsed time. The browser validates these same history and
+age constraints when the additive fields are supplied. Both arrays, activity,
+and previews share the existing 64 KiB limit; there is no extra per-feature budget. Non-finite numbers must not silently turn into JSON `null`. Error messages
 do not echo input strings. Treat an error as fatal to the web publisher/output;
 continuing to serve an older frame indefinitely would hide the failure. The
 experiment propagates these errors through its publisher and server result.
