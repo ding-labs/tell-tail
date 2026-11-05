@@ -82,8 +82,8 @@ on light and dark terminal profiles. It respects `NO_COLOR` and uses the termina
 font and existing cell geometry; the alternate screen and terminal settings are
 restored on exit.
 
-The full header pairs a green `≡╱` angular log-tail text mark with a bold
-lowercase wordmark. Rounded box-drawing borders, bold panel titles, and a subtle
+The full header pairs a green `≡↶` curled-tail text approximation with a bold
+lowercase wordmark. The terminal uses text glyphs in place of the SVG mark. Rounded box-drawing borders, bold panel titles, and a subtle
 table heading provide hierarchy within the existing cell layout. Reading and
 following states are violet, waiting is amber, failures are coral, and frozen
 or final states are neutral. Compact views keep their seven-line summary and
