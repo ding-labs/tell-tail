@@ -98,6 +98,14 @@ figure { margin: 16px 0 0; }
 .chart-area { fill: var(--ding-brand); fill-opacity: .08; }
 .chart-line { stroke: var(--ding-brand); stroke-width: 2; fill: none; stroke-linejoin: round; }
 .chart-dots { fill: var(--ding-brand); }
+.severity-history { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--ding-border); }
+#severity-chart { width: 100%; display: block; }
+.warning-key { color: var(--ding-attention); }
+.error-key { color: var(--ding-incident); }
+.warning-line, .error-line { fill: none; stroke-width: 2; stroke-linejoin: round; }
+.warning-line { stroke: var(--ding-attention); stroke-dasharray: 5 3; }
+.error-line { stroke: var(--ding-incident); }
+.severity-data summary { padding: 8px 0; color: var(--ding-brand); }
 figcaption { margin: 8px 0 0; }
 .chart-data { margin-top: 8px; }
 summary { cursor: pointer; font-size: 13px; line-height: 1.6; }

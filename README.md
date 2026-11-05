@@ -317,6 +317,13 @@ no percentage. The web dashboard breaks unknown records down into malformed,
 oversized, and records without a recognized severity, with parsing guidance;
 press `?` in the terminal for the supported prefix/field conventions.
 
+Throughput, warning, and error-plus-fatal histories show the last 60 completed
+seconds of processing time. Severity charts share a count scale, so a change in
+severity remains visible even when total volume is steady. The web dashboard
+also compares error counts and ratios over the last 30 completed seconds and
+the preceding 30, after a full minute is available. These intervals are separate
+from `--window`; empty intervals have no error percentage.
+
 - Each physical line is one record. Blank and unrecognized lines count as unknown.
   A final nonempty line without a newline counts at finite EOF. A trailing newline
   does not create another record. CRLF is supported.

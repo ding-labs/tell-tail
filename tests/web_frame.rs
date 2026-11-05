@@ -153,6 +153,32 @@ fn history_contains_completed_seconds_oldest_first_and_replaces_each_frame() {
 }
 
 #[test]
+fn severity_history_is_additive_aligned_and_preserves_large_counts() {
+    let mut s = snapshot(Duration::from_secs(1), State::Reading);
+    s.history[0] = u64::MAX;
+    s.severity_history[0].error = u64::MAX;
+    let value = json(1, &s);
+    assert_eq!(value["severity_history"][0]["error"], u64::MAX.to_string());
+    assert_eq!(value["severity_history"][0]["warn"], "0");
+    assert!(
+        serde_json::to_value(&s)
+            .unwrap()
+            .get("severity_history")
+            .is_none()
+    );
+    s.severity_history[0].warn = 1;
+    assert!(matches!(
+        WebFrame::encode(1, &s),
+        Err(EncodeError::InvalidHistory)
+    ));
+    s.severity_history.clear();
+    assert!(matches!(
+        WebFrame::encode(1, &s),
+        Err(EncodeError::InvalidHistory)
+    ));
+}
+
+#[test]
 fn dashboard_previews_are_optional_bounded_and_preserve_exact_record_numbers() {
     use clap::Parser;
     use tell_tail::{cli::Args, engine::Engine, recent::MAX_RECENT_ERRORS};

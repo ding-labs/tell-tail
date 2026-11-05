@@ -6,7 +6,7 @@
 use crate::{
     parse::Level,
     recent::{MAX_PREVIEW_BYTES, MAX_RECENT_ERRORS, RecentError},
-    stats::{Counts, Levels, Snapshot, State, Window},
+    stats::{Counts, Levels, SeverityCounts, Snapshot, State, Window},
 };
 use serde::{Serialize, Serializer, ser::SerializeMap};
 use std::{fmt, io};
@@ -30,7 +30,14 @@ impl WebFrame {
         if snapshot.session_id.is_empty() || snapshot.session_id.contains(['\r', '\n', '\0']) {
             return Err(EncodeError::InvalidSessionId);
         }
-        if snapshot.history.len() > 60 {
+        if snapshot.history.len() > 60
+            || snapshot.severity_history.len() != snapshot.history.len()
+            || snapshot
+                .severity_history
+                .iter()
+                .zip(&snapshot.history)
+                .any(|(p, total)| p.warn.checked_add(p.error).is_none_or(|sum| sum > *total))
+        {
             return Err(EncodeError::InvalidHistory);
         }
         if snapshot.recent_errors.len() > MAX_RECENT_ERRORS
@@ -53,6 +60,8 @@ impl WebFrame {
                 web_schema_version: WEB_SCHEMA_VERSION,
                 sequence: Decimal(sequence),
                 metrics: Metrics::from(snapshot),
+                severity_history: (!snapshot.severity_history.is_empty())
+                    .then_some(SeverityHistory(&snapshot.severity_history)),
                 recent_errors: (!snapshot.recent_errors.is_empty())
                     .then_some(Recent(&snapshot.recent_errors)),
             },
@@ -101,7 +110,9 @@ impl fmt::Display for EncodeError {
             Self::InvalidSessionId => {
                 f.write_str("web session ID is empty or contains CR, LF, or NUL")
             }
-            Self::InvalidHistory => f.write_str("web history exceeds 60 completed seconds"),
+            Self::InvalidHistory => {
+                f.write_str("web histories must align and contain at most 60 completed seconds")
+            }
             Self::InvalidRecentErrors => f.write_str("invalid bounded error previews"),
             Self::Serialization(error) => write!(f, "cannot encode web frame: {error}"),
         }
@@ -160,7 +171,24 @@ struct Envelope<'a> {
     sequence: Decimal,
     metrics: Metrics<'a>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    severity_history: Option<SeverityHistory<'a>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     recent_errors: Option<Recent<'a>>,
+}
+
+struct SeverityHistory<'a>(&'a [SeverityCounts]);
+impl Serialize for SeverityHistory<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        #[derive(Serialize)]
+        struct Point {
+            warn: Decimal,
+            error: Decimal,
+        }
+        serializer.collect_seq(self.0.iter().map(|s| Point {
+            warn: Decimal(s.warn),
+            error: Decimal(s.error),
+        }))
+    }
 }
 
 struct Recent<'a>(&'a [RecentError]);

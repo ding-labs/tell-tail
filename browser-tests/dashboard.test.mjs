@@ -5,6 +5,30 @@ import { chromium, monitor } from './helpers.mjs';
 
 const fixture = JSON.parse(await readFile(new URL('../tests/fixtures/output/empty-web-v1.json', import.meta.url), 'utf8'));
 
+test('severity history renders aligned exact counts and survives idle and freeze', async t => {
+  const server = await monitor();
+  t.after(() => server.close());
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  server.child.stdin.write('INFO normal\nWARN slow\nERROR failed\nFATAL stopped\n');
+  await page.goto(server.url);
+  await page.waitForFunction(() => document.querySelectorAll('#severity-values tr').length >= 1);
+  assert.match(await page.locator('#severity-values').textContent(), /1.*2/s);
+  assert.match(await page.locator('#error-line').getAttribute('d'), /^M/);
+  await page.locator('#freeze').click();
+  const path = await page.locator('#error-line').getAttribute('d');
+  server.child.stdin.write('ERROR later\n');
+  await page.waitForFunction(async () => (await (await fetch('/api/snapshot')).json()).metrics.totals.records === '5');
+  assert.equal(await page.locator('#error-line').getAttribute('d'), path);
+  await page.locator('#freeze').click();
+  await page.waitForFunction(() => document.getElementById('severity-caption').textContent.includes('0 warnings · 0 errors'));
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({ width, height: 1100 });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  }
+});
+
 test('recent error review is safe, frozen, filterable and bounded under a flood', async t => {
   const server = await monitor();
   t.after(() => server.close());

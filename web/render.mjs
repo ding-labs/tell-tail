@@ -1,4 +1,4 @@
-import { elapsed, finalStates, historyPoints, integer, levels, parsingCoverage, percent, rate } from './frame.mjs';
+import { elapsed, finalStates, historyPoints, integer, levels, parsingCoverage, percent, rate, severityComparison } from './frame.mjs';
 
 const byId = id => document.getElementById(id);
 function text(id, value) { const el = byId(id); if (el.textContent !== value) el.textContent = value; }
@@ -21,6 +21,7 @@ let chartDots = new Map();
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let recentFrame = null;
 let recentKey = '';
+let severityKey = '';
 const fatalFilter = byId('fatal-only');
 fatalFilter.addEventListener('click', () => {
   fatalFilter.setAttribute('aria-pressed', fatalFilter.getAttribute('aria-pressed') !== 'true' ? 'true' : 'false');
@@ -241,6 +242,44 @@ function chart(m) {
   text('chart-description', caption);
 }
 
+function severityChart(frame) {
+  const m = frame.metrics;
+  const points = frame.severity_history ?? [];
+  const end = Math.floor(m.elapsed_seconds);
+  const key = `${m.session_id}:${end}:${JSON.stringify(points)}:${m.history.join(',')}`;
+  if (severityKey === key) return;
+  severityKey = key;
+  const max = Math.max(1, ...points.flatMap(p => [Number(p.warn), Number(p.error)]));
+  for (const [field, id] of [['warn', 'warning-line'], ['error', 'error-line']]) {
+    // Each segment represents a completed second. No interpolation invents peaks.
+    const path = points.map((p, i) => {
+      const x = 60 + (60 - points.length + i) / 60 * 688;
+      const y = 100 - Number(p[field]) / max * 80;
+      return `${i ? 'L' : 'M'}${x},${y} H${x + 688 / 60}`;
+    }).join(' ');
+    byId(id).setAttribute('d', path);
+  }
+  text('severity-max', points.length ? rate(max) : '0');
+  const caption = points.length
+    ? `Latest completed second: ${integer(points.at(-1).warn)} warnings · ${integer(points.at(-1).error)} errors + fatal · ${points.length} of 60 seconds available`
+    : 'Severity history unavailable until completed seconds arrive.';
+  text('severity-caption', caption);
+  text('severity-chart-description', caption);
+  text('severity-comparison', severityComparison(frame));
+  const rows = document.createDocumentFragment();
+  for (const [i, point] of points.entries()) {
+    const second = end - points.length + i;
+    const row = document.createElement('tr');
+    for (const value of [`${elapsed(second)}–${elapsed(second + 1)}`, integer(point.warn), integer(point.error)]) {
+      const cell = document.createElement('td');
+      cell.textContent = value;
+      row.append(cell);
+    }
+    rows.append(row);
+  }
+  byId('severity-values').replaceChildren(rows);
+}
+
 /** @param {import('./frame.mjs').Frame} frame */
 export function render(frame) {
   const m = frame.metrics;
@@ -266,5 +305,6 @@ export function render(frame) {
     row.share.textContent = m.totals.records === '0' ? '—' : percent(Number(count) / Number(m.totals.records));
   }
   chart(m);
+  severityChart(frame);
   recentErrors(frame);
 }

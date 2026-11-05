@@ -8,6 +8,14 @@ implemented, along with the [embedded dashboard](WEB-DASHBOARD.md).
 
 ## API and ownership
 
+The optional top-level `severity_history` array is an additive dashboard field.
+Each entry contains decimal-string `warn` and `error` (error plus fatal) counts,
+aligned one-for-one with `metrics.history`. It is omitted before the first
+completed second. Both histories retain at most 60 completed seconds and include
+idle zeroes; their interval is independent of the rolling `--window` duration.
+The browser accepts older frames without this field and shows history as
+unavailable. CLI JSON schema 2 and webhook payloads are unchanged.
+
 After obtaining an owned publication through the [snapshot API](SNAPSHOTS.md):
 
 ```rust

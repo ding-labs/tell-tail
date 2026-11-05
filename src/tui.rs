@@ -331,13 +331,53 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
         .history
         .len()
         .saturating_sub(usize::from(overview[0].width.saturating_sub(2)));
+    let charts = Layout::vertical([
+        Constraint::Min(4),
+        Constraint::Length(3),
+        Constraint::Length(3),
+    ])
+    .split(overview[0]);
     frame.render_widget(
         Sparkline::default()
             .data(&s.history[history_start..])
             .style(Style::default().fg(theme::BRAND))
             .block(panel(" Throughput · entries/s ")),
-        overview[0],
+        charts[0],
     );
+    let warnings: Vec<_> = s
+        .severity_history
+        .iter()
+        .skip(history_start)
+        .map(|p| p.warn)
+        .collect();
+    let errors: Vec<_> = s
+        .severity_history
+        .iter()
+        .skip(history_start)
+        .map(|p| p.error)
+        .collect();
+    // Use the same scale for both severity plots; zero stays visually empty.
+    let severity_max = warnings
+        .iter()
+        .chain(&errors)
+        .copied()
+        .max()
+        .unwrap_or(0)
+        .max(1);
+    for (index, name, data, color) in [
+        (1, "Warn/s", &warnings, theme::WARNING),
+        (2, "Err+fatal/s", &errors, theme::INCIDENT),
+    ] {
+        let latest = data.last().map_or_else(|| "—".into(), u64::to_string);
+        frame.render_widget(
+            Sparkline::default()
+                .data(data)
+                .max(severity_max)
+                .style(Style::default().fg(color))
+                .block(panel(format!(" {name} {latest} "))),
+            charts[index],
+        );
+    }
     let rows = Level::ALL.into_iter().map(|level| {
         let count = s.window.counts.levels.get(level);
         let ratio =
@@ -475,8 +515,8 @@ mod tests {
         let mut terminal = Terminal::new(TestBackend::new(80, 24)).unwrap();
         terminal.draw(|f| draw(f, &snapshot, false, false)).unwrap();
         let buffer = terminal.backend().buffer();
-        assert_eq!(buffer[(35, 12)].symbol(), "█");
-        assert_eq!(buffer[(1, 12)].symbol(), " ");
+        assert_eq!(buffer[(35, 6)].symbol(), "█");
+        assert_eq!(buffer[(1, 6)].symbol(), " ");
     }
 
     #[test]

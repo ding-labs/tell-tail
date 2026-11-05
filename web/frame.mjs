@@ -2,7 +2,7 @@
 /** @typedef {{configured_seconds: number, resolution_seconds: number, observed_seconds: number, counts: Counts, bytes_read: string, records_per_second: number, bytes_per_second: number, warning_ratio: number|null, error_ratio: number|null}} Window */
 /** @typedef {{kind: string, session_id: string, source: string, state: string, elapsed_seconds: number, observed_at_unix_seconds: number, totals: Counts, bytes_read: string, pending_bytes: string, skipped_bytes: string, discarded_partial_records: string, backlog_bytes: string|null, warning_ratio: number|null, error_ratio: number|null, window: Window, history: string[]}} Metrics */
 /** @typedef {{record: string, elapsed_seconds: number, level: 'error'|'fatal', preview: string, truncated: boolean}} RecentError */
-/** @typedef {{web_schema_version: 1, sequence: string, metrics: Metrics, recent_errors?: RecentError[]}} Frame */
+/** @typedef {{web_schema_version: 1, sequence: string, metrics: Metrics, severity_history?: {warn:string,error:string}[], recent_errors?: RecentError[]}} Frame */
 
 export const levels = ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'unknown'];
 export const finalStates = new Set(['complete', 'stopped', 'failed']);
@@ -87,6 +87,16 @@ export function parseFrame(json) {
   ratio(w.error_ratio, 'metrics.window.error_ratio');
   requireField(Array.isArray(m.history) && m.history.length <= 60, 'metrics.history', 'an array of at most 60 counters');
   for (const point of m.history) counter(point, 'metrics.history[]');
+  if (frame.severity_history !== undefined) {
+    requireField(Array.isArray(frame.severity_history) && frame.severity_history.length === m.history.length,
+      'severity_history', 'an array aligned with metrics.history');
+    for (const [i, point] of frame.severity_history.entries()) {
+      object(point, 'severity_history[]');
+      counter(point.warn, 'severity_history[].warn');
+      counter(point.error, 'severity_history[].error');
+      requireField(BigInt(point.warn) + BigInt(point.error) <= BigInt(m.history[i]), 'severity_history[]', 'counts no greater than total entries');
+    }
+  }
   if (frame.recent_errors !== undefined) {
     const entries = frame.recent_errors;
     requireField(Array.isArray(entries) && entries.length <= 20, 'recent_errors', 'an array of at most 20 previews');
@@ -120,6 +130,19 @@ export function parsingCoverage(counts) {
       : `Severity recognized: ${percent(Number(recognized) / Number(total))} · ${integer(recognized)} of ${integer(total)} rolling records`,
     breakdown: `${integer(unknown)} unknown: ${integer(malformed)} malformed, ${integer(oversized)} oversized, ${integer(other)} without a recognized severity.`,
   };
+}
+
+/** Nonoverlapping completed intervals, independent of the configured rolling window. */
+export function severityComparison(frame) {
+  if (!frame.severity_history || frame.severity_history.length < 60) return 'Comparison needs 60 completed seconds.';
+  const sum = values => values.reduce((a, b) => a + BigInt(b), 0n);
+  const describe = (start, end) => {
+    const errors = sum(frame.severity_history.slice(start, end).map(p => p.error));
+    const total = sum(frame.metrics.history.slice(start, end));
+    const ratio = total === 0n ? 'no records' : percent(Number(errors) / Number(total));
+    return `${integer(errors)} / ${integer(total)} (${ratio})`;
+  };
+  return `Error + fatal logs · last 30 completed seconds: ${describe(30, 60)}; preceding 30: ${describe(0, 30)}.`;
 }
 export function elapsed(seconds) {
   const whole = Math.floor(seconds);
