@@ -66,7 +66,7 @@ color tokens: warm ivory or graphite surfaces, pine or original Ding green
 (`#7EE787`) accents, violet information and unknown states, amber warnings, and
 coral errors/fatals. A live connection uses violet; it does not claim that the
 logs are healthy. Text labels distinguish every severity, including error from
-fatal. The green angular log-tail SVG is used in the masthead and on a graphite
+fatal. The green upright-hook cat-tail SVG is used in the masthead and on a graphite
 favicon backing. See [the visual foundation](DESIGN.md) for palette roles.
 Typography, controls, and panels follow Ding Console's system font stacks,
 14 px body, heading hierarchy, 4 px spacing grid, 6 px control corners, and

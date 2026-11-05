@@ -1,7 +1,7 @@
 # Visual foundation
 
-Tell-Tail uses the angular log-tail mark: three log lines, with the lowest
-continuing into an upright, angled tail. `web/logo.svg` is the clean, transparent
+Tell-Tail uses the upright-hook cat-tail mark: three log lines, with the middle
+continuing smoothly upward into an inward curl with a fuller, rounded tip. `web/logo.svg` is the clean, transparent
 vector source in original Ding green (`#7EE787`). `web/favicon.svg` places the
 same geometry on graphite so it stays legible against light and dark browser
 chrome. The dashboard gives the mark the same graphite backing.
