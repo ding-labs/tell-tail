@@ -3,8 +3,8 @@
 Implemented October 20, 2026. A web publisher can now react to each native
 publication without adding a polling interval. The experimental server uses this
 path for real stdin and followed files; fixture replay keeps its synthetic timer.
-The [production web server](WEB-SERVER.md) is implemented; the dashboard remains
-the next increment.
+The [production web server](WEB-SERVER.md) and
+[embedded dashboard](WEB-DASHBOARD.md) use this notification path.
 
 ## API and ownership
 
@@ -53,7 +53,39 @@ runtime starts only in web mode. `--no-default-features` excludes Tokio from the
 active normal dependency graph. The asynchronous subscription adds one weak
 registration and one notifier for the active publisher, independent of browser-client count.
 
-## Local freshness validation
+## Bounded presentation data (unreleased additions)
+
+Current main adds two fields to the owned Rust `Snapshot`:
+
+- `severity_history: Vec<SeverityCounts>` contains up to 60 completed seconds,
+  aligned with `history`. Each point has `warn: u64` and `error: u64`, where
+  error includes fatal. The engine keeps a fixed ring and clones only this
+  bounded view at publication; changing `--window` does not extend history.
+- `activity: Activity` contains `Option<f64>` ages for the last record and last
+  error/fatal record, computed from monotonic processing time at publication.
+  `None` means no matching record observed. A retained snapshot's ages do not
+  change as wall time advances.
+
+Both fields, like the existing bounded `recent_errors`, have `#[serde(skip)]`.
+Serializing `Snapshot` directly therefore preserves CLI JSON schema 2. The web
+encoder explicitly adds presentation fields at the envelope level under web
+schema 1; see the [field types, validation, and compatibility rules](WEB-FRAMES.md).
+Library callers constructing snapshots must keep total and severity history
+lengths aligned and counts consistent before calling `WebFrame::encode`.
+
+Coverage adds no stored history or serialized field. `Counts::recognized_records()`
+returns records minus unknowns (saturating), and `recognized_ratio()` returns
+`None` for an empty denominator. Use the rolling window's counts for the same
+scope as the dashboard, rather than session totals.
+
+These additions do not introduce a publication queue, persistence, an inference
+worker, or per-client ingestion work. A caller retaining arbitrarily many owned
+snapshots can still grow its own memory; built-in consumers retain bounded current
+state. Display freeze retains a snapshot while ingestion and alert evaluation
+continue. Read [time scopes and interpretation](MONITORING.md) before using these
+measurements as a health signal.
+
+## Historical local freshness validation (October 20, 2026)
 
 The [measurement record](validation/snapshot-notifications-2026-10-20.json)
 contains the tested source revision, binary hash, host/toolchain, audit identity,

@@ -1,5 +1,10 @@
 # Tell-Tail 0.2 validation commands
 
+For the current coverage, severity history, activity freshness, and onboarding
+work, start with [dashboard validation](TESTING-DASHBOARDS.md). It maps behavior
+to regression tests and provides manual acceptance steps; the procedures below
+cover the broader reliability and performance campaigns.
+
 Build the exact revision being tested with `cargo build --release --locked`.
 The soak runner records the workspace commit and dirty state, binary SHA-256,
 workspace toolchain, platform, fixture hash, seed, expected counts, and actual
@@ -133,7 +138,8 @@ container exit as an interrupted campaign while preserving the original
 journal. It never restarts containers or counts partial duration as a pass.
 Retain each attempt separately; a retry starts a fresh full-duration campaign.
 The watcher supervises infrastructure; the soak report and final evidence review
-still determine whether a release gate passes.
+still determine whether that campaign is valid. The two 24-hour scenarios remain
+optional background observations, not release gates.
 
 Observe end-to-end dashboard updates with the pinned development-only terminal
 emulator ([pyte](https://pyte.readthedocs.io/en/latest/)):
@@ -225,10 +231,11 @@ and 30-second fuzz smokes. It records host architecture and enforces resource an
 correctness checks; shared-runner throughput is not a release threshold.
 
 `Extended validation` runs weekly or manually: 30 minutes per fuzz target and
-one-hour dashboard soaks on both operating systems. Its optional `release_soaks`
-input requires a provisioned Linux runner with labels `self-hosted`, `linux`, and
-`tell-tail-validation`; the two 24-hour jobs run sequentially with 25-hour job
-timeouts. Provision disk space for Rust builds in addition to the 256 MiB fixture
+one-hour dashboard soaks on both operating systems. The separate, manually dispatched **Background 24-hour soaks (non-blocking)**
+workflow requires a provisioned Linux runner with labels `self-hosted`, `linux`,
+and `tell-tail-validation`; its two jobs run sequentially with 25-hour job
+timeouts. These jobs are optional background validation and are not dependencies
+of release or publication. Provision disk space for Rust builds in addition to the 256 MiB fixture
 budget. No dedicated runner is provisioned by this repository. Workflow files
 alone are not evidence that these jobs have passed.
 

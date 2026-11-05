@@ -193,6 +193,31 @@ fn panel<'a>(title: impl Into<Line<'a>>) -> Block<'a> {
         .title(title.into())
 }
 
+fn activity_summary(s: &Snapshot) -> String {
+    let age = |value: Option<f64>| {
+        value.map_or_else(|| "none observed".into(), |v| format!("{v:.1}s ago"))
+    };
+    format!(
+        "Last record: {} · last error: {}",
+        age(s.activity.last_record_age_seconds),
+        age(s.activity.last_error_age_seconds)
+    )
+}
+
+fn waiting_hint(s: &Snapshot) -> &'static str {
+    if s.state.is_final() {
+        "No complete records observed in this session."
+    } else if s.state == crate::stats::State::Waiting {
+        "Waiting for the input file to appear."
+    } else if s.pending_bytes > 0 {
+        "Partial record buffered; waiting for a newline."
+    } else if s.state == crate::stats::State::Following {
+        "Following new records; --from start includes existing lines."
+    } else {
+        "Waiting for complete records from the input."
+    }
+}
+
 fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review: &Review) {
     let area = frame.area();
     frame.render_widget(
@@ -234,6 +259,11 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
                     Style::default().fg(theme::INFO),
                 ),
                 Line::raw(format!("Parse failures: {}", s.totals.parse_failures)),
+                Line::raw(format!(
+                    "Severity recognized: {} (window)",
+                    percent(s.window.counts.recognized_ratio())
+                )),
+                Line::raw(activity_summary(s)),
                 Line::styled(
                     "Resize to 60 × 18 for dashboard",
                     Style::default().fg(theme::MUTED),
@@ -327,13 +357,53 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
         .history
         .len()
         .saturating_sub(usize::from(overview[0].width.saturating_sub(2)));
+    let charts = Layout::vertical([
+        Constraint::Min(4),
+        Constraint::Length(3),
+        Constraint::Length(3),
+    ])
+    .split(overview[0]);
     frame.render_widget(
         Sparkline::default()
             .data(&s.history[history_start..])
             .style(Style::default().fg(theme::BRAND))
             .block(panel(" Throughput · entries/s ")),
-        overview[0],
+        charts[0],
     );
+    let warnings: Vec<_> = s
+        .severity_history
+        .iter()
+        .skip(history_start)
+        .map(|p| p.warn)
+        .collect();
+    let errors: Vec<_> = s
+        .severity_history
+        .iter()
+        .skip(history_start)
+        .map(|p| p.error)
+        .collect();
+    // Use the same scale for both severity plots; zero stays visually empty.
+    let severity_max = warnings
+        .iter()
+        .chain(&errors)
+        .copied()
+        .max()
+        .unwrap_or(0)
+        .max(1);
+    for (index, name, data, color) in [
+        (1, "Warn/s", &warnings, theme::WARNING),
+        (2, "Err+fatal/s", &errors, theme::INCIDENT),
+    ] {
+        let latest = data.last().map_or_else(|| "—".into(), u64::to_string);
+        frame.render_widget(
+            Sparkline::default()
+                .data(data)
+                .max(severity_max)
+                .style(Style::default().fg(color))
+                .block(panel(format!(" {name} {latest} "))),
+            charts[index],
+        );
+    }
     let rows = Level::ALL.into_iter().map(|level| {
         let count = s.window.counts.levels.get(level);
         let ratio =
@@ -363,7 +433,10 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
                 .add_modifier(Modifier::BOLD),
         ),
     )
-    .block(panel(" Severity "));
+    .block(panel(format!(
+        " Severity · {} recognized ",
+        percent(s.window.counts.recognized_ratio())
+    )));
     frame.render_widget(table, overview[1]);
     let entries = review.entries(s);
     let offset = review.offset.min(entries.len().saturating_sub(1));
@@ -412,7 +485,9 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
         .collect();
     if entries.is_empty() {
         lines.push(Line::styled(
-            if review.fatal_only {
+            if s.totals.records == 0 {
+                waiting_hint(s)
+            } else if review.fatal_only {
                 "No fatal records captured. f shows errors too."
             } else {
                 "No errors or fatal records captured."
@@ -426,18 +501,19 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
         .map(|b| format!("{b} B"))
         .unwrap_or_else(|| "unknown".into());
     let footer = if help {
-        "q: quit · Ctrl-C: interrupt · space: freeze display (ingestion continues)\n↑/↓ or PgUp/PgDn review (freezes display) · f fatal only\n20 previews, 512 bytes each · ? or Esc closes help".into()
+        "q quit · space freeze (ingestion continues) · ↑↓ review · f fatal only\nRecognized = known severity / all window records; unknown may lack a level.\nJSON: string level (--level-field); text: INFO, [WARN], ERROR: · ? closes help".into()
     } else {
         format!(
-            " Session: {} records · {:.2} MiB · {:.1}s   Backlog: {}\n Parse failures: {} · oversized: {} · pending: {} B · skipped: {} B\n q quit · space freeze · ↑↓ review · f fatal · ? help",
+            " {} · Session: {} records · {:.2} MiB · {:.1}s\n Parse failures: {} · oversized: {} · pending: {} B · skipped: {} B · Backlog: {}\n q quit · space freeze · ↑↓ review · f fatal · ? help",
+            activity_summary(s),
             s.totals.records,
             s.bytes_read as f64 / 1_048_576.0,
             s.elapsed_seconds,
-            backlog,
             s.totals.parse_failures,
             s.totals.oversized_records,
             s.pending_bytes,
-            s.skipped_bytes
+            s.skipped_bytes,
+            backlog,
         )
     };
     frame.render_widget(
@@ -456,6 +532,42 @@ mod tests {
     use ratatui::backend::TestBackend;
 
     #[test]
+    fn activity_ages_and_file_waiting_guidance_are_visible() {
+        let mut stats = Stats::new(1, "app.log".into());
+        let waiting = stats.snapshot(Duration::from_secs(2), State::Following, 0, Some(0));
+        let mut terminal = Terminal::new(TestBackend::new(80, 24)).unwrap();
+        terminal.draw(|f| draw(f, &waiting, false, false)).unwrap();
+        let text = terminal
+            .backend()
+            .buffer()
+            .content
+            .iter()
+            .map(|c| c.symbol())
+            .collect::<String>();
+        assert!(text.contains("--from start"));
+        assert!(text.contains("Last record: none observed"));
+        stats.record(
+            Classification {
+                level: Level::Fatal,
+                parse_failure: false,
+            },
+            false,
+            Duration::from_secs(3),
+        );
+        let idle = stats.snapshot(Duration::from_secs(5), State::Following, 0, Some(0));
+        terminal.draw(|f| draw(f, &idle, true, false)).unwrap();
+        let text = terminal
+            .backend()
+            .buffer()
+            .content
+            .iter()
+            .map(|c| c.symbol())
+            .collect::<String>();
+        assert!(text.contains("Last record: 2.0s ago · last error: 2.0s ago"));
+        assert!(text.contains("DISPLAY FROZEN"));
+    }
+
+    #[test]
     fn narrow_chart_keeps_the_newest_completed_second() {
         let mut snapshot = Stats::new(60, "stdin".into()).snapshot(
             Duration::from_secs(60),
@@ -468,8 +580,8 @@ mod tests {
         let mut terminal = Terminal::new(TestBackend::new(80, 24)).unwrap();
         terminal.draw(|f| draw(f, &snapshot, false, false)).unwrap();
         let buffer = terminal.backend().buffer();
-        assert_eq!(buffer[(35, 12)].symbol(), "█");
-        assert_eq!(buffer[(1, 12)].symbol(), " ");
+        assert_eq!(buffer[(35, 6)].symbol(), "█");
+        assert_eq!(buffer[(1, 6)].symbol(), " ");
     }
 
     #[test]

@@ -2,7 +2,7 @@
 /** @typedef {{configured_seconds: number, resolution_seconds: number, observed_seconds: number, counts: Counts, bytes_read: string, records_per_second: number, bytes_per_second: number, warning_ratio: number|null, error_ratio: number|null}} Window */
 /** @typedef {{kind: string, session_id: string, source: string, state: string, elapsed_seconds: number, observed_at_unix_seconds: number, totals: Counts, bytes_read: string, pending_bytes: string, skipped_bytes: string, discarded_partial_records: string, backlog_bytes: string|null, warning_ratio: number|null, error_ratio: number|null, window: Window, history: string[]}} Metrics */
 /** @typedef {{record: string, elapsed_seconds: number, level: 'error'|'fatal', preview: string, truncated: boolean}} RecentError */
-/** @typedef {{web_schema_version: 1, sequence: string, metrics: Metrics, recent_errors?: RecentError[]}} Frame */
+/** @typedef {{web_schema_version: 1, sequence: string, metrics: Metrics, activity?: {last_record_age_seconds:number|null,last_error_age_seconds:number|null}, severity_history?: {warn:string,error:string}[], recent_errors?: RecentError[]}} Frame */
 
 export const levels = ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'unknown'];
 export const finalStates = new Set(['complete', 'stopped', 'failed']);
@@ -66,6 +66,16 @@ export function parseFrame(json) {
   requireField(states.has(m.state), 'metrics.state', 'a supported input state');
   requireField(m.kind === (finalStates.has(m.state) ? 'final' : 'snapshot'), 'metrics.kind', 'consistent with the input state');
   number(m.elapsed_seconds, 'metrics.elapsed_seconds');
+  if (frame.activity !== undefined) {
+    object(frame.activity, 'activity');
+    for (const name of ['last_record_age_seconds', 'last_error_age_seconds']) {
+      const value = frame.activity[name];
+      if (value !== null) {
+        number(value, `activity.${name}`);
+        requireField(value <= m.elapsed_seconds, `activity.${name}`, 'no greater than session elapsed time');
+      }
+    }
+  }
   number(m.observed_at_unix_seconds, 'metrics.observed_at_unix_seconds');
   counts(m.totals, 'metrics.totals');
   for (const key of ['bytes_read', 'pending_bytes', 'skipped_bytes', 'discarded_partial_records']) counter(m[key], `metrics.${key}`);
@@ -87,6 +97,16 @@ export function parseFrame(json) {
   ratio(w.error_ratio, 'metrics.window.error_ratio');
   requireField(Array.isArray(m.history) && m.history.length <= 60, 'metrics.history', 'an array of at most 60 counters');
   for (const point of m.history) counter(point, 'metrics.history[]');
+  if (frame.severity_history !== undefined) {
+    requireField(Array.isArray(frame.severity_history) && frame.severity_history.length === m.history.length,
+      'severity_history', 'an array aligned with metrics.history');
+    for (const [i, point] of frame.severity_history.entries()) {
+      object(point, 'severity_history[]');
+      counter(point.warn, 'severity_history[].warn');
+      counter(point.error, 'severity_history[].error');
+      requireField(BigInt(point.warn) + BigInt(point.error) <= BigInt(m.history[i]), 'severity_history[]', 'counts no greater than total entries');
+    }
+  }
   if (frame.recent_errors !== undefined) {
     const entries = frame.recent_errors;
     requireField(Array.isArray(entries) && entries.length <= 20, 'recent_errors', 'an array of at most 20 previews');
@@ -106,6 +126,52 @@ export function parseFrame(json) {
 export function integer(value) { return integerFormat.format(BigInt(value)); }
 export function rate(value) { return rateFormat.format(value); }
 export function percent(value) { return value === null ? '—' : percentFormat.format(value); }
+
+/** Derive coverage from the unsampled rolling counts; no parser guessing. */
+export function parsingCoverage(counts) {
+  const total = BigInt(counts.records);
+  const unknown = BigInt(counts.levels.unknown);
+  const recognized = total - unknown;
+  const malformed = BigInt(counts.parse_failures);
+  const oversized = BigInt(counts.oversized_records);
+  const other = unknown - malformed - oversized;
+  return {
+    summary: total === 0n ? 'No records in the rolling window; severity coverage is unavailable.'
+      : `Severity recognized: ${percent(Number(recognized) / Number(total))} · ${integer(recognized)} of ${integer(total)} rolling records`,
+    breakdown: `${integer(unknown)} unknown: ${integer(malformed)} malformed, ${integer(oversized)} oversized, ${integer(other)} without a recognized severity.`,
+  };
+}
+
+/** Nonoverlapping completed intervals, independent of the configured rolling window. */
+export function severityComparison(frame) {
+  if (!frame.severity_history || frame.severity_history.length < 60) return 'Comparison needs 60 completed seconds.';
+  const sum = values => values.reduce((a, b) => a + BigInt(b), 0n);
+  const describe = (start, end) => {
+    const errors = sum(frame.severity_history.slice(start, end).map(p => p.error));
+    const total = sum(frame.metrics.history.slice(start, end));
+    const ratio = total === 0n ? 'no records' : percent(Number(errors) / Number(total));
+    return `${integer(errors)} / ${integer(total)} (${ratio})`;
+  };
+  return `Error + fatal logs · last 30 completed seconds: ${describe(30, 60)}; preceding 30: ${describe(0, 30)}.`;
+}
+
+export function activityText(frame) {
+  const m = frame.metrics;
+  const age = value => value === null ? 'None observed' : `${rate(value)}s ago`;
+  let note = 'Ages at the displayed snapshot · errors include fatal records.';
+  if (m.totals.records === '0') {
+    if (finalStates.has(m.state)) note = 'No complete records observed in this session.';
+    else if (m.state === 'waiting') note = 'Waiting for the input file to appear.';
+    else if (m.pending_bytes !== '0') note = 'A partial record is buffered; waiting for a newline.';
+    else if (m.state === 'following') note = 'Following new records. Use --from start to include existing file contents.';
+    else note = 'Waiting for complete records from the input.';
+  }
+  return {
+    record: frame.activity ? age(frame.activity.last_record_age_seconds) : 'Unavailable',
+    error: frame.activity ? age(frame.activity.last_error_age_seconds) : 'Unavailable',
+    note,
+  };
+}
 export function elapsed(seconds) {
   const whole = Math.floor(seconds);
   return `${Math.floor(whole / 3600).toString().padStart(2, '0')}:${Math.floor(whole / 60 % 60).toString().padStart(2, '0')}:${(whole % 60).toString().padStart(2, '0')}`;

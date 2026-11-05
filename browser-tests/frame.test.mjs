@@ -1,9 +1,64 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { elapsed, historyPoints, integer, parseFrame, percent, rate } from '../web/frame.mjs';
+import { activityText, elapsed, historyPoints, integer, parseFrame, parsingCoverage, percent, rate, severityComparison } from '../web/frame.mjs';
 
 const fixture = readFileSync(new URL('../tests/fixtures/output/empty-web-v1.json', import.meta.url), 'utf8');
+
+test('activity distinguishes absent observations, idle ages and waiting states', () => {
+  const frame = JSON.parse(fixture);
+  assert.equal(activityText(frame).record, 'None observed');
+  frame.metrics.state = 'following'; frame.metrics.kind = 'snapshot';
+  assert.match(activityText(frame).note, /--from start/);
+  frame.metrics.pending_bytes = '8';
+  assert.match(activityText(frame).note, /partial record/);
+  frame.metrics.state = 'waiting';
+  assert.match(activityText(frame).note, /file to appear/);
+  frame.metrics.elapsed_seconds = 12;
+  frame.metrics.totals.records = '1';
+  frame.activity = {last_record_age_seconds: 10, last_error_age_seconds: null};
+  assert.equal(activityText(frame).record, '10s ago');
+  parseFrame(JSON.stringify(frame));
+  for (const age of [-1, 13, '1']) {
+    frame.activity.last_record_age_seconds = age;
+    assert.throws(() => parseFrame(JSON.stringify(frame)), /activity/);
+  }
+  delete frame.activity;
+  parseFrame(JSON.stringify(frame));
+  assert.equal(activityText(frame).record, 'Unavailable');
+});
+
+test('severity history validates alignment and compares two complete intervals', () => {
+  const frame = JSON.parse(fixture);
+  assert.match(severityComparison(frame), /needs 60/);
+  frame.metrics.history = Array(60).fill('10');
+  frame.severity_history = Array.from({ length: 60 }, (_, i) => ({ warn: '1', error: i < 30 ? '0' : '2' }));
+  parseFrame(JSON.stringify(frame));
+  assert.match(severityComparison(frame), /last 30 completed seconds: 60 \/ 300 \(20%\); preceding 30: 0 \/ 300 \(0%\)/);
+  for (const mutate of [
+    f => f.severity_history.pop(),
+    f => f.severity_history[0].warn = 1,
+    f => f.severity_history[0].error = '11',
+  ]) {
+    const bad = structuredClone(frame);
+    mutate(bad);
+    assert.throws(() => parseFrame(JSON.stringify(bad)), /severity_history/);
+  }
+  frame.metrics.history.fill('0');
+  frame.severity_history = Array.from({ length: 60 }, () => ({ warn: '0', error: '0' }));
+  assert.match(severityComparison(frame), /0 \/ 0 \(no records\)/);
+});
+
+test('coverage distinguishes no observations from unrecognized and malformed records', () => {
+  const counts = JSON.parse(fixture).metrics.window.counts;
+  assert.match(parsingCoverage(counts).summary, /unavailable/);
+  Object.assign(counts, { records: '4', parse_failures: '1', oversized_records: '1' });
+  counts.levels.unknown = '3';
+  assert.equal(parsingCoverage(counts).summary, 'Severity recognized: 25% · 1 of 4 rolling records');
+  assert.equal(parsingCoverage(counts).breakdown, '3 unknown: 1 malformed, 1 oversized, 1 without a recognized severity.');
+  counts.records = '18446744073709551615';
+  assert.match(parsingCoverage(counts).summary, /18,446,744,073,709,551,612 of 18,446,744,073,709,551,615/);
+});
 
 test('production fixture preserves nulls, zeroes and exact counters', () => {
   const frame = parseFrame(fixture);

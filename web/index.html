@@ -33,6 +33,11 @@
           <div><dt>Session entries</dt><dd id="total-records">—</dd></div>
           <div><dt>Session bytes</dt><dd id="total-bytes">—</dd></div>
         </dl>
+        <dl class="activity-meta">
+          <div><dt>Last record</dt><dd id="last-record">—</dd></div>
+          <div><dt>Last error or fatal</dt><dd id="last-error">—</dd></div>
+        </dl>
+        <p class="subtle" id="activity-note">Ages are measured at the displayed snapshot.</p>
       </section>
       <section aria-labelledby="rolling-title">
         <div class="section-heading"><h2 id="rolling-title">Rolling window</h2><p id="window-note">—</p></div>
@@ -42,6 +47,15 @@
           <article class="metric"><h3>Warning ratio</h3><p class="metric-value" id="warning-ratio">—</p><p>Warn / all entries</p></article>
           <article class="metric"><h3>Error + fatal ratio</h3><p class="metric-value" id="error-ratio">—</p><p>(Error + fatal) / all entries</p></article>
         </div>
+      </section>
+      <section class="parsing-note" aria-label="Parsing coverage">
+        <p id="parsing-coverage">Waiting for records to measure severity coverage.</p>
+        <details id="parsing-help">
+          <summary>Understand parsing coverage</summary>
+          <p id="parsing-breakdown"></p>
+          <p>Coverage measures recognized severity, not application health. Unknown records remain in all ratio denominators. They may be valid logs without a supported level.</p>
+          <p>JSON needs a string level, such as <code>"level":"info"</code>. Use <code>--level-field severity</code> for a different top-level field. Numeric levels are not mapped. Text accepts <code>INFO message</code>, <code>[WARN] message</code>, or <code>ERROR: message</code>, optionally after an ISO timestamp. Disable producer colors if ANSI codes obscure the prefix.</p>
+        </details>
       </section>
       <div class="detail-grid">
         <section class="panel chart-panel" aria-labelledby="throughput-title">
@@ -69,6 +83,21 @@
             <figcaption id="chart-caption">No completed seconds yet.</figcaption>
           </figure>
           <details class="chart-data"><summary>View exact chart values</summary><div class="table-scroll"><table><thead><tr><th scope="col">Elapsed interval</th><th scope="col">Entries</th></tr></thead><tbody id="chart-values"></tbody></table></div></details>
+          <div class="severity-history">
+            <h3>Warnings and errors / second</h3>
+            <p class="subtle"><span class="warning-key">Warnings</span> · <span class="error-key">Errors + fatal</span> · shared scale</p>
+            <svg id="severity-chart" viewBox="0 0 760 130" role="img" aria-labelledby="severity-chart-title severity-chart-description">
+              <title id="severity-chart-title">Severity in the last 60 completed seconds</title>
+              <desc id="severity-chart-description">Waiting for completed seconds.</desc>
+              <g class="chart-grid"><path d="M60 20H748 M60 100H748"/></g>
+              <g class="chart-labels"><text id="severity-max" x="50" y="24" text-anchor="end">0</text><text x="50" y="104" text-anchor="end">0</text></g>
+              <path id="warning-line" class="warning-line"/>
+              <path id="error-line" class="error-line"/>
+            </svg>
+            <p class="subtle" id="severity-caption">Waiting for completed seconds.</p>
+            <p class="subtle" id="severity-comparison">Comparison needs 60 completed seconds.</p>
+            <details class="severity-data"><summary>View exact severity values</summary><div class="table-scroll"><table><thead><tr><th>Elapsed interval</th><th>Warnings</th><th>Errors + fatal</th></tr></thead><tbody id="severity-values"></tbody></table></div></details>
+          </div>
         </section>
         <section class="panel severity-panel" aria-labelledby="severity-title">
           <div class="section-heading"><h2 id="severity-title">Severity</h2><span class="label">SESSION TOTALS</span></div>

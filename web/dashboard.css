@@ -67,6 +67,7 @@ p { line-height: 1.6; }
 .source { display: flex; align-items: baseline; gap: 12px; }
 #source { flex: 1; font: 13px/1.6 var(--ding-mono); overflow-wrap: anywhere; min-width: 0; }
 dl { margin: 0; }
+.activity-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0 8px; }
 .session-meta { display: grid; grid-template-columns: 1fr 1fr 1.2fr 1.2fr; gap: 24px; border-top: 1px solid var(--ding-border); padding-top: 16px; margin-top: 16px; }
 .session-meta > div, .diagnostic-grid > div { min-width: 0; }
 dt { color: var(--ding-muted); font-size: 12px; }
@@ -80,6 +81,9 @@ dd { font-size: 15px; margin: 4px 0 0; font-variant-numeric: tabular-nums; overf
 #error-ratio { color: var(--ding-incident); }
 .metric > p:last-child, .subtle, figcaption { color: var(--ding-muted); font-size: 12px; margin: 0; }
 .detail-grid { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); gap: 24px; margin: 24px 0; }
+.parsing-note { margin-top: 16px; padding: 12px 16px; background: var(--ding-subtle); border-radius: var(--ding-radius-control); }
+.parsing-note p { margin: 4px 0; overflow-wrap: anywhere; }
+.parsing-note details { color: var(--ding-muted); font-size: 12px; }
 .panel .section-heading { margin: 0 0 8px; }
 .panel .section-heading .label { font-size: 11px; text-align: right; }
 figure { margin: 16px 0 0; }
@@ -95,6 +99,14 @@ figure { margin: 16px 0 0; }
 .chart-area { fill: var(--ding-brand); fill-opacity: .08; }
 .chart-line { stroke: var(--ding-brand); stroke-width: 2; fill: none; stroke-linejoin: round; }
 .chart-dots { fill: var(--ding-brand); }
+.severity-history { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--ding-border); }
+#severity-chart { width: 100%; display: block; }
+.warning-key { color: var(--ding-attention); }
+.error-key { color: var(--ding-incident); }
+.warning-line, .error-line { fill: none; stroke-width: 2; stroke-linejoin: round; }
+.warning-line { stroke: var(--ding-attention); stroke-dasharray: 5 3; }
+.error-line { stroke: var(--ding-incident); }
+.severity-data summary { padding: 8px 0; color: var(--ding-brand); }
 figcaption { margin: 8px 0 0; }
 .chart-data { margin-top: 8px; }
 summary { cursor: pointer; font-size: 13px; line-height: 1.6; }

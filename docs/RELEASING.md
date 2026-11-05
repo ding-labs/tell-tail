@@ -16,6 +16,11 @@ package checks alone does not publish to any channel.
 | `x86_64-unknown-linux-musl` | 64-bit x86 Linux, static musl | Native Linux x86_64 |
 | `aarch64-unknown-linux-musl` | 64-bit ARM Linux, static musl | Native Linux ARM64 |
 
+macOS CI and archive builds use the `macos-15` ARM64 runner. GitHub
+[retired macOS 14 runners on November 2, 2026](https://github.blog/changelog/2026-10-01-github-actions-macos-14-runner-image-retirement/).
+The archive build still sets `MACOSX_DEPLOYMENT_TARGET=14.0`; the runner migration
+does not raise the declared minimum OS, but CI execution now verifies macOS 15.
+
 Linux archives have no dynamic loader or shared-library dependencies. Packaging
 rejects a binary for the wrong architecture or one with dynamic dependencies.
 The workflow tests each archive in Debian 11 and Alpine 3.22 userspaces as well

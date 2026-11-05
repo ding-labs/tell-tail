@@ -43,6 +43,14 @@ pub struct Counts {
     pub oversized_records: u64,
 }
 impl Counts {
+    /// Coverage of severity classification, not confidence in application health.
+    pub fn recognized_records(&self) -> u64 {
+        self.records.saturating_sub(self.levels.get(Level::Unknown))
+    }
+    pub fn recognized_ratio(&self) -> Option<f64> {
+        (self.records != 0).then(|| self.recognized_records() as f64 / self.records as f64)
+    }
+
     fn record(&mut self, classification: Classification, oversized: bool) {
         self.records += 1;
         self.levels.0[classification.level as usize] += 1;
@@ -111,6 +119,12 @@ pub struct Snapshot {
     pub window: Window,
     /// Completed per-second record counts, oldest first, at most 60 points.
     pub history: Vec<u64>,
+    /// Dashboard-only counts aligned with the completed-second throughput history.
+    #[serde(skip)]
+    pub severity_history: Vec<SeverityCounts>,
+    /// Ages measured at this snapshot, using monotonic processing time.
+    #[serde(skip)]
+    pub activity: Activity,
     /// Dashboard-only previews; the CLI JSON and webhook contracts omit logs.
     #[serde(skip)]
     pub recent_errors: Vec<crate::recent::RecentError>,
@@ -124,6 +138,18 @@ struct Bucket {
 struct HistoryBucket {
     second: u64,
     records: u64,
+    severity: SeverityCounts,
+}
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct SeverityCounts {
+    pub warn: u64,
+    /// Error and fatal records combined, matching the rolling error ratio.
+    pub error: u64,
+}
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Activity {
+    pub last_record_age_seconds: Option<f64>,
+    pub last_error_age_seconds: Option<f64>,
 }
 const TICKS_PER_SECOND: u64 = 10;
 pub struct Stats {
@@ -139,6 +165,9 @@ pub struct Stats {
     window: u32,
     source: String,
     session_id: String,
+    processing_at: Duration,
+    last_record_at: Option<Duration>,
+    last_error_at: Option<Duration>,
 }
 impl Stats {
     pub fn new(window: u32, source: String) -> Self {
@@ -164,11 +193,15 @@ impl Stats {
             window,
             source,
             session_id,
+            processing_at: Duration::ZERO,
+            last_record_at: None,
+            last_error_at: None,
         }
     }
     // Time advances once per input batch or snapshot. The aggregate excludes the
     // current bucket, avoiding another counter update for every individual log.
     pub(crate) fn advance(&mut self, at: Duration) {
+        self.processing_at = at;
         let tick = at
             .as_secs()
             .saturating_mul(TICKS_PER_SECOND)
@@ -205,15 +238,27 @@ impl Stats {
         self.record_current(class, oversized);
     }
     pub(crate) fn record_current(&mut self, class: Classification, oversized: bool) {
+        self.last_record_at = Some(self.processing_at);
+        if matches!(class.level, Level::Error | Level::Fatal) {
+            self.last_error_at = Some(self.processing_at);
+        }
         self.totals.record(class, oversized);
         let index = self.tick as usize % self.buckets.len();
         self.buckets[index].counts.record(class, oversized);
         let second = self.tick / TICKS_PER_SECOND;
         let history = &mut self.history[second as usize % 61];
         if history.second != second {
-            *history = HistoryBucket { second, records: 0 };
+            *history = HistoryBucket {
+                second,
+                ..HistoryBucket::default()
+            };
         }
         history.records += 1;
+        match class.level {
+            Level::Warn => history.severity.warn += 1,
+            Level::Error | Level::Fatal => history.severity.error += 1,
+            _ => (),
+        }
     }
     pub fn snapshot(
         &mut self,
@@ -238,6 +283,16 @@ impl Stats {
             .map(|s| {
                 let b = self.history[s as usize % 61];
                 if b.second == s { b.records } else { 0 }
+            })
+            .collect();
+        let severity_history = (now.saturating_sub(60)..now)
+            .map(|second| {
+                let b = self.history[second as usize % 61];
+                if b.second == second {
+                    b.severity
+                } else {
+                    SeverityCounts::default()
+                }
             })
             .collect();
         Snapshot {
@@ -275,6 +330,15 @@ impl Stats {
                 error_ratio: counts.levels.error_ratio(),
             },
             history,
+            severity_history,
+            activity: Activity {
+                last_record_age_seconds: self
+                    .last_record_at
+                    .map(|time| at.saturating_sub(time).as_secs_f64()),
+                last_error_age_seconds: self
+                    .last_error_at
+                    .map(|time| at.saturating_sub(time).as_secs_f64()),
+            },
             recent_errors: Vec::new(),
         }
     }
@@ -300,6 +364,69 @@ mod tests {
             Duration::from_secs_f64(second),
         );
     }
+    #[test]
+    fn severity_history_tracks_completed_seconds_and_ring_reuse_independent_of_window() {
+        let mut stats = Stats::new(1, "history".into());
+        for second in 0..130 {
+            for level in [
+                Level::Info,
+                Level::Warn,
+                Level::Error,
+                Level::Fatal,
+                Level::Unknown,
+            ] {
+                record(&mut stats, second as f64 + 0.5, level);
+            }
+            let s = stats.snapshot(
+                Duration::from_millis(second * 1000 + 999),
+                State::Reading,
+                0,
+                None,
+            );
+            assert_eq!(s.severity_history.len(), second.min(60) as usize);
+            assert_eq!(s.severity_history.len(), s.history.len());
+            assert!(s.history.iter().all(|n| *n == 5));
+            assert!(
+                s.severity_history
+                    .iter()
+                    .all(|p| *p == SeverityCounts { warn: 1, error: 2 })
+            );
+            assert!(
+                serde_json::to_value(&s)
+                    .unwrap()
+                    .get("severity_history")
+                    .is_none()
+            );
+        }
+        let idle = stats.snapshot(Duration::from_secs(190), State::Following, 0, None);
+        assert_eq!(idle.history, vec![0; 60]);
+        assert_eq!(idle.severity_history, vec![SeverityCounts::default(); 60]);
+    }
+
+    #[test]
+    fn coverage_includes_unknown_records_and_expires_with_the_window() {
+        let mut stats = Stats::new(1, "coverage".into());
+        let empty = stats.snapshot(Duration::ZERO, State::Reading, 0, None);
+        assert_eq!(empty.window.counts.recognized_ratio(), None);
+        record(&mut stats, 0.0, Level::Info);
+        record(&mut stats, 0.0, Level::Unknown);
+        stats.record(
+            Classification {
+                level: Level::Unknown,
+                parse_failure: true,
+            },
+            false,
+            Duration::ZERO,
+        );
+        stats.record(Classification::unknown(), true, Duration::ZERO);
+        let s = stats.snapshot(Duration::from_millis(500), State::Reading, 0, None);
+        assert_eq!(s.window.counts.recognized_records(), 1);
+        assert_eq!(s.window.counts.recognized_ratio(), Some(0.25));
+        let idle = stats.snapshot(Duration::from_secs(2), State::Reading, 0, None);
+        assert_eq!(idle.window.counts.recognized_ratio(), None);
+        assert_eq!(idle.totals.recognized_records(), 1);
+    }
+
     #[test]
     fn window_expires_on_idle_and_preserves_totals() {
         let mut s = Stats::new(2, "test".into());

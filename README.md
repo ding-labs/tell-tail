@@ -1,30 +1,11 @@
 # Tell-Tail
 
 A Rust log throughput and severity monitor with terminal and local web dashboards.
-Logs pass through; Tell-Tail keeps counters and bounded rolling statistics. It
-follows one file or reads stdin, and supports plain text, NDJSON, Prometheus, and
-a local HTTP/SSE metrics API.
+Tell-Tail reads one file or stdin and keeps counters, bounded rolling statistics,
+and a small in-memory sample of recent errors for its dashboards. It supports
+plain text, NDJSON, Prometheus, and a local HTTP/SSE metrics API.
 
-## Try it
-
-The repository pins Rust 1.88.0. With rustup installed:
-
-```sh
-git clone https://github.com/ding-labs/tell-tail.git
-cd tell-tail
-cargo build --release --locked
-python3 scripts/demo.py | ./target/release/tell-tail
-```
-
-The demo changes warning and error ratios over a 20-second cycle. Press `q` to
-quit, space to freeze the display while ingestion continues, and `?` for help.
-The terminal uses Ding's graphite and green palette with a compact chart/severity
-layout, violet information, amber warnings, and coral errors/fatals. At 60 × 20
-or larger it also shows recent error and fatal previews, newest first. Arrow keys
-and Page Up/Down freeze the display and scroll the previews; `f` toggles fatal-only
-review, and space resumes live updates. The dashboard retains at most 20 previews
-of 512 bytes each in memory; long previews are marked with an ellipsis. These
-previews are omitted from CLI JSON, text, Prometheus, and webhook payloads.
+## Install and try it
 
 Version 0.2.0 is available through Homebrew and
 [crates.io](https://crates.io/crates/tell-tail):
@@ -35,13 +16,89 @@ brew install ding-labs/tap/tell-tail
 cargo install tell-tail --locked
 ```
 
+Follow your application's log file in the terminal or browser:
+
+```sh
+tell-tail app.log
+tell-tail app.log --output web --open
+```
+
+Following starts at the end of the file. If nothing new is being written, an
+empty display is expected; add `--from start` to include existing contents.
+For a quick example without a log file, this command leaves its final report
+open in the browser until Ctrl+C:
+
+```sh
+printf 'INFO ready\nWARN upstream slow\nERROR upstream timeout\n' | tell-tail --output web --open
+```
+
+Press `q` to quit the terminal dashboard, space to freeze its display while
+counting continues, and `?` for help. Arrow keys and Page Up/Down freeze and
+scroll recent errors; `f` toggles fatal-only review. At 60 × 20 or larger, the
+terminal shows up to 20 error/fatal previews, each capped at 512 bytes and kept
+only in memory. Long previews are marked with an ellipsis. Previews are omitted
+from CLI JSON, text, Prometheus, and webhook payloads.
+
 [GitHub Releases](https://github.com/ding-labs/tell-tail/releases/tag/v0.2.0)
 provides native archives for Apple Silicon on macOS 14+ and static Linux binaries
 for x86_64 and ARM64. The dashboard is embedded; the archives need no Rust, Node,
-or Python. See the [distribution and publishing guide](docs/RELEASING.md) for
-platform details and macOS download/signing limitations.
+or Python. See the [distribution guide](docs/RELEASING.md) for platform details.
 
-To install from a local source checkout, use `cargo install --path . --locked`.
+**Current main, not yet released:** the built-in demo, parsing coverage, severity
+history, and activity ages described below are not in the 0.2.0 packages.
+
+Read [Understanding a live log stream](docs/MONITORING.md) for a complete guide
+to interpreting coverage, history, activity ages, controls, and their limits.
+The [documentation index](docs/README.md) links all user guides, API contracts,
+troubleshooting, and validation procedures.
+
+### Built-in demo (unreleased)
+
+Current main includes an offline demo; it is not in the published 0.2.0 packages.
+Clone the repository (it pins Rust 1.88.0), then try either dashboard without a
+log file or generator:
+
+```sh
+git clone https://github.com/ding-labs/tell-tail.git
+cd tell-tail
+cargo run --locked -- --demo --window 5
+cargo run --locked -- --demo --window 5 --output web --open
+```
+
+The source is labeled synthetic. Its 40-second cycle has eight seconds of normal
+activity, eight with warnings, eight with errors, six without records, and ten
+of recovery. Active phases generate approximately 100 records/second. The
+five-second rolling window makes the transitions easy to see; histories still
+cover 60 completed seconds. Press `q` in the terminal or Ctrl+C to stop. The demo
+uses the normal ingestion path and does not read stdin or create log files.
+To install the checkout, use `cargo install --path . --locked`; then run
+`tell-tail --demo --window 5` directly.
+
+The [demo walkthrough](docs/DEMO.md) explains every phase, what to observe,
+supported options, shutdown behavior, and how to distinguish it from a benchmark.
+
+## Everyday workflows
+
+Replace the example filenames and commands with your own:
+
+```sh
+# Watch a service while deploying or debugging it
+tell-tail app.log --window 10 --output web --open
+
+# Observe a Python worker with unbuffered stdout and stderr
+python3 -u worker.py 2>&1 | tell-tail
+
+# Read JSON logs whose string severity lives in a different top-level field
+tell-tail worker.ndjson --level-field severity
+
+# Review a completed capture and print its final counts
+tell-tail capture.ndjson --once
+```
+
+If a piped program buffers its output, configure that program to flush promptly;
+Tell-Tail can only measure records once they arrive. A fast scan of an old file
+shows processing throughput, not its original event rate. No recent logs alone
+cannot establish whether the application is healthy or stalled.
 
 ## Inputs and output
 
@@ -99,7 +156,8 @@ my-app 2>&1 | tell-tail --output web
 
 Web mode serves an embedded live dashboard and prints its loopback URL to stderr.
 It shows rolling rates and ratios, exact session totals, a 60-second throughput
-chart, severity counts, and ingestion diagnostics. Freeze/resume affects only
+chart, severity counts, and ingestion diagnostics. Current main also shows
+parsing coverage, warning/error histories, and activity ages as described above. Freeze/resume affects only
 the display; connection and failure status stay live. Hidden tabs release their
 stream and reconnect when shown. The binary works offline without Node or a CDN.
 The compact layout also shows the latest 20 error/fatal previews with a fatal-only
@@ -310,6 +368,28 @@ runs on the ingestion thread. Alerting is disabled unless configured.
 
 ## What is counted
 
+Both dashboards show **severity recognition coverage** for the rolling window:
+records with a recognized severity divided by all records. This is a measured
+coverage fraction, not confidence in application health. An empty window shows
+no percentage. The web dashboard breaks unknown records down into malformed,
+oversized, and records without a recognized severity, with parsing guidance;
+press `?` in the terminal for the supported prefix/field conventions.
+
+Throughput, warning, and error-plus-fatal histories show the last 60 completed
+seconds of processing time. Severity charts share a count scale, so a change in
+severity remains visible even when total volume is steady. The web dashboard
+also compares error counts and ratios over the last 30 completed seconds and
+the preceding 30, after a full minute is available. These intervals are separate
+from `--window`; empty intervals have no error percentage.
+
+Activity freshness shows the time since the last complete record and the last
+error/fatal record, measured at the displayed snapshot using processing time.
+Partial input bytes do not reset these ages; a final unterminated record counts
+at finite EOF. Ages freeze with the display and stop at the final snapshot.
+“None observed” means none in this session, not that the application is healthy.
+When a followed file has no new records, use `--from start` to include its existing
+contents. Missing files and incomplete lines have separate waiting guidance.
+
 - Each physical line is one record. Blank and unrecognized lines count as unknown.
   A final nonempty line without a newline counts at finite EOF. A trailing newline
   does not create another record. CRLF is supported.
@@ -391,11 +471,13 @@ Windows support. See [the implementation plan](docs/PLAN.md) for scope and
 subsequent increments, and [validation results](docs/VALIDATION.md) for measured
 performance and test coverage.
 
-The [0.2 implementation plan](docs/PLAN-0.2.md) defines the next reliability
-milestone, focused commits, and release criteria.
+The [0.2 implementation plan](docs/PLAN-0.2.md) records that release's reliability
+scope, focused increments, and validation criteria. For current dashboard work,
+use the [feature validation guide](docs/TESTING-DASHBOARDS.md).
 
-The [0.2 implementation validation](docs/VALIDATION-0.2.md) records completed
-checks and remaining release gates. See [validation commands](docs/TESTING-0.2.md)
+The [0.2 implementation validation](docs/VALIDATION-0.2.md) records checks and
+open items at that milestone; the [release validation](docs/VALIDATION-0.2-RELEASE.md)
+records the later release decision. See [validation commands](docs/TESTING-0.2.md)
 for the expanded test, fuzz, soak, benchmark, and package workflows.
 
 ## License

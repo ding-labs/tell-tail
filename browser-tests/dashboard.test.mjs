@@ -5,6 +5,56 @@ import { chromium, monitor } from './helpers.mjs';
 
 const fixture = JSON.parse(await readFile(new URL('../tests/fixtures/output/empty-web-v1.json', import.meta.url), 'utf8'));
 
+test('record ages advance on idle input, freeze with metrics and remain fixed at EOF', async t => {
+  const server = await monitor();
+  t.after(() => server.close());
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  await page.goto(server.url);
+  await page.waitForFunction(() => document.getElementById('last-record').textContent === 'None observed');
+  assert.match(await page.locator('#activity-note').textContent(), /Waiting for complete records/);
+  server.child.stdin.write('ERROR failed\n');
+  await page.waitForFunction(() => parseFloat(document.getElementById('last-error').textContent) >= 0.5);
+  await page.locator('#freeze').click();
+  const frozen = await page.locator('#last-record').textContent();
+  server.child.stdin.write('INFO recovered\n');
+  await page.waitForFunction(async () => (await (await fetch('/api/snapshot')).json()).metrics.totals.records === '2');
+  assert.equal(await page.locator('#last-record').textContent(), frozen);
+  await page.locator('#freeze').click();
+  await page.waitForFunction(() => parseFloat(document.getElementById('last-error').textContent) > parseFloat(document.getElementById('last-record').textContent));
+  server.child.stdin.end();
+  await page.waitForFunction(() => document.getElementById('input-state').textContent === 'complete');
+  const finalAge = await page.locator('#last-record').textContent();
+  await page.clock.install();
+  await page.clock.fastForward(10000);
+  assert.equal(await page.locator('#last-record').textContent(), finalAge);
+});
+
+test('severity history renders aligned exact counts and survives idle and freeze', async t => {
+  const server = await monitor();
+  t.after(() => server.close());
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  server.child.stdin.write('INFO normal\nWARN slow\nERROR failed\nFATAL stopped\n');
+  await page.goto(server.url);
+  await page.waitForFunction(() => document.querySelectorAll('#severity-values tr').length >= 1);
+  assert.match(await page.locator('#severity-values').textContent(), /1.*2/s);
+  assert.match(await page.locator('#error-line').getAttribute('d'), /^M/);
+  await page.locator('#freeze').click();
+  const path = await page.locator('#error-line').getAttribute('d');
+  server.child.stdin.write('ERROR later\n');
+  await page.waitForFunction(async () => (await (await fetch('/api/snapshot')).json()).metrics.totals.records === '5');
+  assert.equal(await page.locator('#error-line').getAttribute('d'), path);
+  await page.locator('#freeze').click();
+  await page.waitForFunction(() => document.getElementById('severity-caption').textContent.includes('0 warnings · 0 errors'));
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({ width, height: 1100 });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  }
+});
+
 test('recent error review is safe, frozen, filterable and bounded under a flood', async t => {
   const server = await monitor();
   t.after(() => server.close());
@@ -57,6 +107,9 @@ test('embedded dashboard renders real final metrics, diagnostics and responsive 
   assert.equal(await page.locator('#total-records').textContent(), '4');
   assert.equal(await page.locator('#warning-ratio').textContent(), '25%');
   assert.equal(await page.locator('#error-ratio').textContent(), '25%');
+  assert.equal(await page.locator('#parsing-coverage').textContent(), 'Severity recognized: 75% · 3 of 4 rolling records');
+  await page.locator('#parsing-help summary').click();
+  assert.match(await page.locator('#parsing-breakdown').textContent(), /1 unknown: 1 malformed, 0 oversized, 0 without/);
   await page.locator('.diagnostics summary').click();
   assert.equal(await page.locator('#parse-failures').textContent(), '1');
   assert.equal(await page.locator('#backlog').textContent(), '—');

@@ -32,6 +32,9 @@ pub enum From {
 pub struct Args {
     /// File to follow; omit or use - to read stdin.
     pub file: Option<PathBuf>,
+    /// Run a built-in synthetic stream: healthy, warnings, errors, silence, recovery.
+    #[arg(long, conflicts_with_all = ["file", "apple_unified", "once", "from", "format", "level_field"])]
+    pub demo: bool,
     /// Stream macOS unified logs at info level; no pipe or jq required.
     #[arg(long, conflicts_with_all = ["file", "once", "from"])]
     pub apple_unified: bool,
@@ -170,6 +173,24 @@ impl Args {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn demo_is_an_explicit_input_and_rejects_conflicting_sources_or_parsers() {
+        let args = Args::parse_from(["tell-tail", "--demo"]);
+        assert!(args.demo);
+        assert!(args.validate().is_ok());
+        for extra in [
+            vec!["app.log"],
+            vec!["-"],
+            vec!["--apple-unified"],
+            vec!["--once"],
+            vec!["--from", "start"],
+            vec!["--format", "json"],
+            vec!["--level-field", "severity"],
+        ] {
+            assert!(Args::try_parse_from([vec!["tell-tail", "--demo"], extra].concat()).is_err());
+        }
+    }
+
     #[test]
     fn apple_source_and_capture_format_have_explicit_contracts() {
         let args = Args::parse_from(["tell-tail", "--apple-unified"]);

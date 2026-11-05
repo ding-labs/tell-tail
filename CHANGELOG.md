@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- Both dashboards show rolling severity recognition coverage, completed-second
+  warning/error histories, and time since the last complete record and error.
+  The web view explains unknown records and compares two completed 30-second
+  error intervals. Activity ages freeze with displayed snapshots.
+- Added waiting guidance for new file records, missing files, and partial lines.
+- `--demo` runs a bounded offline synthetic stream through normal ingestion,
+  cycling through healthy activity, warnings, errors, silence, and recovery.
+- Installation-first onboarding includes practical recipes and clearly separates
+  published 0.2.0 commands from features available only in the source checkout.
+- Web schema 1 gains additive `severity_history` and `activity` fields. CLI JSON
+  schema 2, Prometheus metrics, and webhook payloads remain unchanged.
+
 ## 0.2.0 (2026-10-28)
 
 ### Added
