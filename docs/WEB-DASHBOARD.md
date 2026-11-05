@@ -135,7 +135,9 @@ existing security headers and CSP. There is no framework, chart library, font do
 CDN, or generated frontend bundle. Cargo includes these assets in source
 packages; development browser tooling is excluded.
 
-Development checks use a separate pinned Playwright package (Node 22+):
+See [dashboard validation](TESTING-DASHBOARDS.md) for the feature regression
+matrix, terminal checks, and manual acceptance walkthrough. Development browser
+checks use a separate pinned Playwright package (Node 22+):
 
 ```sh
 cargo build --locked
