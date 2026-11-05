@@ -5,6 +5,32 @@ import { chromium, monitor } from './helpers.mjs';
 
 const fixture = JSON.parse(await readFile(new URL('../tests/fixtures/output/empty-web-v1.json', import.meta.url), 'utf8'));
 
+test('record ages advance on idle input, freeze with metrics and remain fixed at EOF', async t => {
+  const server = await monitor();
+  t.after(() => server.close());
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  await page.goto(server.url);
+  await page.waitForFunction(() => document.getElementById('last-record').textContent === 'None observed');
+  assert.match(await page.locator('#activity-note').textContent(), /Waiting for complete records/);
+  server.child.stdin.write('ERROR failed\n');
+  await page.waitForFunction(() => parseFloat(document.getElementById('last-error').textContent) >= 0.5);
+  await page.locator('#freeze').click();
+  const frozen = await page.locator('#last-record').textContent();
+  server.child.stdin.write('INFO recovered\n');
+  await page.waitForFunction(async () => (await (await fetch('/api/snapshot')).json()).metrics.totals.records === '2');
+  assert.equal(await page.locator('#last-record').textContent(), frozen);
+  await page.locator('#freeze').click();
+  await page.waitForFunction(() => parseFloat(document.getElementById('last-error').textContent) > parseFloat(document.getElementById('last-record').textContent));
+  server.child.stdin.end();
+  await page.waitForFunction(() => document.getElementById('input-state').textContent === 'complete');
+  const finalAge = await page.locator('#last-record').textContent();
+  await page.clock.install();
+  await page.clock.fastForward(10000);
+  assert.equal(await page.locator('#last-record').textContent(), finalAge);
+});
+
 test('severity history renders aligned exact counts and survives idle and freeze', async t => {
   const server = await monitor();
   t.after(() => server.close());

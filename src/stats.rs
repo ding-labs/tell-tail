@@ -122,6 +122,9 @@ pub struct Snapshot {
     /// Dashboard-only counts aligned with the completed-second throughput history.
     #[serde(skip)]
     pub severity_history: Vec<SeverityCounts>,
+    /// Ages measured at this snapshot, using monotonic processing time.
+    #[serde(skip)]
+    pub activity: Activity,
     /// Dashboard-only previews; the CLI JSON and webhook contracts omit logs.
     #[serde(skip)]
     pub recent_errors: Vec<crate::recent::RecentError>,
@@ -143,6 +146,11 @@ pub struct SeverityCounts {
     /// Error and fatal records combined, matching the rolling error ratio.
     pub error: u64,
 }
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Activity {
+    pub last_record_age_seconds: Option<f64>,
+    pub last_error_age_seconds: Option<f64>,
+}
 const TICKS_PER_SECOND: u64 = 10;
 pub struct Stats {
     pub totals: Counts,
@@ -157,6 +165,9 @@ pub struct Stats {
     window: u32,
     source: String,
     session_id: String,
+    processing_at: Duration,
+    last_record_at: Option<Duration>,
+    last_error_at: Option<Duration>,
 }
 impl Stats {
     pub fn new(window: u32, source: String) -> Self {
@@ -182,11 +193,15 @@ impl Stats {
             window,
             source,
             session_id,
+            processing_at: Duration::ZERO,
+            last_record_at: None,
+            last_error_at: None,
         }
     }
     // Time advances once per input batch or snapshot. The aggregate excludes the
     // current bucket, avoiding another counter update for every individual log.
     pub(crate) fn advance(&mut self, at: Duration) {
+        self.processing_at = at;
         let tick = at
             .as_secs()
             .saturating_mul(TICKS_PER_SECOND)
@@ -223,6 +238,10 @@ impl Stats {
         self.record_current(class, oversized);
     }
     pub(crate) fn record_current(&mut self, class: Classification, oversized: bool) {
+        self.last_record_at = Some(self.processing_at);
+        if matches!(class.level, Level::Error | Level::Fatal) {
+            self.last_error_at = Some(self.processing_at);
+        }
         self.totals.record(class, oversized);
         let index = self.tick as usize % self.buckets.len();
         self.buckets[index].counts.record(class, oversized);
@@ -312,6 +331,14 @@ impl Stats {
             },
             history,
             severity_history,
+            activity: Activity {
+                last_record_age_seconds: self
+                    .last_record_at
+                    .map(|time| at.saturating_sub(time).as_secs_f64()),
+                last_error_age_seconds: self
+                    .last_error_at
+                    .map(|time| at.saturating_sub(time).as_secs_f64()),
+            },
             recent_errors: Vec::new(),
         }
     }

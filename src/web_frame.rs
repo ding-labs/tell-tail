@@ -50,6 +50,16 @@ impl WebFrame {
         {
             return Err(EncodeError::InvalidRecentErrors);
         }
+        if [
+            snapshot.activity.last_record_age_seconds,
+            snapshot.activity.last_error_age_seconds,
+        ]
+        .into_iter()
+        .flatten()
+        .any(|age| !age.is_finite() || age < 0.0 || age > snapshot.elapsed_seconds)
+        {
+            return Err(EncodeError::InvalidActivity);
+        }
         let mut writer = FrameWriter {
             bytes: Vec::with_capacity(MAX_FRAME_BYTES),
             too_large: false,
@@ -60,6 +70,10 @@ impl WebFrame {
                 web_schema_version: WEB_SCHEMA_VERSION,
                 sequence: Decimal(sequence),
                 metrics: Metrics::from(snapshot),
+                activity: WebActivity {
+                    last_record_age_seconds: snapshot.activity.last_record_age_seconds.map(Finite),
+                    last_error_age_seconds: snapshot.activity.last_error_age_seconds.map(Finite),
+                },
                 severity_history: (!snapshot.severity_history.is_empty())
                     .then_some(SeverityHistory(&snapshot.severity_history)),
                 recent_errors: (!snapshot.recent_errors.is_empty())
@@ -100,6 +114,7 @@ pub enum EncodeError {
     InvalidSessionId,
     InvalidHistory,
     InvalidRecentErrors,
+    InvalidActivity,
     Serialization(serde_json::Error),
 }
 
@@ -114,6 +129,9 @@ impl fmt::Display for EncodeError {
                 f.write_str("web histories must align and contain at most 60 completed seconds")
             }
             Self::InvalidRecentErrors => f.write_str("invalid bounded error previews"),
+            Self::InvalidActivity => {
+                f.write_str("activity ages must be finite, nonnegative and within the session")
+            }
             Self::Serialization(error) => write!(f, "cannot encode web frame: {error}"),
         }
     }
@@ -170,10 +188,17 @@ struct Envelope<'a> {
     web_schema_version: u32,
     sequence: Decimal,
     metrics: Metrics<'a>,
+    activity: WebActivity,
     #[serde(skip_serializing_if = "Option::is_none")]
     severity_history: Option<SeverityHistory<'a>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     recent_errors: Option<Recent<'a>>,
+}
+
+#[derive(Serialize)]
+struct WebActivity {
+    last_record_age_seconds: Option<Finite>,
+    last_error_age_seconds: Option<Finite>,
 }
 
 struct SeverityHistory<'a>(&'a [SeverityCounts]);

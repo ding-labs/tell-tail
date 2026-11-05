@@ -128,6 +128,40 @@ mod tests {
     use clap::Parser;
 
     #[test]
+    fn activity_tracks_complete_records_not_bytes_and_survives_idle_and_boundaries() {
+        let mut engine = Engine::new(&Args::parse_from(["tell-tail", "--window", "1"]));
+        engine.feed(b"INFO partial", Duration::from_millis(100));
+        let partial = engine.snapshot(Duration::from_millis(200), State::Reading, None);
+        assert_eq!(partial.activity.last_record_age_seconds, None);
+        engine.feed(b"\nERROR failed\n", Duration::from_millis(250));
+        let active = engine.snapshot(Duration::from_millis(300), State::Reading, None);
+        assert_eq!(active.activity.last_record_age_seconds, Some(0.05));
+        assert_eq!(active.activity.last_error_age_seconds, Some(0.05));
+        engine.feed(b"INFO unfinished", Duration::from_secs(1));
+        engine.discard_partial();
+        let idle = engine.snapshot(Duration::from_secs(3), State::Waiting, None);
+        assert_eq!(idle.window.counts.records, 0);
+        assert_eq!(idle.activity.last_record_age_seconds, Some(2.75));
+        assert_eq!(idle.activity.last_error_age_seconds, Some(2.75));
+        engine.feed(b"INFO final", Duration::from_secs(4));
+        engine.finish(Duration::from_secs(5));
+        let final_snapshot = engine.snapshot(Duration::from_secs(5), State::Complete, None);
+        assert_eq!(final_snapshot.activity.last_record_age_seconds, Some(0.0));
+        assert_eq!(final_snapshot.activity.last_error_age_seconds, Some(4.75));
+        assert!(
+            serde_json::to_value(final_snapshot)
+                .unwrap()
+                .get("activity")
+                .is_none()
+        );
+        assert_eq!(
+            active.activity.last_record_age_seconds,
+            Some(0.05),
+            "older snapshots stay frozen"
+        );
+    }
+
+    #[test]
     fn dashboard_review_follows_classification_chunking_and_final_records() {
         let input =
             b"INFO normal\nWARN ignored\nERROR first\n{\"level\":\"panic\",\"message\":\"last\"}";

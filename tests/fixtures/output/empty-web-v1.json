@@ -1,6 +1,7 @@
 {
   "web_schema_version": 1,
   "sequence": "0",
+  "activity": {"last_record_age_seconds": null, "last_error_age_seconds": null},
   "metrics": {
     "kind": "final",
     "session_id": "fixture",

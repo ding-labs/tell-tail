@@ -324,6 +324,14 @@ also compares error counts and ratios over the last 30 completed seconds and
 the preceding 30, after a full minute is available. These intervals are separate
 from `--window`; empty intervals have no error percentage.
 
+Activity freshness shows the time since the last complete record and the last
+error/fatal record, measured at the displayed snapshot using processing time.
+Partial input bytes do not reset these ages; a final unterminated record counts
+at finite EOF. Ages freeze with the display and stop at the final snapshot.
+“None observed” means none in this session, not that the application is healthy.
+When a followed file has no new records, use `--from start` to include its existing
+contents. Missing files and incomplete lines have separate waiting guidance.
+
 - Each physical line is one record. Blank and unrecognized lines count as unknown.
   A final nonempty line without a newline counts at finite EOF. A trailing newline
   does not create another record. CRLF is supported.

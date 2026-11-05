@@ -16,6 +16,13 @@ idle zeroes; their interval is independent of the rolling `--window` duration.
 The browser accepts older frames without this field and shows history as
 unavailable. CLI JSON schema 2 and webhook payloads are unchanged.
 
+The additive top-level `activity` object has `last_record_age_seconds` and
+`last_error_age_seconds` (including fatal). Each is null until observed, or a
+finite nonnegative age at the snapshot, no larger than session elapsed time.
+Partial bytes and skipped metadata do not count as records. Ages use monotonic
+processing time, persist beyond rolling expiry, and freeze with the displayed
+snapshot. Older frames without `activity` display unavailable ages.
+
 After obtaining an owned publication through the [snapshot API](SNAPSHOTS.md):
 
 ```rust

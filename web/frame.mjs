@@ -2,7 +2,7 @@
 /** @typedef {{configured_seconds: number, resolution_seconds: number, observed_seconds: number, counts: Counts, bytes_read: string, records_per_second: number, bytes_per_second: number, warning_ratio: number|null, error_ratio: number|null}} Window */
 /** @typedef {{kind: string, session_id: string, source: string, state: string, elapsed_seconds: number, observed_at_unix_seconds: number, totals: Counts, bytes_read: string, pending_bytes: string, skipped_bytes: string, discarded_partial_records: string, backlog_bytes: string|null, warning_ratio: number|null, error_ratio: number|null, window: Window, history: string[]}} Metrics */
 /** @typedef {{record: string, elapsed_seconds: number, level: 'error'|'fatal', preview: string, truncated: boolean}} RecentError */
-/** @typedef {{web_schema_version: 1, sequence: string, metrics: Metrics, severity_history?: {warn:string,error:string}[], recent_errors?: RecentError[]}} Frame */
+/** @typedef {{web_schema_version: 1, sequence: string, metrics: Metrics, activity?: {last_record_age_seconds:number|null,last_error_age_seconds:number|null}, severity_history?: {warn:string,error:string}[], recent_errors?: RecentError[]}} Frame */
 
 export const levels = ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'unknown'];
 export const finalStates = new Set(['complete', 'stopped', 'failed']);
@@ -66,6 +66,16 @@ export function parseFrame(json) {
   requireField(states.has(m.state), 'metrics.state', 'a supported input state');
   requireField(m.kind === (finalStates.has(m.state) ? 'final' : 'snapshot'), 'metrics.kind', 'consistent with the input state');
   number(m.elapsed_seconds, 'metrics.elapsed_seconds');
+  if (frame.activity !== undefined) {
+    object(frame.activity, 'activity');
+    for (const name of ['last_record_age_seconds', 'last_error_age_seconds']) {
+      const value = frame.activity[name];
+      if (value !== null) {
+        number(value, `activity.${name}`);
+        requireField(value <= m.elapsed_seconds, `activity.${name}`, 'no greater than session elapsed time');
+      }
+    }
+  }
   number(m.observed_at_unix_seconds, 'metrics.observed_at_unix_seconds');
   counts(m.totals, 'metrics.totals');
   for (const key of ['bytes_read', 'pending_bytes', 'skipped_bytes', 'discarded_partial_records']) counter(m[key], `metrics.${key}`);
@@ -143,6 +153,24 @@ export function severityComparison(frame) {
     return `${integer(errors)} / ${integer(total)} (${ratio})`;
   };
   return `Error + fatal logs · last 30 completed seconds: ${describe(30, 60)}; preceding 30: ${describe(0, 30)}.`;
+}
+
+export function activityText(frame) {
+  const m = frame.metrics;
+  const age = value => value === null ? 'None observed' : `${rate(value)}s ago`;
+  let note = 'Ages at the displayed snapshot · errors include fatal records.';
+  if (m.totals.records === '0') {
+    if (finalStates.has(m.state)) note = 'No complete records observed in this session.';
+    else if (m.state === 'waiting') note = 'Waiting for the input file to appear.';
+    else if (m.pending_bytes !== '0') note = 'A partial record is buffered; waiting for a newline.';
+    else if (m.state === 'following') note = 'Following new records. Use --from start to include existing file contents.';
+    else note = 'Waiting for complete records from the input.';
+  }
+  return {
+    record: frame.activity ? age(frame.activity.last_record_age_seconds) : 'Unavailable',
+    error: frame.activity ? age(frame.activity.last_error_age_seconds) : 'Unavailable',
+    note,
+  };
 }
 export function elapsed(seconds) {
   const whole = Math.floor(seconds);

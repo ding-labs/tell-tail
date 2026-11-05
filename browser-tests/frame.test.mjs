@@ -1,9 +1,32 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { elapsed, historyPoints, integer, parseFrame, parsingCoverage, percent, rate, severityComparison } from '../web/frame.mjs';
+import { activityText, elapsed, historyPoints, integer, parseFrame, parsingCoverage, percent, rate, severityComparison } from '../web/frame.mjs';
 
 const fixture = readFileSync(new URL('../tests/fixtures/output/empty-web-v1.json', import.meta.url), 'utf8');
+
+test('activity distinguishes absent observations, idle ages and waiting states', () => {
+  const frame = JSON.parse(fixture);
+  assert.equal(activityText(frame).record, 'None observed');
+  frame.metrics.state = 'following'; frame.metrics.kind = 'snapshot';
+  assert.match(activityText(frame).note, /--from start/);
+  frame.metrics.pending_bytes = '8';
+  assert.match(activityText(frame).note, /partial record/);
+  frame.metrics.state = 'waiting';
+  assert.match(activityText(frame).note, /file to appear/);
+  frame.metrics.elapsed_seconds = 12;
+  frame.metrics.totals.records = '1';
+  frame.activity = {last_record_age_seconds: 10, last_error_age_seconds: null};
+  assert.equal(activityText(frame).record, '10s ago');
+  parseFrame(JSON.stringify(frame));
+  for (const age of [-1, 13, '1']) {
+    frame.activity.last_record_age_seconds = age;
+    assert.throws(() => parseFrame(JSON.stringify(frame)), /activity/);
+  }
+  delete frame.activity;
+  parseFrame(JSON.stringify(frame));
+  assert.equal(activityText(frame).record, 'Unavailable');
+});
 
 test('severity history validates alignment and compares two complete intervals', () => {
   const frame = JSON.parse(fixture);

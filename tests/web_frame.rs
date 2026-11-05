@@ -153,6 +153,21 @@ fn history_contains_completed_seconds_oldest_first_and_replaces_each_frame() {
 }
 
 #[test]
+fn activity_preserves_missing_ages_and_rejects_impossible_timestamps() {
+    let mut s = snapshot(Duration::from_secs(3), State::Reading);
+    s.activity.last_record_age_seconds = Some(1.25);
+    assert_eq!(json(1, &s)["activity"]["last_record_age_seconds"], 1.25);
+    assert!(json(1, &s)["activity"]["last_error_age_seconds"].is_null());
+    for age in [-1.0, 4.0, f64::NAN, f64::INFINITY] {
+        s.activity.last_error_age_seconds = Some(age);
+        assert!(matches!(
+            WebFrame::encode(1, &s),
+            Err(EncodeError::InvalidActivity)
+        ));
+    }
+}
+
+#[test]
 fn severity_history_is_additive_aligned_and_preserves_large_counts() {
     let mut s = snapshot(Duration::from_secs(1), State::Reading);
     s.history[0] = u64::MAX;

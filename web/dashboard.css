@@ -67,6 +67,7 @@ p { line-height: 1.6; }
 .source { display: flex; align-items: baseline; gap: 12px; }
 #source { flex: 1; font: 13px/1.6 var(--ding-mono); overflow-wrap: anywhere; min-width: 0; }
 dl { margin: 0; }
+.activity-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0 8px; }
 .session-meta { display: grid; grid-template-columns: 1fr 1fr 1.2fr 1.2fr; gap: 24px; border-top: 1px solid var(--ding-border); padding-top: 16px; margin-top: 16px; }
 .session-meta > div, .diagnostic-grid > div { min-width: 0; }
 dt { color: var(--ding-muted); font-size: 12px; }

@@ -1,4 +1,4 @@
-import { elapsed, finalStates, historyPoints, integer, levels, parsingCoverage, percent, rate, severityComparison } from './frame.mjs';
+import { activityText, elapsed, finalStates, historyPoints, integer, levels, parsingCoverage, percent, rate, severityComparison } from './frame.mjs';
 
 const byId = id => document.getElementById(id);
 function text(id, value) { const el = byId(id); if (el.textContent !== value) el.textContent = value; }
@@ -285,6 +285,10 @@ export function render(frame) {
   const m = frame.metrics;
   const w = m.window;
   const coverage = parsingCoverage(w.counts);
+  const activity = activityText(frame);
+  text('last-record', activity.record);
+  text('last-error', activity.error);
+  text('activity-note', activity.note);
   text('parsing-coverage', coverage.summary);
   text('parsing-breakdown', coverage.breakdown);
   for (const [id, value] of Object.entries({
