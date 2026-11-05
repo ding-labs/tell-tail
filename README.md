@@ -1,9 +1,9 @@
 # Tell-Tail
 
 A Rust log throughput and severity monitor with terminal and local web dashboards.
-Logs pass through; Tell-Tail keeps counters and bounded rolling statistics. It
-follows one file or reads stdin, and supports plain text, NDJSON, Prometheus, and
-a local HTTP/SSE metrics API.
+Tell-Tail reads one file or stdin and keeps counters, bounded rolling statistics,
+and a small in-memory sample of recent errors for its dashboards. It supports
+plain text, NDJSON, Prometheus, and a local HTTP/SSE metrics API.
 
 ## Install and try it
 
@@ -49,6 +49,8 @@ history, and activity ages described below are not in the 0.2.0 packages.
 
 Read [Understanding a live log stream](docs/MONITORING.md) for a complete guide
 to interpreting coverage, history, activity ages, controls, and their limits.
+The [documentation index](docs/README.md) links all user guides, API contracts,
+troubleshooting, and validation procedures.
 
 ### Built-in demo (unreleased)
 
@@ -154,7 +156,8 @@ my-app 2>&1 | tell-tail --output web
 
 Web mode serves an embedded live dashboard and prints its loopback URL to stderr.
 It shows rolling rates and ratios, exact session totals, a 60-second throughput
-chart, severity counts, and ingestion diagnostics. Freeze/resume affects only
+chart, severity counts, and ingestion diagnostics. Current main also shows
+parsing coverage, warning/error histories, and activity ages as described above. Freeze/resume affects only
 the display; connection and failure status stay live. Hidden tabs release their
 stream and reconnect when shown. The binary works offline without Node or a CDN.
 The compact layout also shows the latest 20 error/fatal previews with a fatal-only
@@ -468,11 +471,13 @@ Windows support. See [the implementation plan](docs/PLAN.md) for scope and
 subsequent increments, and [validation results](docs/VALIDATION.md) for measured
 performance and test coverage.
 
-The [0.2 implementation plan](docs/PLAN-0.2.md) defines the next reliability
-milestone, focused commits, and release criteria.
+The [0.2 implementation plan](docs/PLAN-0.2.md) records that release's reliability
+scope, focused increments, and validation criteria. For current dashboard work,
+use the [feature validation guide](docs/TESTING-DASHBOARDS.md).
 
-The [0.2 implementation validation](docs/VALIDATION-0.2.md) records completed
-checks and remaining release gates. See [validation commands](docs/TESTING-0.2.md)
+The [0.2 implementation validation](docs/VALIDATION-0.2.md) records checks and
+open items at that milestone; the [release validation](docs/VALIDATION-0.2-RELEASE.md)
+records the later release decision. See [validation commands](docs/TESTING-0.2.md)
 for the expanded test, fuzz, soak, benchmark, and package workflows.
 
 ## License
