@@ -43,6 +43,23 @@ platform details and macOS download/signing limitations.
 
 To install from a local source checkout, use `cargo install --path . --locked`.
 
+### Built-in demo (unreleased)
+
+Current main includes an offline demo; it is not in the published 0.2.0 packages.
+From this checkout, try either dashboard without a log file or generator:
+
+```sh
+cargo run --locked -- --demo --window 5
+cargo run --locked -- --demo --window 5 --output web --open
+```
+
+The source is labeled synthetic. Its 40-second cycle has eight seconds of normal
+activity, eight with warnings, eight with errors, six without records, and ten
+of recovery. Active phases generate approximately 100 records/second. The
+five-second rolling window makes the transitions easy to see; histories still
+cover 60 completed seconds. Press `q` in the terminal or Ctrl+C to stop. The demo
+uses the normal ingestion path and does not read stdin or create log files.
+
 ## Inputs and output
 
 ```sh

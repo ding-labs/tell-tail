@@ -24,7 +24,9 @@ impl Engine {
         Self {
             stats: Stats::new(
                 args.window,
-                if args.apple_unified {
+                if args.demo {
+                    "demo (synthetic · 40s cycle)".into()
+                } else if args.apple_unified {
                     "macOS unified log".into()
                 } else {
                     args.path()

@@ -11,6 +11,7 @@ use std::{
 };
 
 mod apple;
+mod demo;
 pub use apple::AppleStream;
 
 pub enum Event {
@@ -20,6 +21,7 @@ pub enum Event {
     End,
 }
 pub enum Input {
+    Demo(demo::Demo),
     Finite(File),
     Stdin(platform::Stdin),
     Apple(AppleStream),
@@ -27,6 +29,9 @@ pub enum Input {
 }
 impl Input {
     pub fn open(args: &Args) -> io::Result<Self> {
+        if args.demo {
+            return Ok(Self::Demo(demo::Demo::new()));
+        }
         if args.apple_unified {
             return Ok(Self::Apple(AppleStream::open()?));
         }
@@ -41,6 +46,7 @@ impl Input {
     }
     pub fn next(&mut self, buffer: &mut [u8]) -> io::Result<Event> {
         match self {
+            Self::Demo(demo) => demo.next(buffer),
             Self::Follow(f) => f.next(buffer),
             Self::Stdin(file) if !file.readable()? => Ok(Event::Idle(State::Reading)),
             Self::Stdin(file) => read_event(file, buffer),
