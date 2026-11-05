@@ -4,7 +4,7 @@ This guide covers parsing coverage, severity history, and activity freshness in
 the current source checkout. These additions are **unreleased** and are not in
 the published 0.2.0 Homebrew, Cargo, or release archives. See the
 [installation instructions](../README.md#install-and-try-it) and the
-[built-in demo instructions](../README.md#built-in-demo-unreleased) to run the new dashboard locally.
+[built-in demo walkthrough](DEMO.md) to run the new dashboard locally.
 
 Tell-Tail helps answer four questions: are records arriving, can their severity
 be recognized, is the severity mix changing, and which recent errors can I

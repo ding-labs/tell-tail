@@ -72,6 +72,9 @@ uses the normal ingestion path and does not read stdin or create log files.
 To install the checkout, use `cargo install --path . --locked`; then run
 `tell-tail --demo --window 5` directly.
 
+The [demo walkthrough](docs/DEMO.md) explains every phase, what to observe,
+supported options, shutdown behavior, and how to distinguish it from a benchmark.
+
 ## Everyday workflows
 
 Replace the example filenames and commands with your own:
