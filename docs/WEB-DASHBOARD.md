@@ -3,6 +3,11 @@
 Implemented October 20, 2026. The dashboard uses the production
 [frame contract](WEB-FRAMES.md) and [loopback server](WEB-SERVER.md).
 
+**Current main, not yet released:** parsing coverage, severity histories and their
+30-second comparison, activity ages, and built-in demo are not in the published
+0.2.0 packages. Read [Understanding a live log stream](MONITORING.md) for formulas,
+examples, time scopes, and limitations, or start with the [demo walkthrough](DEMO.md).
+
 ```sh
 tell-tail app.log --from start --output web --open
 tell-tail --apple-unified --output web --open  # macOS system activity
@@ -29,7 +34,8 @@ it does not need piped stdin or `jq`.
   otherwise unrecognized counts and guidance for supported fields and prefixes.
 - Throughput for up to 60 completed process-elapsed seconds, including idle
   seconds. A monotone cubic curve connects samples without overshooting them;
-  one-second transitions animate at the display refresh rate (typically 60 fps).
+  one-second transitions use native transform animation with SVG geometry
+  updates bounded to 20 Hz.
   Each snapshot replaces the chart history. Expand **View exact chart
   values** for a table with exact counts and elapsed intervals.
 - Warning and error-plus-fatal counts per completed second, sharing a scale and
@@ -71,7 +77,10 @@ provide 40 px targets with visible keyboard focus.
 connection retains one latest frame. **Resume display** paints that frame on the
 next animation frame. Connection, capacity, and failure messages continue to
 update while frozen. If input completes while frozen, the banner reports the
-final state and asks you to resume to view its metrics.
+final state and asks you to resume to view its metrics. Use Tab to focus the
+button and Space or Enter to activate it; the browser has no global space-bar
+freeze shortcut. **Fatal only** filters the retained preview list without
+changing counts, charts, ingestion, or alerts.
 
 ## Connection behavior
 
@@ -138,21 +147,26 @@ npm test
 RUN_HEADED_TESTS=1 npm test
 ```
 
-`node --test browser-tests/frame.test.mjs` runs the three pure contract/formatting
+`node --test browser-tests/frame.test.mjs` runs the pure contract/formatting
 tests without Playwright. Set `TELL_TAIL_BIN` relative to the repository root to
 test a release binary. `PLAYWRIGHT_MODULE_DIR` optionally points at an existing
 development installation. The native visibility test uses a disposable browser
 profile and CDP without Playwright focus emulation; the default headless run
 skips that one test.
 
-Local macOS validation passed 12 JavaScript/browser tests, including native
+At the **October 20, 2026 dashboard milestone**, local macOS validation passed
+12 JavaScript/browser tests, including native
 visibility, against debug and release binaries, plus 84 default, 61 CLI-only,
-and 67 notification-only Rust tests. Clippy passes with warnings denied in all
-three modes. An extracted source package installs offline and serves all six
+and 67 notification-only Rust tests. Clippy passed with warnings denied in all
+three modes. An extracted source package installed offline and served all six
 dashboard routes and exact final metrics. See the
 [validation record](validation/web-dashboard-2026-10-20.json).
 
-CI is configured for the browser suite on Linux and the Rust/package matrix on
-macOS/Linux; remote CI has not run here. Firefox/Safari checks, a one-hour browser
-resource soak, and production ingestion/freshness performance gates remain open
-in [increment 6](PLAN-WEB.md#delivery-increments).
+Those counts and package results describe that historical revision, not a
+fresh run of current main. For the current features, the frame suite also covers
+coverage, aligned severity history, interval comparison, and activity ages; the
+browser suite checks rendering, exact values, and freeze behavior. CI is
+configured for the browser suite on Linux and the Rust/package matrix on
+macOS/Linux. Consult [the web plan](PLAN-WEB.md#delivery-increments) and dated
+validation records for historical milestone status; a configured workflow is not
+evidence that it has passed on a new revision.
