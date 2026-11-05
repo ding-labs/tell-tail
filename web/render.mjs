@@ -1,4 +1,4 @@
-import { elapsed, finalStates, historyPoints, integer, levels, percent, rate } from './frame.mjs';
+import { elapsed, finalStates, historyPoints, integer, levels, parsingCoverage, percent, rate } from './frame.mjs';
 
 const byId = id => document.getElementById(id);
 function text(id, value) { const el = byId(id); if (el.textContent !== value) el.textContent = value; }
@@ -245,6 +245,9 @@ function chart(m) {
 export function render(frame) {
   const m = frame.metrics;
   const w = m.window;
+  const coverage = parsingCoverage(w.counts);
+  text('parsing-coverage', coverage.summary);
+  text('parsing-breakdown', coverage.breakdown);
   for (const [id, value] of Object.entries({
     source: m.source, 'input-state': m.state, elapsed: elapsed(m.elapsed_seconds),
     'total-records': integer(m.totals.records), 'total-bytes': integer(m.bytes_read),

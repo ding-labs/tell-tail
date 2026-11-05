@@ -57,6 +57,9 @@ test('embedded dashboard renders real final metrics, diagnostics and responsive 
   assert.equal(await page.locator('#total-records').textContent(), '4');
   assert.equal(await page.locator('#warning-ratio').textContent(), '25%');
   assert.equal(await page.locator('#error-ratio').textContent(), '25%');
+  assert.equal(await page.locator('#parsing-coverage').textContent(), 'Severity recognized: 75% · 3 of 4 rolling records');
+  await page.locator('#parsing-help summary').click();
+  assert.match(await page.locator('#parsing-breakdown').textContent(), /1 unknown: 1 malformed, 0 oversized, 0 without/);
   await page.locator('.diagnostics summary').click();
   assert.equal(await page.locator('#parse-failures').textContent(), '1');
   assert.equal(await page.locator('#backlog').textContent(), '—');

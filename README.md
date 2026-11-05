@@ -310,6 +310,13 @@ runs on the ingestion thread. Alerting is disabled unless configured.
 
 ## What is counted
 
+Both dashboards show **severity recognition coverage** for the rolling window:
+records with a recognized severity divided by all records. This is a measured
+coverage fraction, not confidence in application health. An empty window shows
+no percentage. The web dashboard breaks unknown records down into malformed,
+oversized, and records without a recognized severity, with parsing guidance;
+press `?` in the terminal for the supported prefix/field conventions.
+
 - Each physical line is one record. Blank and unrecognized lines count as unknown.
   A final nonempty line without a newline counts at finite EOF. A trailing newline
   does not create another record. CRLF is supported.

@@ -1,9 +1,20 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { elapsed, historyPoints, integer, parseFrame, percent, rate } from '../web/frame.mjs';
+import { elapsed, historyPoints, integer, parseFrame, parsingCoverage, percent, rate } from '../web/frame.mjs';
 
 const fixture = readFileSync(new URL('../tests/fixtures/output/empty-web-v1.json', import.meta.url), 'utf8');
+
+test('coverage distinguishes no observations from unrecognized and malformed records', () => {
+  const counts = JSON.parse(fixture).metrics.window.counts;
+  assert.match(parsingCoverage(counts).summary, /unavailable/);
+  Object.assign(counts, { records: '4', parse_failures: '1', oversized_records: '1' });
+  counts.levels.unknown = '3';
+  assert.equal(parsingCoverage(counts).summary, 'Severity recognized: 25% · 1 of 4 rolling records');
+  assert.equal(parsingCoverage(counts).breakdown, '3 unknown: 1 malformed, 1 oversized, 1 without a recognized severity.');
+  counts.records = '18446744073709551615';
+  assert.match(parsingCoverage(counts).summary, /18,446,744,073,709,551,612 of 18,446,744,073,709,551,615/);
+});
 
 test('production fixture preserves nulls, zeroes and exact counters', () => {
   const frame = parseFrame(fixture);

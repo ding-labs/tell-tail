@@ -106,6 +106,21 @@ export function parseFrame(json) {
 export function integer(value) { return integerFormat.format(BigInt(value)); }
 export function rate(value) { return rateFormat.format(value); }
 export function percent(value) { return value === null ? '—' : percentFormat.format(value); }
+
+/** Derive coverage from the unsampled rolling counts; no parser guessing. */
+export function parsingCoverage(counts) {
+  const total = BigInt(counts.records);
+  const unknown = BigInt(counts.levels.unknown);
+  const recognized = total - unknown;
+  const malformed = BigInt(counts.parse_failures);
+  const oversized = BigInt(counts.oversized_records);
+  const other = unknown - malformed - oversized;
+  return {
+    summary: total === 0n ? 'No records in the rolling window; severity coverage is unavailable.'
+      : `Severity recognized: ${percent(Number(recognized) / Number(total))} · ${integer(recognized)} of ${integer(total)} rolling records`,
+    breakdown: `${integer(unknown)} unknown: ${integer(malformed)} malformed, ${integer(oversized)} oversized, ${integer(other)} without a recognized severity.`,
+  };
+}
 export function elapsed(seconds) {
   const whole = Math.floor(seconds);
   return `${Math.floor(whole / 3600).toString().padStart(2, '0')}:${Math.floor(whole / 60 % 60).toString().padStart(2, '0')}:${(whole % 60).toString().padStart(2, '0')}`;

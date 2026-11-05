@@ -234,6 +234,10 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
                     Style::default().fg(theme::INFO),
                 ),
                 Line::raw(format!("Parse failures: {}", s.totals.parse_failures)),
+                Line::raw(format!(
+                    "Severity recognized: {} (window)",
+                    percent(s.window.counts.recognized_ratio())
+                )),
                 Line::styled(
                     "Resize to 60 × 18 for dashboard",
                     Style::default().fg(theme::MUTED),
@@ -363,7 +367,10 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
                 .add_modifier(Modifier::BOLD),
         ),
     )
-    .block(panel(" Severity "));
+    .block(panel(format!(
+        " Severity · {} recognized ",
+        percent(s.window.counts.recognized_ratio())
+    )));
     frame.render_widget(table, overview[1]);
     let entries = review.entries(s);
     let offset = review.offset.min(entries.len().saturating_sub(1));
@@ -426,7 +433,7 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
         .map(|b| format!("{b} B"))
         .unwrap_or_else(|| "unknown".into());
     let footer = if help {
-        "q: quit · Ctrl-C: interrupt · space: freeze display (ingestion continues)\n↑/↓ or PgUp/PgDn review (freezes display) · f fatal only\n20 previews, 512 bytes each · ? or Esc closes help".into()
+        "q quit · space freeze · ↑↓/PgUp/PgDn review · f fatal only\nRecognized = known severity / all window records; unknown may lack a level.\nJSON: string level (--level-field); text: INFO, [WARN], ERROR: · ? closes help".into()
     } else {
         format!(
             " Session: {} records · {:.2} MiB · {:.1}s   Backlog: {}\n Parse failures: {} · oversized: {} · pending: {} B · skipped: {} B\n q quit · space freeze · ↑↓ review · f fatal · ? help",

@@ -43,6 +43,14 @@ pub struct Counts {
     pub oversized_records: u64,
 }
 impl Counts {
+    /// Coverage of severity classification, not confidence in application health.
+    pub fn recognized_records(&self) -> u64 {
+        self.records.saturating_sub(self.levels.get(Level::Unknown))
+    }
+    pub fn recognized_ratio(&self) -> Option<f64> {
+        (self.records != 0).then(|| self.recognized_records() as f64 / self.records as f64)
+    }
+
     fn record(&mut self, classification: Classification, oversized: bool) {
         self.records += 1;
         self.levels.0[classification.level as usize] += 1;
@@ -300,6 +308,30 @@ mod tests {
             Duration::from_secs_f64(second),
         );
     }
+    #[test]
+    fn coverage_includes_unknown_records_and_expires_with_the_window() {
+        let mut stats = Stats::new(1, "coverage".into());
+        let empty = stats.snapshot(Duration::ZERO, State::Reading, 0, None);
+        assert_eq!(empty.window.counts.recognized_ratio(), None);
+        record(&mut stats, 0.0, Level::Info);
+        record(&mut stats, 0.0, Level::Unknown);
+        stats.record(
+            Classification {
+                level: Level::Unknown,
+                parse_failure: true,
+            },
+            false,
+            Duration::ZERO,
+        );
+        stats.record(Classification::unknown(), true, Duration::ZERO);
+        let s = stats.snapshot(Duration::from_millis(500), State::Reading, 0, None);
+        assert_eq!(s.window.counts.recognized_records(), 1);
+        assert_eq!(s.window.counts.recognized_ratio(), Some(0.25));
+        let idle = stats.snapshot(Duration::from_secs(2), State::Reading, 0, None);
+        assert_eq!(idle.window.counts.recognized_ratio(), None);
+        assert_eq!(idle.totals.recognized_records(), 1);
+    }
+
     #[test]
     fn window_expires_on_idle_and_preserves_totals() {
         let mut s = Stats::new(2, "test".into());

@@ -43,6 +43,15 @@
           <article class="metric"><h3>Error + fatal ratio</h3><p class="metric-value" id="error-ratio">—</p><p>(Error + fatal) / all entries</p></article>
         </div>
       </section>
+      <section class="parsing-note" aria-label="Parsing coverage">
+        <p id="parsing-coverage">Waiting for records to measure severity coverage.</p>
+        <details id="parsing-help">
+          <summary>Understand parsing coverage</summary>
+          <p id="parsing-breakdown"></p>
+          <p>Coverage measures recognized severity, not application health. Unknown records remain in all ratio denominators. They may be valid logs without a supported level.</p>
+          <p>JSON needs a string level, such as <code>"level":"info"</code>. Use <code>--level-field severity</code> for a different top-level field. Numeric levels are not mapped. Text accepts <code>INFO message</code>, <code>[WARN] message</code>, or <code>ERROR: message</code>, optionally after an ISO timestamp. Disable producer colors if ANSI codes obscure the prefix.</p>
+        </details>
+      </section>
       <div class="detail-grid">
         <section class="panel chart-panel" aria-labelledby="throughput-title">
           <div class="section-heading"><h2 id="throughput-title">Throughput</h2><span class="label">ENTRIES / SECOND</span></div>
