@@ -14,6 +14,14 @@ webhook is contacted unless you explicitly configure one.
 From the repository root, with the pinned Rust toolchain installed:
 
 ```sh
+cargo run --locked -- --demo --window 5 --output web --open
+```
+
+That one command builds the current checkout and opens the mixed-format demo.
+The first build needs the Rust dependencies; the running demo itself is offline.
+For repeated runs, build once and use the binary directly:
+
+```sh
 cargo build --locked
 
 # Terminal dashboard; stop with q or Ctrl+C
@@ -102,8 +110,9 @@ session hints remain. No automatic profile switch happens midway through a demo.
    Coverage settles near 80%; read the numeric and conflicting-field hints.
    Unknown is deliberately different from malformed here.
 3. Around 16 seconds, inspect **Recent errors**. Freeze the display, read a
-   text, JSON, logfmt, colored, or syslog timeout preview, and then resume. Ingestion and the demo's cycle continue
-   during the freeze; resuming shows current state, not a replay.
+   text, JSON, logfmt, colored, or syslog timeout preview, and then resume.
+   Ingestion and the demo's cycle continue during the freeze; resuming shows
+   current state, not a replay.
 4. During the quiet phase, watch **Last record** age. With the five-second window,
    rolling counts eventually become empty and coverage becomes unavailable.
    An empty ratio is not a successful-recovery signal.
@@ -127,6 +136,7 @@ Add an existing parser flag to select matching synthetic input:
 ./target/debug/tell-tail --demo --profile pino --window 5 --output web --open
 ./target/debug/tell-tail --demo --level-field priority --window 5 --output web --open
 ./target/debug/tell-tail --demo --level-path /log/level --window 5 --output web --open
+./target/debug/tell-tail --demo --envelope docker --window 5 --output web --open
 ./target/debug/tell-tail --demo --envelope cri --profile pino --window 5 --output web --open
 ```
 
@@ -143,8 +153,13 @@ The other profiles work the same way:
 
 Stop the current process with Ctrl+C before trying another command. Inspect
 **Recent errors** during seconds 16–24 to see the selected raw sample shape.
-Profile and
-field/path overrides combine as they do for real input. These options select the
+Profile and field/path overrides combine as they do for real input. For example,
+`--demo --profile python --level-path /event/priority` generates numeric Python
+levels inside `event.priority`. Choose either `--level-field` or `--level-path`;
+they cannot be combined. The [format reference](LOG-FORMATS.md#nested-json-fields)
+explains literal dotted keys, escaped path components, and path limits.
+
+These options select the
 **generated examples**, not just the parser: a profile/field/path demo emits only
 matching JSON and omits the default demo's deliberate ambiguous records. It has
 100% recognition at the default record-size limit, with 80% info / 20% warn in
@@ -155,6 +170,45 @@ An envelope alone wraps the default mixed-format examples, preserving their
 unknowns and hints. Combined with a selector, it wraps the selected JSON samples.
 All samples pass through normal framing, envelope decoding, classification, and
 statistics. Forty examples are prepared once and reused; no replay queue grows.
+
+## Move from the demo to your logs
+
+Keep the parser flags you need and replace `--demo` with a file or pipe. Run
+these commands from the checkout, replacing the example app/file names:
+
+```sh
+# Live Pino output: the producer supplies the numeric JSON records.
+node app.js 2>&1 | ./target/debug/tell-tail --profile pino --output web --open
+
+# Read existing records, then follow new ones in a file with nested severity.
+./target/debug/tell-tail app.log --from start --level-path /log/level --output web --open
+
+# A saved Docker capture with Pino JSON inside each envelope.
+./target/debug/tell-tail saved-docker.ndjson --from start --envelope docker --profile pino --output web --open
+```
+
+Without `--from start`, file following begins at the end. Do not add `--demo`
+to a real-input command: the demo is a separate input source. On real input,
+parser flags configure interpretation only; they never rewrite your logs or
+select a matching producer. Restart Tell-Tail to change flags. Unknowns may
+remain when records do not match the selected convention.
+
+## What the demo does not exercise
+
+The default stream illustrates recognition and ambiguity with valid records.
+It does not generate malformed JSON, oversized records at the default limit,
+fatal/trace/debug events, file rotation, or partial container chains. CRI samples
+are complete `F` records. Serilog samples use explicit `@l` values rather than
+the omitted-info fallback. Those cases have separate
+[regression checks](TESTING-DASHBOARDS.md#automated-checks) and
+[format rules](LOG-FORMATS.md).
+
+Timestamps inside synthetic records are fixed example values. Rates, ages,
+histories, and phase timing use processing time, not those timestamps. The
+dashboard shows aggregates and bounded recent error/fatal previews, not the
+entire raw stream; intentional unknowns are explained by the hints and examples
+above. Nothing is forwarded or persisted unless you explicitly configure an
+output or alert destination that does so.
 
 ## Other outputs and option combinations
 
