@@ -1,4 +1,5 @@
 mod diagnostics;
+mod syslog;
 use diagnostics::Selection;
 pub use diagnostics::{Assessment, ParseIssue, ParserKind, ParsingDiagnostics};
 mod logfmt;
@@ -118,9 +119,20 @@ impl Classifier {
             || (self.format == Format::Auto && logfmt::looks_like(line))
         {
             ParserKind::Logfmt
+        } else if self.format == Format::Syslog
+            || (self.format == Format::Auto && syslog::looks_like(line))
+        {
+            ParserKind::Syslog
         } else {
             ParserKind::Text
         };
+        if matches!(parser, ParserKind::Syslog) {
+            return Some(Assessment {
+                classification: syslog::classify(line),
+                parser,
+                issue: ParseIssue::None,
+            });
+        }
         if matches!(parser, ParserKind::Text) {
             return Some(Assessment {
                 classification: Classification {

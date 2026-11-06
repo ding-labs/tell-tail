@@ -8,6 +8,8 @@ pub enum Format {
     Json,
     /// Whitespace-separated key=value records with quoted string support.
     Logfmt,
+    /// RFC 5424 or RFC 3164 wire headers with an explicit <PRI> prefix.
+    Syslog,
     /// Apple unified log NDJSON; maps messageType and skips stream metadata.
     AppleUnified,
 }

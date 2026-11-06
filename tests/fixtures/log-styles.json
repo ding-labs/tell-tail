@@ -225,5 +225,26 @@
     "flags": [],
     "expected": "unknown",
     "target": "unknown"
+  },
+  {
+    "name": "syslog RFC5424",
+    "input": "<11>1 2026-11-05T12:00:00Z host app 123 event - timeout",
+    "flags": [],
+    "expected": "error",
+    "target": "error"
+  },
+  {
+    "name": "syslog RFC3164",
+    "input": "<132>Nov  5 12:00:00 host app: slow",
+    "flags": [],
+    "expected": "warn",
+    "target": "warn"
+  },
+  {
+    "name": "syslog missing priority",
+    "input": "Nov  5 12:00:00 host app: ERROR timeout",
+    "flags": [],
+    "expected": "unknown",
+    "target": "unknown"
   }
 ]

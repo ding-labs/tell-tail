@@ -154,3 +154,23 @@ known session records, and issue sums cannot exceed session unknowns. The encode
 and browser reject invalid evidence. Older frames may omit the object. All fields
 share the existing 64 KiB frame limit. Rust snapshots expose optional `parsing`
 with `#[serde(skip)]`, populated by the ingestion engine.
+
+## Syslog priority headers
+
+Auto mode recognizes `<PRI>`-prefixed RFC 5424 version 1 and traditional RFC 3164
+headers. `--format syslog` requires them. Priorities must be canonical decimal
+0–191; severity is `PRI % 8`: emergency/alert/critical → fatal, error → error,
+warning → warn, notice/informational → info, debug → debug. Message keywords do
+not override the priority. Header fields and structured-data syntax are checked;
+timestamp recognition is structural rather than calendar validation.
+
+```sh
+tell-tail syslog-capture.log --format syslog
+```
+
+Human-formatted syslog files often omit `<PRI>` and therefore cannot supply
+severity through this parser. They remain unknown unless another supported
+leading-level grammar applies. This is file/stdin parsing, not a syslog network
+receiver. RFC 5424 structured-data names are bounded to 32 bytes, and headers
+follow the protocol's field-length bounds. Source:
+[RFC 5424](https://www.rfc-editor.org/rfc/rfc5424).
