@@ -57,14 +57,33 @@ impl Demo {
 }
 
 fn record_at(at: Duration, slot: u8) -> &'static [u8] {
-    match at.as_secs() % 40 {
-        0..=7 => b"INFO request completed (demo: healthy)\n",
-        8..=15 if slot < 2 => b"WARN upstream latency rising (demo)\n",
-        16..=23 if slot < 5 => b"ERROR upstream request timed out (demo)\n",
-        16..=23 if slot < 7 => b"WARN retrying upstream request (demo)\n",
+    let second = at.as_secs() % 40;
+    match second {
+        8..=15 if slot == 0 => b"level=warn msg=\"upstream latency rising (demo)\"\n",
+        8..=15 if slot == 1 => b"{\"severity\":\"warning\",\"message\":\"upstream latency rising (demo)\"}\n",
+        16..=23 if slot < 5 => [
+            &b"ERROR upstream request timed out (demo)\n"[..],
+            b"{\"severity\":\"error\",\"message\":\"upstream request timed out (demo)\"}\n",
+            b"level=error msg=\"upstream request timed out (demo)\"\n",
+            b"\x1b[31mERROR\x1b[0m upstream request timed out (demo)\n",
+            b"<11>1 2026-11-05T12:00:00Z demo worker - - - upstream request timed out (demo)\n",
+        ][slot as usize],
+        16..=23 if slot < 7 => b"WARNING:worker:retrying upstream request (demo)\n",
+        8..=23 if slot == 8 => b"{\"level\":50,\"msg\":\"demo: numeric convention needs --profile pino\"}\n",
+        8..=23 if slot == 9 => b"{\"level\":\"info\",\"severity\":\"error\",\"message\":\"demo: choose --level-field severity\"}\n",
         24..=29 => b"",
-        30..=39 => b"INFO request completed (demo: recovery)\n",
-        _ => b"INFO request completed (demo)\n",
+        _ => [
+            &b"INFO request completed (demo)\n"[..],
+            b"{\"severity\":\"info\",\"message\":\"request completed (demo)\"}\n",
+            b"level=info msg=\"ERROR is only a message word (demo)\"\n",
+            b"INFO:worker:request completed (demo)\n",
+            b"\x1b[32mINFO\x1b[0m request completed (demo)\n",
+            b"<14>1 2026-11-05T12:00:00Z demo worker - - - ERROR is only a message word (demo)\n",
+            b"{\"levelname\":\"INFO\",\"message\":\"request completed (demo)\"}\n",
+            b"{\"log.level\":\"info\",\"message\":\"request completed (demo)\"}\n",
+            b"2026-11-05 12:00:00,000 INFO request completed (demo)\n",
+            b"{\"level\":\"info\",\"message\":\"request completed (demo)\"}\n",
+        ][slot as usize],
     }
 }
 
@@ -72,19 +91,22 @@ fn record_at(at: Duration, slot: u8) -> &'static [u8] {
 mod tests {
     use super::*;
     use crate::{
-        cli::Format,
-        parse::{Classifier, Level},
+        cli::Args,
+        engine::Engine,
+        parse::{Classifier, Level, ParserKind},
     };
+
+    use clap::Parser;
 
     #[test]
     fn cycle_has_predictable_severity_and_silence_without_external_input() {
-        let classifier = Classifier::new(Format::Auto, "level".into());
-        for (second, records, warnings, errors) in [
-            (0, 10, 0, 0),
-            (8, 10, 2, 0),
-            (16, 10, 2, 5),
-            (24, 0, 0, 0),
-            (30, 10, 0, 0),
+        let classifier = Classifier::from_args(&Args::parse_from(["tell-tail", "--demo"]));
+        for (second, records, warnings, errors, unknown) in [
+            (0, 10, 0, 0, 0),
+            (8, 10, 2, 0, 2),
+            (16, 10, 2, 5, 2),
+            (24, 0, 0, 0, 0),
+            (30, 10, 0, 0, 0),
         ] {
             for cycle in [0, 40, 80] {
                 let mut counts = [0; 7];
@@ -99,8 +121,39 @@ mod tests {
                 assert_eq!(counts.iter().sum::<u32>(), records);
                 assert_eq!(counts[Level::Warn as usize], warnings);
                 assert_eq!(counts[Level::Error as usize], errors);
-                assert_eq!(counts[Level::Unknown as usize], 0);
+                assert_eq!(counts[Level::Unknown as usize], unknown);
             }
+        }
+    }
+
+    #[test]
+    fn mixed_demo_reports_real_parser_evidence_across_read_boundaries() {
+        for chunk in [1, 7, 65536] {
+            let mut engine = Engine::new(&Args::parse_from(["tell-tail", "--demo"]));
+            for second in [0, 8, 16, 24, 30] {
+                let at = Duration::from_secs(second);
+                for slot in 0..10 {
+                    for bytes in record_at(at, slot).chunks(chunk) {
+                        engine.feed(bytes, at);
+                    }
+                }
+            }
+            let snapshot = engine.snapshot(Duration::from_secs(30), State::Reading, None);
+            assert_eq!(snapshot.totals.records, 40);
+            assert_eq!(snapshot.totals.parse_failures, 0);
+            assert_eq!(snapshot.totals.levels.get(Level::Unknown), 4);
+            let parsing = snapshot.parsing.unwrap();
+            assert_eq!(parsing.numeric, 2);
+            assert_eq!(parsing.conflicting, 2);
+            for kind in [
+                ParserKind::Text,
+                ParserKind::Json,
+                ParserKind::Logfmt,
+                ParserKind::Syslog,
+            ] {
+                assert!(parsing.recognized[kind as usize] > 0);
+            }
+            assert_eq!(parsing.recognized.iter().sum::<u64>(), 36);
         }
     }
 

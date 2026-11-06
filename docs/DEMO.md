@@ -46,11 +46,11 @@ The cycle repeats every 40 seconds while the process runs:
 
 | Elapsed position in cycle | Generated records | What to look for |
 | --- | --- | --- |
-| 0–8 seconds | Info only | Records arrive; coverage is 100%; no error observed yet on the first cycle |
-| 8–16 seconds | About 80% info, 20% warn | Warning counts and the warning history rise |
-| 16–24 seconds | About 30% info, 20% warn, 50% error | Error ratio rises; timeout previews appear; error history shows the change |
+| 0–8 seconds | Info across text, JSON, logfmt, and syslog | Coverage is 100%; expand parsing coverage to see recognized rule counts |
+| 8–16 seconds | About 60% info, 20% warn, 20% unknown | Warning history rises; numeric and conflicting-field hints appear; coverage settles near 80% |
+| 16–24 seconds | About 10% info, 20% warn, 50% error, 20% unknown | Error ratio rises; differently formatted timeout previews appear; coverage stays near 80% |
 | 24–30 seconds | No records | Last-record age increases and the rolling window drains |
-| 30–40 seconds | Info only | Last-record age resets; rolling error counts expire; earlier errors remain in history and previews |
+| 30–40 seconds | Mixed-format info only | Coverage returns to 100% as unknowns expire; session parser hints and earlier error previews remain |
 
 Phase boundaries are relative to the demo's start, not wall-clock timestamps.
 The severity mix follows a ten-record pattern; counts near boundaries can differ
