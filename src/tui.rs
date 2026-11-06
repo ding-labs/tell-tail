@@ -289,7 +289,7 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
     .split(area);
     let header = Line::from(vec![
         Span::styled(
-            " ≡╱ ",
+            " ≡↶ ",
             Style::default()
                 .fg(theme::BRAND)
                 .add_modifier(Modifier::BOLD),
