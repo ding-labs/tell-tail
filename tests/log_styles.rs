@@ -312,3 +312,111 @@ fn parsing_evidence_distinguishes_ambiguity_from_malformed_records() {
     assert_eq!(diagnostics.conflicting, 2);
     assert!(diagnostics.hint().contains("--level-field"));
 }
+
+#[test]
+fn container_envelopes_keep_physical_counts_and_never_use_stream_as_severity() {
+    use tell_tail::parse::Classifier;
+    let docker = Classifier::from_args(&Args::parse_from(["tell-tail", "--envelope", "docker"]));
+    for (line, level, bad) in [
+        (
+            r#"{"log":"INFO ready\n","stream":"stderr","time":"2026-11-05T12:00:00Z"}"#,
+            Level::Info,
+            false,
+        ),
+        (
+            r#"{"log":"{\"severity\":\"error\"}\n","stream":"stdout","time":"2026-11-05T12:00:00Z"}"#,
+            Level::Error,
+            false,
+        ),
+        (
+            r#"{"log":"ERROR one\nINFO two\n","stream":"stdout","time":"2026-11-05T12:00:00Z"}"#,
+            Level::Unknown,
+            false,
+        ),
+        (
+            r#"{"log":"ERROR","stream":"other","time":"2026-11-05T12:00:00Z"}"#,
+            Level::Unknown,
+            true,
+        ),
+        (
+            r#"{"log":"ERROR","log":"INFO","stream":"stdout","time":"2026-11-05T12:00:00Z"}"#,
+            Level::Unknown,
+            true,
+        ),
+        (
+            r#"{"log":"ERROR","stream":"stdout","time":"2026-11-05T12:00:00Z","other":"\uD800"}"#,
+            Level::Unknown,
+            true,
+        ),
+    ] {
+        let c = docker.classify(line.as_bytes());
+        assert_eq!((c.level, c.parse_failure), (level, bad), "{line}");
+    }
+    let cri = Classifier::from_args(&Args::parse_from(["tell-tail", "--envelope", "cri"]));
+    for (tail, level) in [
+        ("stdout F INFO ready", Level::Info),
+        ("stdout P arbitrary prefix ", Level::Unknown),
+        ("stderr F WARN slow", Level::Warn),
+        ("stdout F ERROR is only a continuation", Level::Unknown),
+        ("stdout F ERROR complete", Level::Error),
+    ] {
+        assert_eq!(
+            cri.classify(format!("2026-11-05T12:00:00Z {tail}").as_bytes())
+                .level,
+            level
+        );
+    }
+    cri.lost_envelope_record();
+    assert_eq!(
+        cri.classify(b"2026-11-05T12:00:00Z stdout F ERROR continuation")
+            .level,
+        Level::Unknown
+    );
+    cri.reset_envelope();
+    assert_eq!(
+        cri.classify(b"2026-11-05T12:00:00Z stdout F ERROR new file")
+            .level,
+        Level::Error
+    );
+    let profiled = Classifier::from_args(&Args::parse_from([
+        "tell-tail",
+        "--envelope",
+        "cri",
+        "--profile",
+        "pino",
+    ]));
+    assert_eq!(
+        profiled
+            .classify(b"2026-11-05T12:00:00Z stdout F {\"level\":50}")
+            .level,
+        Level::Error
+    );
+}
+
+#[test]
+fn cri_fragment_chains_and_oversized_records_are_chunk_independent() {
+    let args = Args::parse_from([
+        "tell-tail",
+        "--envelope",
+        "cri",
+        "--max-record-bytes",
+        "100",
+    ]);
+    let input = format!(
+        "2026-11-05T12:00:00Z stdout P prefix\n2026-11-05T12:00:00Z stdout F ERROR continuation\n{}\n2026-11-05T12:00:00Z stdout F ERROR uncertain\n2026-11-05T12:00:00Z stdout F WARN complete\n",
+        "x".repeat(101)
+    );
+    for chunk in [1, 7, 65536] {
+        let mut engine = Engine::new(&args);
+        for bytes in input.as_bytes().chunks(chunk) {
+            engine.feed(bytes, Duration::ZERO);
+        }
+        engine.finish(Duration::ZERO);
+        let s = engine.snapshot(Duration::from_secs(1), State::Complete, None);
+        assert_eq!(s.totals.records, 5);
+        assert_eq!(s.totals.levels.get(Level::Unknown), 4);
+        assert_eq!(s.totals.levels.get(Level::Warn), 1);
+        assert_eq!(s.totals.oversized_records, 1);
+        assert_eq!(s.bytes_read, input.len() as u64);
+    }
+}

@@ -1,4 +1,5 @@
 mod diagnostics;
+mod envelope;
 mod syslog;
 use diagnostics::Selection;
 pub use diagnostics::{Assessment, ParseIssue, ParserKind, ParsingDiagnostics};
@@ -74,6 +75,7 @@ pub struct Classifier {
     field: Option<String>,
     path: Option<Vec<String>>,
     profile: Option<Profile>,
+    envelope: Option<envelope::Decoder>,
 }
 impl Classifier {
     pub fn new(format: Format, field: String) -> Self {
@@ -82,12 +84,14 @@ impl Classifier {
             field: Some(field),
             path: None,
             profile: None,
+            envelope: None,
         }
     }
     pub fn from_args(args: &Args) -> Self {
         Self {
             format: args.input_format(),
             profile: args.profile,
+            envelope: args.envelope.map(envelope::Decoder::new),
             field: args.level_field.clone(),
             path: args
                 .level_path
@@ -104,7 +108,38 @@ impl Classifier {
         self.assess_record(line).map(|a| a.classification)
     }
     /// Classification plus bounded evidence, without storing raw input.
+    pub fn reset_envelope(&self) {
+        if let Some(decoder) = &self.envelope {
+            decoder.reset();
+        }
+    }
+    pub fn lost_envelope_record(&self) {
+        if let Some(decoder) = &self.envelope {
+            decoder.lost_record();
+        }
+    }
     pub fn assess_record(&self, line: &[u8]) -> Option<Assessment> {
+        if let Some(decoder) = &self.envelope {
+            return match decoder.decode(line) {
+                Ok(Some(payload)) => self.assess_inner(&payload),
+                Ok(None) => Some(Assessment {
+                    classification: Classification::unknown(),
+                    parser: ParserKind::Text,
+                    issue: ParseIssue::None,
+                }),
+                Err(()) => Some(Assessment {
+                    classification: Classification {
+                        level: Level::Unknown,
+                        parse_failure: true,
+                    },
+                    parser: ParserKind::Text,
+                    issue: ParseIssue::None,
+                }),
+            };
+        }
+        self.assess_inner(line)
+    }
+    fn assess_inner(&self, line: &[u8]) -> Option<Assessment> {
         let line = trim_start(line);
         let parser = if self.format == Format::AppleUnified {
             ParserKind::Apple

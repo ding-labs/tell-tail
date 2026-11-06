@@ -174,3 +174,48 @@ leading-level grammar applies. This is file/stdin parsing, not a syslog network
 receiver. RFC 5424 structured-data names are bounded to 32 bytes, and headers
 follow the protocol's field-length bounds. Source:
 [RFC 5424](https://www.rfc-editor.org/rfc/rfc5424).
+
+## Container envelopes
+
+Prefer the runtime's normal log command for live use. Its application output
+usually needs no envelope flag:
+
+```sh
+docker logs --follow my-container 2>&1 | tell-tail
+kubectl logs --follow my-pod | tell-tail
+```
+
+For **saved captures** containing raw wrappers, select the outer envelope, then
+optionally select the inner format/profile:
+
+```sh
+tell-tail saved-docker.ndjson --envelope docker --from start
+tell-tail saved-cri.log --envelope cri --profile pino --from start
+```
+
+Envelope detection is explicit. Only one wrapper layer is removed. `stdout` and
+`stderr` never determine severity. Docker requires unique string `log`, `stream`
+(stdout/stderr), and ISO-shaped `time` fields, with complete JSON validation.
+Escaped payloads use a temporary decoded buffer bounded by the input record size.
+A trailing LF/CRLF is removed; a payload containing multiple physical lines
+remains unknown rather than being split into invented extra records.
+
+CRI requires timestamp, stdout/stderr, and F/P fields. Standalone `F` records are
+classified. Every `P` fragment and its terminating `F` stay unknown: this increment
+does **not** reconstruct multiline/fragmented events. Two booleans track pending
+chains independently by stream; no fragment contents are retained. A malformed or
+oversized outer record conservatively marks both streams pending until their
+next `F`. A followed-file generation boundary resets that state. Starting in the
+middle of a stream cannot establish whether an unseen `P` preceded the first `F`.
+
+In both modes, one outer physical line is one counted record, bytes describe the
+outer input, and previews show the original bounded envelope. Input/activity time
+remains processing time. Malformed envelopes increment parse failures; valid but
+unsupported multiline/partial payloads only increment unknown. Use runtime output
+or normalize upstream when event reconstruction is required. Apple unified input
+and `--demo` cannot be combined with an envelope.
+
+Docker advises using its own tooling instead of reading daemon-owned live files;
+these examples use exported captures. See the
+[Docker format](https://docs.docker.com/engine/logging/drivers/json-file/) and
+[Kubernetes CRI reader](https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/cri-client/pkg/logs/logs.go).

@@ -52,6 +52,7 @@ impl Engine {
         } = self;
         framer.feed_counted(bytes, |line, oversized, consumed| {
             let class = if oversized {
+                classifier.lost_envelope_record();
                 Some(Classification::unknown())
             } else {
                 classifier.assess_record(line).map(|assessment| {
@@ -80,6 +81,7 @@ impl Engine {
         } = self;
         framer.finish_counted(|line, oversized, consumed| {
             let class = if oversized {
+                classifier.lost_envelope_record();
                 Some(Classification::unknown())
             } else {
                 classifier.assess_record(line).map(|assessment| {
@@ -98,6 +100,7 @@ impl Engine {
         });
     }
     pub fn discard_partial(&mut self) {
+        self.classifier.reset_envelope();
         let n = self.framer.pending_bytes();
         if n > 0 {
             self.stats.discarded_partial_records += 1;
