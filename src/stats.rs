@@ -128,6 +128,9 @@ pub struct Snapshot {
     /// Dashboard-only previews; the CLI JSON and webhook contracts omit logs.
     #[serde(skip)]
     pub recent_errors: Vec<crate::recent::RecentError>,
+    /// Bounded session-level parser evidence; omitted from CLI schema 2.
+    #[serde(skip)]
+    pub parsing: Option<crate::parse::ParsingDiagnostics>,
 }
 #[derive(Clone, Copy, Default)]
 struct Bucket {
@@ -340,6 +343,7 @@ impl Stats {
                     .map(|time| at.saturating_sub(time).as_secs_f64()),
             },
             recent_errors: Vec::new(),
+            parsing: None,
         }
     }
 }

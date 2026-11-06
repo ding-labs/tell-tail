@@ -66,7 +66,9 @@ Current main adds two fields to the owned Rust `Snapshot`:
   `None` means no matching record observed. A retained snapshot's ages do not
   change as wall time advances.
 
-Both fields, like the existing bounded `recent_errors`, have `#[serde(skip)]`.
+The engine also attaches optional `parsing` session evidence with six fixed rule
+counters and two issue counters; see [format diagnostics](LOG-FORMATS.md). These
+fields, like the bounded `recent_errors`, have `#[serde(skip)]`.
 Serializing `Snapshot` directly therefore preserves CLI JSON schema 2. The web
 encoder explicitly adds presentation fields at the envelope level under web
 schema 1; see the [field types, validation, and compatibility rules](WEB-FRAMES.md).

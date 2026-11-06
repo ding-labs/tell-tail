@@ -6,8 +6,40 @@ pub enum Format {
     Auto,
     Text,
     Json,
+    /// Whitespace-separated key=value records with quoted string support.
+    Logfmt,
+    /// RFC 5424 or RFC 3164 wire headers with an explicit <PRI> prefix.
+    Syslog,
     /// Apple unified log NDJSON; maps messageType and skips stream metadata.
     AppleUnified,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+pub enum Envelope {
+    /// Saved Docker json-file envelopes; classify the inner log string.
+    Docker,
+    /// CRI envelopes; partial chains remain unknown rather than being reassembled.
+    Cri,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+pub enum Profile {
+    /// JSON level: 10 trace, 20 debug, 30 info, 40 warn, 50 error, 60 fatal.
+    Pino,
+    /// JSON levelno: Python's standard numeric severity mapping.
+    Python,
+    /// One JSON LogRecord with severityNumber in the OpenTelemetry 1..=24 range.
+    Otel,
+    /// Serilog compact JSON (@l; omitted informational level requires @t and @m/@mt).
+    Serilog,
+}
+impl Profile {
+    pub fn field(self) -> &'static str {
+        match self {
+            Self::Pino => "level",
+            Self::Python => "levelno",
+            Self::Otel => "severityNumber",
+            Self::Serilog => "@l",
+        }
+    }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 pub enum Output {
@@ -33,7 +65,7 @@ pub struct Args {
     /// File to follow; omit or use - to read stdin.
     pub file: Option<PathBuf>,
     /// Run a built-in synthetic stream: healthy, warnings, errors, silence, recovery.
-    #[arg(long, conflicts_with_all = ["file", "apple_unified", "once", "from", "format", "level_field"])]
+    #[arg(long, conflicts_with_all = ["file", "apple_unified", "once", "from", "format", "level_field", "level_path", "profile", "envelope"])]
     pub demo: bool,
     /// Stream macOS unified logs at info level; no pipe or jq required.
     #[arg(long, conflicts_with_all = ["file", "once", "from"])]
@@ -46,9 +78,18 @@ pub struct Args {
     pub from: Option<From>,
     #[arg(long, value_enum, default_value = "auto")]
     pub format: Format,
-    /// Top-level JSON severity field.
-    #[arg(long, default_value = "level")]
-    pub level_field: String,
+    /// Exact top-level JSON or logfmt severity field; omit to recognize common field names.
+    #[arg(long)]
+    pub level_field: Option<String>,
+    /// JSON Pointer to a nested object severity field (for example /log/level).
+    #[arg(long, conflicts_with = "level_field")]
+    pub level_path: Option<String>,
+    /// Explicit JSON severity convention; field/path flags override its default selector.
+    #[arg(long, value_enum)]
+    pub profile: Option<Profile>,
+    /// Unwrap a container record before applying format/profile/field options.
+    #[arg(long, value_enum)]
+    pub envelope: Option<Envelope>,
     /// Rolling window in seconds (1..=3600).
     #[arg(long, default_value_t = 60, value_parser = clap::value_parser!(u32).range(1..=3600))]
     pub window: u32,
@@ -118,9 +159,28 @@ impl Args {
             }
         }
         if self.input_format() == Format::AppleUnified
-            && !matches!(self.level_field.as_str(), "level" | "messageType")
+            && !matches!(
+                self.level_field.as_deref(),
+                None | Some("level" | "messageType")
+            )
         {
             return Err("--format apple-unified uses messageType; omit --level-field");
+        }
+        if self.envelope.is_some() && self.input_format() == Format::AppleUnified {
+            return Err("--envelope cannot be combined with Apple unified input");
+        }
+        if self.profile.is_some() && !matches!(self.input_format(), Format::Auto | Format::Json) {
+            return Err("--profile requires auto or json format");
+        }
+        if let Some(path) = &self.level_path {
+            if crate::parse::pointer_tokens(path).is_none() {
+                return Err(
+                    "--level-path must be a JSON Pointer with 1..=16 object keys, at most 1024 bytes, and valid ~0/~1 escapes",
+                );
+            }
+            if !matches!(self.input_format(), Format::Auto | Format::Json) {
+                return Err("--level-path requires auto or json format");
+            }
         }
         #[cfg(feature = "web")]
         {
@@ -151,7 +211,11 @@ impl Args {
         if self.path().is_none() && (self.once || self.from.is_some()) {
             return Err("--once and --from require a file input");
         }
-        if self.level_field.is_empty() {
+        if self
+            .level_field
+            .as_ref()
+            .is_some_and(|field| field.is_empty())
+        {
             return Err("--level-field must not be empty");
         }
         if self.metrics_file.is_some() && self.output != Output::Prometheus {

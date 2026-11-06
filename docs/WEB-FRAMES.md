@@ -186,6 +186,16 @@ The CLI's existing total-record `history` is unchanged. Raw error previews use
 the separate bounded `recent_errors` field described above. None of these
 additions enable retention, log forwarding, or new webhook triggers.
 
+## Parser evidence (unreleased)
+
+Current main also emits optional `parsing` session evidence: six decimal-string
+`recognized` counters (text, JSON, logfmt, profile, Apple, syslog), and decimal
+`numeric` / `conflicting` issue counters. It retains no raw input. The encoder and
+browser validate that recognized counts do not exceed known session records and
+that disjoint issue counts do not exceed session unknowns. Old frames may omit
+it; the browser displays unavailable evidence. CLI schema 2 is unchanged.
+See [the complete field and hint contract](LOG-FORMATS.md#understanding-parser-evidence).
+
 ## Sessions, sequence numbers, and final state
 
 An SSE `snapshot` event carries `json()` as its data. `event_id()` is

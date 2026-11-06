@@ -501,7 +501,17 @@ fn draw_review(frame: &mut Frame, s: &Snapshot, frozen: bool, help: bool, review
         .map(|b| format!("{b} B"))
         .unwrap_or_else(|| "unknown".into());
     let footer = if help {
-        "q quit · space freeze (ingestion continues) · ↑↓ review · f fatal only\nRecognized = known severity / all window records; unknown may lack a level.\nJSON: string level (--level-field); text: INFO, [WARN], ERROR: · ? closes help".into()
+        let p = s.parsing.unwrap_or_default();
+        format!(
+            "q quit · space freeze (ingestion continues) · ↑↓ review · f fatal · ? closes help\nSession recognized: text {} · JSON {} · logfmt {} · profile {} · Apple {} · syslog {}\n{}",
+            p.recognized[0],
+            p.recognized[1],
+            p.recognized[2],
+            p.recognized[3],
+            p.recognized[4],
+            p.recognized[5],
+            p.hint()
+        )
     } else {
         format!(
             " {} · Session: {} records · {:.2} MiB · {:.1}s\n Parse failures: {} · oversized: {} · pending: {} B · skipped: {} B · Backlog: {}\n q quit · space freeze · ↑↓ review · f fatal · ? help",

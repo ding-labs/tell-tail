@@ -12,7 +12,7 @@ use tell_tail::{
 fn apple_types_are_mapped_only_in_the_explicit_format() {
     let args = Args::parse_from(["tell-tail", "--format", "apple-unified"]);
     assert!(args.validate().is_ok());
-    let classifier = Classifier::new(args.format, args.level_field);
+    let classifier = Classifier::from_args(&args);
     for (value, level) in [
         ("Default", Level::Info),
         ("Info", Level::Info),

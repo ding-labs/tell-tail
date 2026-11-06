@@ -45,7 +45,7 @@ for x86_64 and ARM64. The dashboard is embedded; the archives need no Rust, Node
 or Python. See the [distribution guide](docs/RELEASING.md) for platform details.
 
 **Current main, not yet released:** the built-in demo, parsing coverage, severity
-history, and activity ages described below are not in the 0.2.0 packages.
+history, activity ages, and expanded format recognition described below are not in the 0.2.0 packages.
 
 Read [Understanding a live log stream](docs/MONITORING.md) for a complete guide
 to interpreting coverage, history, activity ages, controls, and their limits.
@@ -99,6 +99,30 @@ If a piped program buffers its output, configure that program to flush promptly;
 Tell-Tail can only measure records once they arrive. A fast scan of an old file
 shows processing throughput, not its original event rate. No recent logs alone
 cannot establish whether the application is healthy or stalled.
+
+## Log formats with minimal setup (unreleased)
+
+Current main recognizes common JSON severity fields, logfmt key/value records,
+Python-style console prefixes, timestamped/colored levels, and syslog priority
+headers automatically. Recognition runs per record, so supported styles can mix.
+
+```sh
+my-app 2>&1 | tell-tail --output web --open
+# An explicit numeric convention needs just one flag:
+node app.js 2>&1 | tell-tail --profile pino
+# Choose a literal key or a nested JSON object path:
+tell-tail app.log --level-field priority
+tell-tail app.log --level-path /log/level
+# Unwrap a saved container capture, then classify its application records:
+tell-tail saved-cri.log --envelope cri --profile pino --from start
+```
+
+Other JSON profiles are `python` (numeric `levelno`), `otel` (one JSON LogRecord),
+and `serilog` (compact JSON). Numeric conventions are not guessed. Explicit
+selectors override automatic field selection; conflicting automatic candidates
+remain unknown. Browser hints and terminal `?` help explain recognized rule counts
+and corrective flags. See the [format reference](docs/LOG-FORMATS.md) for exact
+mappings, examples, compatibility changes, container limits, and troubleshooting.
 
 ## Inputs and output
 
@@ -395,15 +419,17 @@ contents. Missing files and incomplete lines have separate waiting guidance.
   does not create another record. CRLF is supported.
 - Severity categories are trace, debug, info, warn, error, fatal, and unknown.
   Names are case-insensitive. Aliases: warning → warn; critical and panic → fatal.
-- JSON reads the top-level `level` string, configurable with `--level-field`.
-  Missing, numeric, or unrecognized values are unknown. Malformed JSON and invalid
-  UTF-8 in JSON increment `parse_failures`. Duplicate severity fields are malformed.
-- Text accepts `INFO message`, `[WARN] message`, `ERROR: message`, and an ISO-shaped
-  timestamp followed by a level, such as `2026-10-14T22:01:02Z ERROR message`.
-  Bracketed timestamps work too. Words elsewhere in a message do not set severity.
-- Auto parsing treats lines starting with `{` after whitespace as JSON. Invalid
-  JSON never falls back to text. Other formats, ANSI-colored prefixes, and multiline
-  event reconstruction remain unsupported in 0.2.
+- Current main recognizes common JSON keys such as `level`, `severity`, and
+  `log.level`. `--level-field` selects one literal key; `--level-path` selects a
+  nested object value. Duplicate selected keys are malformed; conflicting
+  automatically selected values remain unknown. Named profiles map numeric levels.
+- Text accepts `INFO message`, `[WARN] message`, `ERROR:message`, Python prefixes,
+  and ISO-shaped timestamps with `T` or a space. Bounded ANSI SGR colors are
+  ignored for classification. Message keywords never set severity.
+- Auto mode selects JSON, logfmt, syslog priority headers, or leading-level text
+  per record. Malformed structured input never falls back to message guessing.
+  Multiline event reconstruction and arbitrary custom layouts remain unsupported.
+  Published 0.2.0 has the earlier, narrower parser; see the format reference above.
 - Warning ratio is warn / all records. Error ratio is (error + fatal) / all records.
   Unknown records remain in both denominators. These are log ratios, not request
   failure rates.

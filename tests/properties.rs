@@ -94,6 +94,26 @@ proptest! {
     }
 
     #[test]
+    fn quoted_messages_cannot_override_structured_severity(
+        message in ".{0,256}", index in 0usize..6,
+    ) {
+        use tell_tail::parse::Classifier;
+        let expected = Level::ALL[index];
+        let c = Classifier::from_args(&Args::parse_from(["tell-tail"]));
+        let json = serde_json::json!({"severity": expected.name(), "message": format!("level=error ERROR {message}")}).to_string();
+        prop_assert_eq!(c.classify(json.as_bytes()).level, expected);
+        let quoted = serde_json::to_string(&format!("level=error ERROR {message}")).unwrap();
+        let logfmt = format!("msg={quoted} level={}", expected.name());
+        let actual = c.classify(logfmt.as_bytes());
+        prop_assert_eq!(actual.level, expected);
+        prop_assert!(!actual.parse_failure);
+        let conflict = serde_json::json!({"level":expected.name(), "severity":Level::ALL[(index + 1) % 6].name(), "message":message}).to_string();
+        let actual = c.classify(conflict.as_bytes());
+        prop_assert_eq!(actual.level, Level::Unknown);
+        prop_assert!(!actual.parse_failure);
+    }
+
+    #[test]
     fn timed_operations_match_an_independent_event_ledger(
         window in prop_oneof![Just(1u32), Just(60), Just(3600)],
         operations in prop::collection::vec((0u64..10_000_000, 0usize..7, any::<bool>()), 0..32),

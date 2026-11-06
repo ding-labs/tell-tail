@@ -60,6 +60,18 @@ impl WebFrame {
         {
             return Err(EncodeError::InvalidActivity);
         }
+        if let Some(parsing) = snapshot.parsing {
+            let recognized = parsing
+                .recognized
+                .iter()
+                .try_fold(0u64, |sum, value| sum.checked_add(*value));
+            let unknown = parsing.numeric.checked_add(parsing.conflicting);
+            if recognized.is_none_or(|n| n > snapshot.totals.recognized_records())
+                || unknown.is_none_or(|n| n > snapshot.totals.levels.get(Level::Unknown))
+            {
+                return Err(EncodeError::InvalidParsing);
+            }
+        }
         let mut writer = FrameWriter {
             bytes: Vec::with_capacity(MAX_FRAME_BYTES),
             too_large: false,
@@ -70,6 +82,11 @@ impl WebFrame {
                 web_schema_version: WEB_SCHEMA_VERSION,
                 sequence: Decimal(sequence),
                 metrics: Metrics::from(snapshot),
+                parsing: snapshot.parsing.map(|p| WebParsing {
+                    recognized: p.recognized.map(Decimal),
+                    numeric: Decimal(p.numeric),
+                    conflicting: Decimal(p.conflicting),
+                }),
                 activity: WebActivity {
                     last_record_age_seconds: snapshot.activity.last_record_age_seconds.map(Finite),
                     last_error_age_seconds: snapshot.activity.last_error_age_seconds.map(Finite),
@@ -115,6 +132,7 @@ pub enum EncodeError {
     InvalidHistory,
     InvalidRecentErrors,
     InvalidActivity,
+    InvalidParsing,
     Serialization(serde_json::Error),
 }
 
@@ -129,6 +147,7 @@ impl fmt::Display for EncodeError {
                 f.write_str("web histories must align and contain at most 60 completed seconds")
             }
             Self::InvalidRecentErrors => f.write_str("invalid bounded error previews"),
+            Self::InvalidParsing => f.write_str("parser evidence exceeds session record counts"),
             Self::InvalidActivity => {
                 f.write_str("activity ages must be finite, nonnegative and within the session")
             }
@@ -190,9 +209,18 @@ struct Envelope<'a> {
     metrics: Metrics<'a>,
     activity: WebActivity,
     #[serde(skip_serializing_if = "Option::is_none")]
+    parsing: Option<WebParsing>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     severity_history: Option<SeverityHistory<'a>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     recent_errors: Option<Recent<'a>>,
+}
+
+#[derive(Serialize)]
+struct WebParsing {
+    recognized: [Decimal; 6],
+    numeric: Decimal,
+    conflicting: Decimal,
 }
 
 #[derive(Serialize)]

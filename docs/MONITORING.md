@@ -1,6 +1,6 @@
 # Understanding a live log stream
 
-This guide covers parsing coverage, severity history, and activity freshness in
+This guide covers parsing coverage, severity history, activity freshness, and expanded format recognition in
 the current source checkout. These additions are **unreleased** and are not in
 the published 0.2.0 Homebrew, Cargo, or release archives. See the
 [installation instructions](../README.md#install-and-try-it) and the
@@ -114,17 +114,17 @@ view labels it explicitly. Press `?` for format guidance.
 
 | Category | Examples | Interpretation |
 | --- | --- | --- |
-| Malformed | Invalid JSON, invalid UTF-8 in JSON, duplicate selected severity fields, invalid Unicode escapes | Also increments `parse_failures` |
+| Malformed | Invalid structured input, invalid UTF-8 in JSON/logfmt, duplicate selected severity fields, invalid Unicode escapes | Also increments `parse_failures` |
 | Oversized | A physical line exceeds `--max-record-bytes` | Drained and counted once as unknown; increments `oversized_records` |
-| No recognized severity | Blank lines, missing or unsupported level values, numeric JSON levels, unrecognized text prefixes | May be valid application output; does not itself increment `parse_failures` |
+| No recognized severity | Blank lines, missing or unsupported level values, numeric JSON levels without a matching profile, unrecognized text prefixes | May be valid application output; does not itself increment `parse_failures` |
 
 The default record limit is 1 MiB and the maximum is 16 MiB. Increasing it raises
-buffer capacity. Parsing coverage adds no retained raw-log archive or new parser
-profiles; it exposes the behavior of the existing classifier.
+buffer capacity. Parsing coverage adds no retained raw-log archive. For supported parsers and
+explicit profiles, see the [format reference](LOG-FORMATS.md).
 
 ### Supported input examples
 
-With the default `--format auto` and `--level-field level`:
+With `--format auto` and no field/profile override:
 
 | Record | Result |
 | --- | --- |
@@ -135,19 +135,21 @@ With the default `--format auto` and `--level-field level`:
 | `{"level":"warning","message":"retrying"}` | Warn |
 | `{"level":"panic","message":"failed"}` | Fatal |
 | `{"level":50,"message":"timeout"}` | Unknown, not a parse failure |
-| `{"severity":"error"}` | Unknown; select `--level-field severity` |
-| `{"context":{"level":"error"}}` | Unknown; nested severity fields are not supported |
+| `{"severity":"error"}` | Error; a common field is recognized automatically |
+| `{"context":{"level":"error"}}` | Unknown; select `--level-path /context/level` |
 | `request completed with ERROR in its message` | Unknown; words inside the message do not set severity |
 | `{bad}` | Unknown plus a parse failure |
 
 Severity names are case-insensitive. `warning` maps to warn; `critical` and
 `panic` map to fatal. Auto mode treats a record starting with `{` after whitespace
 as JSON; malformed JSON does not fall back to text. `--format json` explicitly
-requires JSON. A selected JSON severity field must be a top-level string.
+requires JSON. Numeric mappings require a named profile; nested selectors use
+`--level-path`. Explicit `--level-field` names a literal top-level key.
 
-ANSI-colored prefixes, logfmt, numeric mappings, nested-field paths, and
-multiline reconstruction remain unsupported. Disable colors in the producer
-where possible, or emit a supported format. A multiline stack trace consists of
+Current main also recognizes bounded ANSI SGR colors, logfmt fields, and syslog
+priority headers. Explicit profiles and nested paths handle other conventions;
+see [format recognition](LOG-FORMATS.md). Multiline reconstruction remains
+unsupported. A multiline stack trace consists of
 multiple physical records; continuation lines often have unknown severity.
 Apple captures have their own [explicit format rules](APPLE-UNIFIED.md).
 

@@ -10,6 +10,7 @@ how to build and run the checkout explicitly.
 
 | Guide | What it answers |
 | --- | --- |
+| [Log format recognition](LOG-FORMATS.md) | Automatic styles, one-flag profiles, nested keys, container wrappers, parser hints, and precise limits |
 | [Understanding a live log stream](MONITORING.md) | What coverage, histories, ratios, and activity ages mean; worked examples, parser conventions, time scopes, and controls |
 | [Built-in demo](DEMO.md) | How to try the tool offline, what each phase demonstrates, compatible flags, and shutdown |
 | [Web dashboard](WEB-DASHBOARD.md) | Browser display, freeze, exact values, connection states, accessibility, and browser opening |

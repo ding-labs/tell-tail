@@ -1,7 +1,8 @@
 #![no_main]
+use clap::Parser;
 use libfuzzer_sys::fuzz_target;
 use tell_tail::{
-    cli::Format,
+    cli::{Args, Format},
     parse::{Classifier, Level},
 };
 use tell_tail_fuzz::Json;
@@ -35,12 +36,30 @@ fuzz_target!(|data: &[u8]| {
     let text = Classifier::new(Format::Text, "level".into()).classify(data);
     assert!(!text.parse_failure);
     let auto = Classifier::new(Format::Auto, "level".into()).classify(data);
-    assert_eq!(
-        auto,
-        if data.trim_ascii_start().first() == Some(&b'{') {
-            result
-        } else {
-            text
+    if data.trim_ascii_start().first() == Some(&b'{') {
+        assert_eq!(auto, result);
+    } else {
+        let logfmt = Classifier::new(Format::Logfmt, "level".into()).classify(data);
+        let syslog = Classifier::new(Format::Syslog, "level".into()).classify(data);
+        assert!([text, logfmt, syslog].contains(&auto));
+    }
+    // Exercise bounded field inference, nested traversal, numeric conventions,
+    // and envelope decoding as well as the strict JSON reference above.
+    thread_local! {
+        static PARSERS: Vec<Classifier> = [
+            vec![], vec!["--level-path", "/log/level"],
+            vec!["--profile", "pino"], vec!["--profile", "python"],
+            vec!["--profile", "otel"], vec!["--profile", "serilog"],
+            vec!["--envelope", "docker"], vec!["--envelope", "cri"],
+        ].into_iter().map(|flags| Classifier::from_args(&Args::parse_from(std::iter::once("tell-tail").chain(flags)))).collect();
+    }
+    PARSERS.with(|parsers| {
+        for parser in parsers {
+            parser.reset_envelope();
+            let result = parser.classify(data);
+            if result.parse_failure {
+                assert_eq!(result.level, Level::Unknown);
+            }
         }
-    );
+    });
 });

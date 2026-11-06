@@ -1,0 +1,250 @@
+[
+  {
+    "name": "generic JSON level",
+    "input": "{\"level\":\"error\",\"message\":\"timeout\"}",
+    "flags": [],
+    "expected": "error",
+    "target": "error"
+  },
+  {
+    "name": "Go slog JSON",
+    "input": "{\"time\":\"2026-11-05T12:00:00Z\",\"level\":\"WARN\",\"msg\":\"slow\"}",
+    "flags": [],
+    "expected": "warn",
+    "target": "warn"
+  },
+  {
+    "name": "JSON severity",
+    "input": "{\"severity\":\"ERROR\",\"message\":\"timeout\"}",
+    "flags": [],
+    "expected": "error",
+    "target": "error"
+  },
+  {
+    "name": "JSON levelname",
+    "input": "{\"levelname\":\"WARNING\",\"message\":\"slow\"}",
+    "flags": [],
+    "expected": "warn",
+    "target": "warn"
+  },
+  {
+    "name": "JSON capitalized Level",
+    "input": "{\"Level\":\"Information\",\"Message\":\"ready\"}",
+    "flags": [],
+    "expected": "info",
+    "target": "info"
+  },
+  {
+    "name": "ECS dotted field",
+    "input": "{\"log.level\":\"ERROR\",\"message\":\"timeout\"}",
+    "flags": [],
+    "expected": "error",
+    "target": "error"
+  },
+  {
+    "name": "ECS nested field",
+    "input": "{\"log\":{\"level\":\"ERROR\"},\"message\":\"timeout\"}",
+    "flags": [
+      "--level-path",
+      "/log/level"
+    ],
+    "expected": "error",
+    "target": "error"
+  },
+  {
+    "name": "explicit custom field",
+    "input": "{\"priority\":\"fatal\"}",
+    "flags": [
+      "--level-field",
+      "priority"
+    ],
+    "expected": "fatal",
+    "target": "fatal"
+  },
+  {
+    "name": "conflicting fields",
+    "input": "{\"level\":\"info\",\"severity\":\"error\"}",
+    "flags": [],
+    "expected": "unknown",
+    "target": "unknown"
+  },
+  {
+    "name": "explicit field resolves conflict",
+    "input": "{\"level\":\"info\",\"severity\":\"error\"}",
+    "flags": [
+      "--level-field",
+      "level"
+    ],
+    "expected": "info",
+    "target": "info"
+  },
+  {
+    "name": "Pino numeric",
+    "input": "{\"level\":50,\"time\":1793870400000,\"pid\":123,\"hostname\":\"example\",\"msg\":\"timeout\"}",
+    "flags": [
+      "--profile",
+      "pino"
+    ],
+    "expected": "error",
+    "target": "error"
+  },
+  {
+    "name": "Python numeric",
+    "input": "{\"levelno\":30,\"message\":\"slow\"}",
+    "flags": [
+      "--profile",
+      "python"
+    ],
+    "expected": "warn",
+    "target": "warn"
+  },
+  {
+    "name": "OTel numeric record",
+    "input": "{\"severityNumber\":17,\"body\":\"timeout\"}",
+    "flags": [
+      "--profile",
+      "otel"
+    ],
+    "expected": "error",
+    "target": "error"
+  },
+  {
+    "name": "Serilog compact error",
+    "input": "{\"@t\":\"2026-11-05T12:00:00Z\",\"@mt\":\"Timeout\",\"@l\":\"Error\"}",
+    "flags": [
+      "--profile",
+      "serilog"
+    ],
+    "expected": "error",
+    "target": "error"
+  },
+  {
+    "name": "Serilog implicit info",
+    "input": "{\"@t\":\"2026-11-05T12:00:00Z\",\"@mt\":\"Ready\"}",
+    "flags": [
+      "--profile",
+      "serilog"
+    ],
+    "expected": "info",
+    "target": "info"
+  },
+  {
+    "name": "prefix text",
+    "input": "INFO ready",
+    "flags": [],
+    "expected": "info",
+    "target": "info"
+  },
+  {
+    "name": "bracket text",
+    "input": "[WARN] slow",
+    "flags": [],
+    "expected": "warn",
+    "target": "warn"
+  },
+  {
+    "name": "ISO text",
+    "input": "2026-11-05T12:00:00Z ERROR timeout",
+    "flags": [],
+    "expected": "error",
+    "target": "error"
+  },
+  {
+    "name": "Python default",
+    "input": "WARNING:root:upstream slow",
+    "flags": [],
+    "expected": "warn",
+    "target": "warn"
+  },
+  {
+    "name": "Python timestamp",
+    "input": "2026-11-05 12:00:00,123 ERROR timeout",
+    "flags": [],
+    "expected": "error",
+    "target": "error"
+  },
+  {
+    "name": "colored prefix",
+    "input": "\u001b[31mERROR\u001b[0m timeout",
+    "flags": [],
+    "expected": "error",
+    "target": "error"
+  },
+  {
+    "name": "Go slog text",
+    "input": "time=2026-11-05T12:00:00Z level=WARN msg=\"upstream slow\"",
+    "flags": [],
+    "expected": "warn",
+    "target": "warn"
+  },
+  {
+    "name": "key value custom field",
+    "input": "severity=error message=\"timeout\"",
+    "flags": [],
+    "expected": "error",
+    "target": "error"
+  },
+  {
+    "name": "quoted fake level",
+    "input": "msg=\"level=error\" level=info",
+    "flags": [],
+    "expected": "info",
+    "target": "info"
+  },
+  {
+    "name": "numeric without profile",
+    "input": "{\"level\":30,\"message\":\"ambiguous\"}",
+    "flags": [],
+    "expected": "unknown",
+    "target": "unknown"
+  },
+  {
+    "name": "message keyword",
+    "input": "request completed with ERROR in message",
+    "flags": [],
+    "expected": "unknown",
+    "target": "unknown"
+  },
+  {
+    "name": "nested unrelated level",
+    "input": "{\"context\":{\"level\":\"ERROR\"},\"message\":\"ready\"}",
+    "flags": [],
+    "expected": "unknown",
+    "target": "unknown"
+  },
+  {
+    "name": "no level",
+    "input": "{\"message\":\"ERROR was mentioned\"}",
+    "flags": [],
+    "expected": "unknown",
+    "target": "unknown"
+  },
+  {
+    "name": "HTTP access without severity",
+    "input": "127.0.0.1 - - [05/Nov/2026:12:00:00 +0000] \"GET / HTTP/1.1\" 500 0",
+    "flags": [],
+    "expected": "unknown",
+    "target": "unknown"
+  },
+  {
+    "name": "syslog RFC5424",
+    "input": "<11>1 2026-11-05T12:00:00Z host app 123 event - timeout",
+    "flags": [],
+    "expected": "error",
+    "target": "error"
+  },
+  {
+    "name": "syslog RFC3164",
+    "input": "<132>Nov  5 12:00:00 host app: slow",
+    "flags": [],
+    "expected": "warn",
+    "target": "warn"
+  },
+  {
+    "name": "syslog missing priority",
+    "input": "Nov  5 12:00:00 host app: ERROR timeout",
+    "flags": [],
+    "expected": "unknown",
+    "target": "unknown"
+  }
+]

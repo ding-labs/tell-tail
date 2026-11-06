@@ -1,7 +1,16 @@
-use crate::cli::Format;
+mod diagnostics;
+mod envelope;
+mod syslog;
+use diagnostics::Selection;
+pub use diagnostics::{Assessment, ParseIssue, ParserKind, ParsingDiagnostics};
+mod logfmt;
+mod profiles;
+mod text;
+use crate::cli::{Args, Format, Profile};
 use serde::de::{self, DeserializeSeed, IgnoredAny, MapAccess, Visitor};
 use serde_json::value::RawValue;
 use std::{borrow::Cow, fmt};
+use text::text_level;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(usize)]
@@ -37,6 +46,10 @@ impl Level {
         }
         if bytes.eq_ignore_ascii_case(b"warning") {
             Self::Warn
+        } else if bytes.eq_ignore_ascii_case(b"information")
+            || bytes.eq_ignore_ascii_case(b"informational")
+        {
+            Self::Info
         } else if bytes.eq_ignore_ascii_case(b"critical") || bytes.eq_ignore_ascii_case(b"panic") {
             Self::Fatal
         } else {
@@ -59,72 +72,165 @@ impl Classification {
 }
 pub struct Classifier {
     format: Format,
-    field: String,
+    field: Option<String>,
+    path: Option<Vec<String>>,
+    profile: Option<Profile>,
+    envelope: Option<envelope::Decoder>,
 }
 impl Classifier {
     pub fn new(format: Format, field: String) -> Self {
-        Self { format, field }
-    }
-    /// Classify one record. Use classify_record when source metadata should be
-    /// omitted; this compatibility API represents such metadata as unknown.
-    pub fn classify(&self, line: &[u8]) -> Classification {
-        if self.format == Format::AppleUnified {
-            return self
-                .classify_record(line)
-                .unwrap_or_else(Classification::unknown);
+        Self {
+            format,
+            field: Some(field),
+            path: None,
+            profile: None,
+            envelope: None,
         }
+    }
+    pub fn from_args(args: &Args) -> Self {
+        Self {
+            format: args.input_format(),
+            profile: args.profile,
+            envelope: args.envelope.map(envelope::Decoder::new),
+            field: args.level_field.clone(),
+            path: args
+                .level_path
+                .as_deref()
+                .map(|path| pointer_tokens(path).unwrap_or_default()),
+        }
+    }
+    /// Compatibility API: skipped source metadata is represented as unknown.
+    pub fn classify(&self, line: &[u8]) -> Classification {
+        self.classify_record(line)
+            .unwrap_or_else(Classification::unknown)
+    }
+    pub fn classify_record(&self, line: &[u8]) -> Option<Classification> {
+        self.assess_record(line).map(|a| a.classification)
+    }
+    /// Classification plus bounded evidence, without storing raw input.
+    pub fn reset_envelope(&self) {
+        if let Some(decoder) = &self.envelope {
+            decoder.reset();
+        }
+    }
+    pub fn lost_envelope_record(&self) {
+        if let Some(decoder) = &self.envelope {
+            decoder.lost_record();
+        }
+    }
+    pub fn assess_record(&self, line: &[u8]) -> Option<Assessment> {
+        if let Some(decoder) = &self.envelope {
+            return match decoder.decode(line) {
+                Ok(Some(payload)) => self.assess_inner(&payload),
+                Ok(None) => Some(Assessment {
+                    classification: Classification::unknown(),
+                    parser: ParserKind::Text,
+                    issue: ParseIssue::None,
+                }),
+                Err(()) => Some(Assessment {
+                    classification: Classification {
+                        level: Level::Unknown,
+                        parse_failure: true,
+                    },
+                    parser: ParserKind::Text,
+                    issue: ParseIssue::None,
+                }),
+            };
+        }
+        self.assess_inner(line)
+    }
+    fn assess_inner(&self, line: &[u8]) -> Option<Assessment> {
         let line = trim_start(line);
-        if self.format == Format::Json
+        let parser = if self.format == Format::AppleUnified {
+            ParserKind::Apple
+        } else if self.profile.is_some() {
+            ParserKind::Profile
+        } else if self.path.is_some()
+            || self.format == Format::Json
             || (self.format == Format::Auto && line.first() == Some(&b'{'))
         {
-            if std::str::from_utf8(line).is_err() || !valid_unicode_escapes(line) {
-                return Classification {
-                    level: Level::Unknown,
-                    parse_failure: true,
-                };
-            }
-            match json_level(line, &self.field, false) {
-                Ok(level) => Classification {
-                    level: level.unwrap_or(Level::Unknown),
+            ParserKind::Json
+        } else if self.format == Format::Logfmt
+            || (self.format == Format::Auto && logfmt::looks_like(line))
+        {
+            ParserKind::Logfmt
+        } else if self.format == Format::Syslog
+            || (self.format == Format::Auto && syslog::looks_like(line))
+        {
+            ParserKind::Syslog
+        } else {
+            ParserKind::Text
+        };
+        if matches!(parser, ParserKind::Syslog) {
+            return Some(Assessment {
+                classification: syslog::classify(line),
+                parser,
+                issue: ParseIssue::None,
+            });
+        }
+        if matches!(parser, ParserKind::Text) {
+            return Some(Assessment {
+                classification: Classification {
+                    level: text_level(line),
                     parse_failure: false,
                 },
-                Err(_) => Classification {
+                parser,
+                issue: ParseIssue::None,
+            });
+        }
+        if matches!(parser, ParserKind::Logfmt) {
+            let (classification, issue) = logfmt::classify(line, self.field.as_deref());
+            return Some(Assessment {
+                classification,
+                parser,
+                issue,
+            });
+        }
+        let apple = matches!(parser, ParserKind::Apple);
+        if apple && line.first() != Some(&b'{') {
+            return None;
+        }
+        let selection = if std::str::from_utf8(line).is_ok() && valid_unicode_escapes(line) {
+            json_selected(
+                line,
+                if apple {
+                    Some("messageType")
+                } else {
+                    self.field
+                        .as_deref()
+                        .or_else(|| self.profile.map(Profile::field))
+                },
+                self.path.as_deref(),
+                apple,
+                self.profile,
+                self.profile == Some(Profile::Serilog)
+                    && self.field.is_none()
+                    && self.path.is_none(),
+            )
+            .ok()
+        } else {
+            None
+        };
+        Some(match selection {
+            Some(selected) => {
+                if apple && selected.level.is_none() {
+                    return None;
+                }
+                Assessment {
+                    classification: selected.classification(),
+                    parser,
+                    issue: selected.issue,
+                }
+            }
+            None => Assessment {
+                classification: Classification {
                     level: Level::Unknown,
                     parse_failure: true,
                 },
-            }
-        } else {
-            Classification {
-                level: text_level(line),
-                parse_failure: false,
-            }
-        }
-    }
-    /// Source-aware classification. None denotes Apple stream metadata, which
-    /// ingestion excludes from entry counts and accounts for as skipped bytes.
-    pub fn classify_record(&self, line: &[u8]) -> Option<Classification> {
-        if self.format != Format::AppleUnified {
-            return Some(self.classify(line));
-        }
-        let line = trim_start(line);
-        // The native tool writes a text banner alongside its NDJSON records.
-        if line.first() != Some(&b'{') {
-            return None;
-        }
-        let bad = Classification {
-            level: Level::Unknown,
-            parse_failure: true,
-        };
-        if std::str::from_utf8(line).is_err() || !valid_unicode_escapes(line) {
-            return Some(bad);
-        }
-        match json_level(line, "messageType", true) {
-            Ok(level) => level.map(|level| Classification {
-                level,
-                parse_failure: false,
-            }),
-            Err(_) => Some(bad),
-        }
+                parser,
+                issue: ParseIssue::None,
+            },
+        })
     }
 }
 // serde's IgnoredAny validates JSON syntax but skips surrogate pairing in
@@ -164,56 +270,61 @@ fn valid_unicode_escapes(mut bytes: &[u8]) -> bool {
 fn trim_start(bytes: &[u8]) -> &[u8] {
     bytes.trim_ascii_start()
 }
-fn text_level(mut line: &[u8]) -> Level {
-    let token_end = line
-        .iter()
-        .position(u8::is_ascii_whitespace)
-        .unwrap_or(line.len());
-    if iso_timestamp(&line[..token_end]) {
-        line = trim_start(&line[token_end..]);
+pub(crate) fn pointer_tokens(path: &str) -> Option<Vec<String>> {
+    if path.len() > 1024 || !path.starts_with('/') {
+        return None;
     }
-    if let Some(bracketed) = line.strip_prefix(b"[") {
-        let Some(end) = bracketed.iter().take(16).position(|&b| b == b']') else {
-            return Level::Unknown;
-        };
-        let after = &bracketed[end + 1..];
-        if !after.is_empty() && !after[0].is_ascii_whitespace() {
-            return Level::Unknown;
+    let parts: Vec<_> = path[1..].split('/').collect();
+    if parts.len() > 16 {
+        return None;
+    }
+    let mut result = Vec::with_capacity(parts.len());
+    for part in parts {
+        let mut decoded = String::new();
+        let mut chars = part.chars();
+        while let Some(c) = chars.next() {
+            decoded.push(if c == '~' {
+                match chars.next()? {
+                    '0' => '~',
+                    '1' => '/',
+                    _ => return None,
+                }
+            } else {
+                c
+            });
         }
-        Level::from_bytes(&bracketed[..end])
-    } else {
-        let end = line
-            .iter()
-            .position(u8::is_ascii_whitespace)
-            .unwrap_or(line.len());
-        Level::from_bytes(line[..end].strip_suffix(b":").unwrap_or(&line[..end]))
+        result.push(decoded);
     }
+    Some(result)
 }
-fn iso_timestamp(bytes: &[u8]) -> bool {
-    let b = bytes
-        .strip_prefix(b"[")
-        .and_then(|s| s.strip_suffix(b"]"))
-        .unwrap_or(bytes);
-    b.len() >= 19
-        && b.len() <= 40
-        && b[4] == b'-'
-        && b[7] == b'-'
-        && matches!(b[10], b'T' | b't')
-        && b[13] == b':'
-        && b[16] == b':'
-        && [0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 14, 15, 17, 18]
-            .iter()
-            .all(|&i| b[i].is_ascii_digit())
-        && b[19..]
-            .iter()
-            .all(|b| b.is_ascii_digit() || b".Zz+-:".contains(b))
+
+// A fixed allowlist avoids searching message/context fields for severity words.
+const LEVEL_FIELDS: &[&str] = &[
+    "level",
+    "severity",
+    "levelname",
+    "Level",
+    "log.level",
+    "severityText",
+    "SeverityText",
+    "levelno",
+    "severityNumber",
+];
+fn field_index(key: &str, field: Option<&str>) -> Option<usize> {
+    match field {
+        Some(field) => (key == field).then_some(0),
+        None => LEVEL_FIELDS.iter().position(|candidate| key == *candidate),
+    }
 }
 struct LevelSeed<'a> {
-    field: &'a str,
+    field: Option<&'a str>,
+    path: Option<&'a [String]>,
     apple: bool,
+    profile: Option<Profile>,
+    clef_default: bool,
 }
 impl<'de> DeserializeSeed<'de> for LevelSeed<'_> {
-    type Value = Option<Level>;
+    type Value = Selection;
     fn deserialize<D: de::Deserializer<'de>>(
         self,
         deserializer: D,
@@ -222,26 +333,51 @@ impl<'de> DeserializeSeed<'de> for LevelSeed<'_> {
     }
 }
 impl<'de> Visitor<'de> for LevelSeed<'_> {
-    type Value = Option<Level>;
+    type Value = Selection;
     fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str("a JSON log object")
     }
     fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Self::Value, M::Error> {
         let mut found = None;
+        let mut seen = 0u16;
+        let mut clef_seen = 0u8;
+        let mut clef_valid = 0u8;
+        let mut issue = ParseIssue::None;
         while let Some(key) = map.next_key::<Cow<'de, str>>()? {
-            if key == self.field {
-                if found.is_some() {
+            let index = match self.path {
+                Some(path) => path.first().filter(|field| **field == key).map(|_| 0),
+                None => field_index(&key, self.field),
+            };
+            if let Some(index) = index {
+                if seen & (1 << index) != 0 {
                     return Err(de::Error::custom("duplicate severity field"));
                 }
+                seen |= 1 << index;
                 let raw: &RawValue = map.next_value()?;
-                let value = if self.apple && raw.get() == "null" {
+                let value = if let Some(path) = self.path.filter(|path| path.len() > 1) {
+                    Some(if raw.get().starts_with('{') {
+                        let nested = json_selected(
+                            raw.get().as_bytes(),
+                            None,
+                            Some(&path[1..]),
+                            false,
+                            self.profile,
+                            false,
+                        )
+                        .map_err(de::Error::custom)?;
+                        issue = nested.issue;
+                        nested.level.unwrap_or(Level::Unknown)
+                    } else {
+                        Level::Unknown
+                    })
+                } else if self.apple && raw.get() == "null" {
                     None
                 } else {
                     let decode = |s: &str| {
                         if self.apple {
                             apple_level(s.as_bytes())
                         } else {
-                            Level::from_bytes(s.as_bytes())
+                            profiles::text(self.profile, s.as_bytes())
                         }
                     };
                     Some(if let Ok(s) = serde_json::from_str::<&str>(raw.get()) {
@@ -249,15 +385,55 @@ impl<'de> Visitor<'de> for LevelSeed<'_> {
                     } else if let Ok(s) = serde_json::from_str::<String>(raw.get()) {
                         decode(&s)
                     } else {
-                        Level::Unknown
+                        if issue != ParseIssue::Conflicting
+                            && raw
+                                .get()
+                                .as_bytes()
+                                .first()
+                                .is_some_and(|b| b.is_ascii_digit() || *b == b'-')
+                        {
+                            issue = ParseIssue::Numeric;
+                        }
+                        profiles::number(self.profile, raw.get())
                     })
                 };
-                found = Some(value);
+                found = Some(match found {
+                    Some(previous) if previous != value => {
+                        issue = ParseIssue::Conflicting;
+                        Some(Level::Unknown)
+                    }
+                    _ => value,
+                });
+            } else if self.clef_default && matches!(key.as_ref(), "@t" | "@m" | "@mt") {
+                let bit = match key.as_ref() {
+                    "@t" => 1,
+                    "@m" => 2,
+                    _ => 4,
+                };
+                if clef_seen & bit != 0 {
+                    return Err(de::Error::custom("duplicate compact event field"));
+                }
+                clef_seen |= bit;
+                let raw: &RawValue = map.next_value()?;
+                if let Ok(value) = serde_json::from_str::<String>(raw.get()) {
+                    if bit != 1 || text::iso_timestamp(value.as_bytes()) {
+                        clef_valid |= bit;
+                    }
+                }
             } else {
                 map.next_value::<IgnoredAny>()?;
             }
         }
-        Ok(found.flatten())
+        if found.is_none() && self.clef_default && clef_valid & 1 != 0 && clef_valid & 6 != 0 {
+            return Ok(Selection {
+                level: Some(Level::Info),
+                issue,
+            });
+        }
+        Ok(Selection {
+            level: found.flatten(),
+            issue,
+        })
     }
 }
 fn apple_level(value: &[u8]) -> Level {
@@ -274,9 +450,23 @@ fn apple_level(value: &[u8]) -> Level {
     }
     Level::Unknown
 }
-fn json_level(line: &[u8], field: &str, apple: bool) -> Result<Option<Level>, serde_json::Error> {
+fn json_selected(
+    line: &[u8],
+    field: Option<&str>,
+    path: Option<&[String]>,
+    apple: bool,
+    profile: Option<Profile>,
+    clef_default: bool,
+) -> Result<Selection, serde_json::Error> {
     let mut de = serde_json::Deserializer::from_slice(line);
-    let level = LevelSeed { field, apple }.deserialize(&mut de)?;
+    let level = LevelSeed {
+        field,
+        path,
+        apple,
+        profile,
+        clef_default,
+    }
+    .deserialize(&mut de)?;
     de.end()?;
     Ok(level)
 }

@@ -1,4 +1,4 @@
-import { activityText, elapsed, finalStates, historyPoints, integer, levels, parsingCoverage, percent, rate, severityComparison } from './frame.mjs';
+import { activityText, elapsed, finalStates, historyPoints, integer, levels, parsingCoverage, parsingEvidence, percent, rate, severityComparison } from './frame.mjs';
 
 const byId = id => document.getElementById(id);
 function text(id, value) { const el = byId(id); if (el.textContent !== value) el.textContent = value; }
@@ -284,6 +284,9 @@ function severityChart(frame) {
 export function render(frame) {
   const m = frame.metrics;
   const w = m.window;
+  const evidence = parsingEvidence(frame);
+  text('parsing-rules', evidence.summary);
+  text('parsing-hint', evidence.hint);
   const coverage = parsingCoverage(w.counts);
   const activity = activityText(frame);
   text('last-record', activity.record);

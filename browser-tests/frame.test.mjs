@@ -169,3 +169,20 @@ test('validation errors identify fields without echoing untrusted payloads', () 
   }
   assert.throws(() => parseFrame('{"secret'), /frame must be valid JSON/);
 });
+
+test('parser evidence validates exact counts and provides specific corrections', async () => {
+  const { parsingEvidence } = await import('../web/frame.mjs');
+  const frame = JSON.parse(fixture);
+  frame.metrics.totals.records = '4'; frame.metrics.totals.levels.unknown = '2';
+  frame.parsing = {recognized:['1','1','0','0','0','0'], numeric:'1', conflicting:'1'};
+  parseFrame(JSON.stringify(frame));
+  assert.match(parsingEvidence(frame).summary, /text 1 · JSON 1/);
+  assert.match(parsingEvidence(frame).hint, /--level-field/);
+  assert.match(parsingEvidence(frame).hint, /--profile pino/);
+  for (const change of [p => p.recognized.push('0'), p => p.numeric = '3', p => p.recognized[0] = '3', p => p.conflicting = 1]) {
+    const bad = structuredClone(frame); change(bad.parsing);
+    assert.throws(() => parseFrame(JSON.stringify(bad)), /parsing/);
+  }
+  delete frame.parsing;
+  assert.match(parsingEvidence(parseFrame(JSON.stringify(frame))).summary, /unavailable/);
+});

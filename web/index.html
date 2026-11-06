@@ -49,12 +49,14 @@
         </div>
       </section>
       <section class="parsing-note" aria-label="Parsing coverage">
+        <p id="parsing-hint"></p>
         <p id="parsing-coverage">Waiting for records to measure severity coverage.</p>
         <details id="parsing-help">
           <summary>Understand parsing coverage</summary>
           <p id="parsing-breakdown"></p>
+          <p id="parsing-rules"></p>
           <p>Coverage measures recognized severity, not application health. Unknown records remain in all ratio denominators. They may be valid logs without a supported level.</p>
-          <p>JSON needs a string level, such as <code>"level":"info"</code>. Use <code>--level-field severity</code> for a different top-level field. Numeric levels are not mapped. Text accepts <code>INFO message</code>, <code>[WARN] message</code>, or <code>ERROR: message</code>, optionally after an ISO timestamp. Disable producer colors if ANSI codes obscure the prefix.</p>
+          <p>JSON recognizes common severity fields, and logfmt reads <code>level=warn</code>. Use <code>--level-field</code> for an exact key or <code>--level-path /log/level</code> for nested JSON. Numeric JSON conventions require <code>--profile pino</code>, <code>python</code>, or <code>otel</code>; compact Serilog uses <code>--profile serilog</code>. Text accepts leading levels, Python prefixes, timestamps, and ANSI colors. Message keywords never set severity.</p>
         </details>
       </section>
       <div class="detail-grid">

@@ -86,8 +86,10 @@ class SupportTests(unittest.TestCase):
         self.assertEqual(counts.bytes_read, len(payload))
         self.assertEqual(counts.parse_failures, 20)
         self.assertEqual(counts.oversized_records, 1)
-        for level in ('trace', 'debug', 'info', 'warn', 'error', 'fatal'):
+        for level in ('trace', 'debug', 'info', 'warn', 'fatal'):
             self.assertEqual(counts.levels[level], 10)
+        self.assertEqual(counts.levels['error'], 19)
+        self.assertEqual(counts.levels['unknown'], 31)
         report = {'totals': {'levels': counts.levels.copy(), 'records': 100,
                             'parse_failures': 20, 'oversized_records': 1},
                   'bytes_read': len(payload), 'skipped_bytes': 0,

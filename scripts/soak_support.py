@@ -79,7 +79,8 @@ def make_batch(seed, profile, limit):
             elif kind == 8:
                 line, level, failure = b'{"level":"INFO","message":"\xff"}', 'unknown', True
             else:
-                line, level = b'level=error message=unsupported', 'unknown'
+                # Keep historical payload bytes stable; logfmt now recognizes this level.
+                line, level = b'level=error message=unsupported', 'error'
             if index == 99:
                 line, level, failure = b'x' * (limit + 1), 'unknown', False
         oversized = len(line) > limit
