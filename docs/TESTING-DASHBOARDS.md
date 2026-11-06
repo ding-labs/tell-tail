@@ -104,8 +104,8 @@ space, `?`, Escape, arrows, `f`, and `q`. Resize through 100 × 26, 60 × 20,
 needs 60 × 18. Small views may clip longer activity/help text. The terminal
 must restore after quitting, signals, and input completion.
 
-Use real parser cases as well: the synthetic demo deliberately contains only
-recognized text. This finite example has four records, one recognized severity,
+Use real parser cases as well: the synthetic demo mixes formats and intentional
+ambiguity, but does not include malformed records. This finite example has four records, one recognized severity,
 one malformed record, and two otherwise unrecognized records:
 
 ```sh

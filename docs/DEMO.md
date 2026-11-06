@@ -42,7 +42,7 @@ alone does not establish whether these unreleased changes are included.
 
 ## What happens during each cycle
 
-The cycle repeats every 40 seconds while the process runs:
+The default mixed-format cycle repeats every 40 seconds while the process runs:
 
 | Elapsed position in cycle | Generated records | What to look for |
 | --- | --- | --- |
@@ -64,15 +64,45 @@ second. Use the [benchmark and validation tooling](TESTING-0.2.md) for measured
 performance workloads. The separate `scripts/demo.py` generator also remains
 available for configurable rates; its 20-second cycle differs from this demo.
 
+## What the parsing examples teach
+
+The default demo uses automatic parsing independently on every record:
+
+| Example shape | Result | Lesson |
+| --- | --- | --- |
+| `INFO request completed` | Info | A leading level is enough |
+| `INFO:worker:request completed` | Info | Python console prefixes work automatically |
+| ANSI-colored `ERROR` prefix | Error | SGR colors do not hide severity; previews sanitize escape bytes |
+| `{"severity":"warning"}` or `{"levelname":"INFO"}` | Warn / info | Common JSON keys need no override |
+| `{"log.level":"info"}` | Info | A common literal dotted key is recognized |
+| `level=info msg="ERROR is only a message word"` | Info | Message keywords do not override the level |
+| `<14>1 ... ERROR is only a message word` | Info | Syslog priority supplies severity, not message text |
+| `{"level":50}` | Unknown | Numeric conventions differ; choose an explicit profile |
+| `{"level":"info","severity":"error"}` | Unknown | Select the authoritative field explicitly |
+
+The two intentional unknown shapes appear once each per ten records during the
+warning/error phases. They are valid JSON, so **parse failures stay zero** at the
+default record limit. They remain in severity-ratio denominators. This is a small
+teaching sample, not a claim about real-world format coverage.
+
+The browser shows both numeric and conflicting-field hints; terminal help shows
+a prioritized hint (conflicts first). Recognized-rule and unresolved-issue counts
+are session totals. Rolling coverage can return to 100% during recovery while
+session hints remain. No automatic profile switch happens midway through a demo.
+
 ## A guided first minute
 
 1. Start with `--window 5`. During the first second, the histories are still
    waiting for a completed interval. Rolling counters can already be nonzero.
+   Expand **Understand parsing coverage**: text, JSON, logfmt, and syslog rule
+   counts should all grow. In the terminal, press `?` for the same evidence.
 2. Watch the warning phase begin around eight seconds. The chart changes after
    each second completes; rolling ratios blend the records in the last five
    seconds, so they do not jump immediately to the new phase's proportions.
+   Coverage settles near 80%; read the numeric and conflicting-field hints.
+   Unknown is deliberately different from malformed here.
 3. Around 16 seconds, inspect **Recent errors**. Freeze the display, read a
-   timeout preview, and then resume. Ingestion and the demo's cycle continue
+   text, JSON, logfmt, colored, or syslog timeout preview, and then resume. Ingestion and the demo's cycle continue
    during the freeze; resuming shows current state, not a replay.
 4. During the quiet phase, watch **Last record** age. With the five-second window,
    rolling counts eventually become empty and coverage becomes unavailable.
@@ -100,7 +130,20 @@ Add an existing parser flag to select matching synthetic input:
 ./target/debug/tell-tail --demo --envelope cri --profile pino --window 5 --output web --open
 ```
 
-The other profiles (`python`, `otel`, `serilog`) work the same way. Profile and
+The other profiles work the same way:
+
+| Flag | Generated field | Info / warn / error values |
+| --- | --- | --- |
+| `--profile pino` | `level` | `30` / `40` / `50` |
+| `--profile python` | `levelno` | `20` / `30` / `40` |
+| `--profile otel` | `severityNumber` | `9` / `13` / `17` |
+| `--profile serilog` | `@l` | `Information` / `Warning` / `Error` |
+| `--level-field priority` | Literal `priority` | `info` / `warn` / `error` |
+| `--level-path /log/level` | Nested `log.level` | `info` / `warn` / `error` |
+
+Stop the current process with Ctrl+C before trying another command. Inspect
+**Recent errors** during seconds 16–24 to see the selected raw sample shape.
+Profile and
 field/path overrides combine as they do for real input. These options select the
 **generated examples**, not just the parser: a profile/field/path demo emits only
 matching JSON and omits the default demo's deliberate ambiguous records. It has
@@ -159,6 +202,10 @@ finite demonstration using a temporary local receiver.
 | No chart immediately | Histories only include completed seconds |
 | No records for a few seconds | The 24–30 second phase is intentionally silent; check the elapsed time |
 | Error ratio persists during recovery | Older errors remain in the rolling window until they expire |
+| Coverage drops to about 80% | Default warning/error phases deliberately include numeric and conflicting-field unknowns |
+| Hints persist after coverage returns to 100% | Hints count the session; coverage uses the rolling window |
+| `--demo --profile pino` shows 100% coverage | The flag selects matching generated JSON, not the same mixed stream with a different parser |
+| `--demo --format json` is rejected | Use the mixed automatic demo, or a profile/field/path flag for a matching JSON demo |
 | Coverage is unavailable during silence | An empty window has no denominator |
 | Error previews remain after recovery | They are the latest retained error/fatal examples, independent of rolling expiry |
 | Last-error age is not “none observed” in the next healthy phase | Activity remembers the whole session, including previous cycles |

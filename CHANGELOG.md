@@ -19,7 +19,9 @@
   error intervals. Activity ages freeze with displayed snapshots.
 - Added waiting guidance for new file records, missing files, and partial lines.
 - `--demo` runs a bounded offline synthetic stream through normal ingestion,
-  cycling through healthy activity, warnings, errors, silence, and recovery.
+  cycling through mixed-format activity, warnings, errors, silence, and recovery.
+  Intentional numeric/conflicting-field unknowns demonstrate parsing hints;
+  profile, field/path, and envelope flags select matching built-in samples.
 - Installation-first onboarding includes practical recipes and clearly separates
   published 0.2.0 commands from features available only in the source checkout.
 - Web schema 1 gains additive `severity_history` and `activity` fields. CLI JSON
