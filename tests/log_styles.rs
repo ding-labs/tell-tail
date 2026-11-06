@@ -46,3 +46,60 @@ fn documented_log_styles_have_explicit_expectations_across_read_boundaries() {
         cases.len()
     );
 }
+
+#[test]
+fn automatic_json_fields_agree_or_remain_unknown_and_explicit_fields_win() {
+    use tell_tail::parse::Classifier;
+    let auto = Classifier::from_args(&Args::parse_from(["tell-tail"]));
+    for (line, level, malformed) in [
+        (
+            r#"{"severity":"warning","level":"WARN"}"#,
+            Level::Warn,
+            false,
+        ),
+        (
+            r#"{"severity":"error","level":"info"}"#,
+            Level::Unknown,
+            false,
+        ),
+        (
+            r#"{"level":"info","severity":"error","Level":"Information"}"#,
+            Level::Unknown,
+            false,
+        ),
+        (
+            r#"{"severity":null,"level":"error"}"#,
+            Level::Unknown,
+            false,
+        ),
+        (
+            r#"{"severity":"warn","severity":"warn"}"#,
+            Level::Unknown,
+            true,
+        ),
+        (
+            r#"{"severity":"error","message":"\uD800"}"#,
+            Level::Unknown,
+            true,
+        ),
+    ] {
+        let result = auto.classify(line.as_bytes());
+        assert_eq!(
+            (result.level, result.parse_failure),
+            (level, malformed),
+            "{line}"
+        );
+    }
+    let explicit =
+        Classifier::from_args(&Args::parse_from(["tell-tail", "--level-field", "level"]));
+    assert_eq!(
+        explicit.classify(br#"{"severity":"error"}"#).level,
+        Level::Unknown
+    );
+    assert_eq!(
+        explicit
+            .classify(br#"{"level":"info","severity":"error"}"#)
+            .level,
+        Level::Info
+    );
+}

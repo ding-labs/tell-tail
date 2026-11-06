@@ -35,7 +35,7 @@ impl Engine {
                 },
             ),
             framer: Framer::new(args.max_record_bytes as usize),
-            classifier: Classifier::new(args.input_format(), args.level_field.clone()),
+            classifier: Classifier::from_args(args),
             recent_errors: review.then(RecentErrors::default),
         }
     }

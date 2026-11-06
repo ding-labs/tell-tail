@@ -33,7 +33,7 @@ fn corpus_counts_are_independent_of_read_boundaries() {
             "--format",
             case.format.as_deref().unwrap_or("auto"),
         ]);
-        args.level_field = case.level_field.unwrap_or_else(|| "level".into());
+        args.level_field = case.level_field;
         args.max_record_bytes = case.max_record_bytes.unwrap_or(1024);
         for chunk in [1, 2, 3, 7, 64, 65536] {
             let mut engine = Engine::new(&args);

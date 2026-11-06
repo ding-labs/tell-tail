@@ -17,28 +17,28 @@
     "name": "JSON severity",
     "input": "{\"severity\":\"ERROR\",\"message\":\"timeout\"}",
     "flags": [],
-    "expected": "unknown",
+    "expected": "error",
     "target": "error"
   },
   {
     "name": "JSON levelname",
     "input": "{\"levelname\":\"WARNING\",\"message\":\"slow\"}",
     "flags": [],
-    "expected": "unknown",
+    "expected": "warn",
     "target": "warn"
   },
   {
     "name": "JSON capitalized Level",
     "input": "{\"Level\":\"Information\",\"Message\":\"ready\"}",
     "flags": [],
-    "expected": "unknown",
+    "expected": "info",
     "target": "info"
   },
   {
     "name": "ECS dotted field",
     "input": "{\"log.level\":\"ERROR\",\"message\":\"timeout\"}",
     "flags": [],
-    "expected": "unknown",
+    "expected": "error",
     "target": "error"
   },
   {
@@ -66,7 +66,7 @@
     "name": "conflicting fields",
     "input": "{\"level\":\"info\",\"severity\":\"error\"}",
     "flags": [],
-    "expected": "info",
+    "expected": "unknown",
     "target": "unknown"
   },
   {

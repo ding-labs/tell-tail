@@ -1,4 +1,4 @@
-use crate::cli::Format;
+use crate::cli::{Args, Format};
 use serde::de::{self, DeserializeSeed, IgnoredAny, MapAccess, Visitor};
 use serde_json::value::RawValue;
 use std::{borrow::Cow, fmt};
@@ -37,6 +37,10 @@ impl Level {
         }
         if bytes.eq_ignore_ascii_case(b"warning") {
             Self::Warn
+        } else if bytes.eq_ignore_ascii_case(b"information")
+            || bytes.eq_ignore_ascii_case(b"informational")
+        {
+            Self::Info
         } else if bytes.eq_ignore_ascii_case(b"critical") || bytes.eq_ignore_ascii_case(b"panic") {
             Self::Fatal
         } else {
@@ -59,11 +63,20 @@ impl Classification {
 }
 pub struct Classifier {
     format: Format,
-    field: String,
+    field: Option<String>,
 }
 impl Classifier {
     pub fn new(format: Format, field: String) -> Self {
-        Self { format, field }
+        Self {
+            format,
+            field: Some(field),
+        }
+    }
+    pub fn from_args(args: &Args) -> Self {
+        Self {
+            format: args.input_format(),
+            field: args.level_field.clone(),
+        }
     }
     /// Classify one record. Use classify_record when source metadata should be
     /// omitted; this compatibility API represents such metadata as unknown.
@@ -83,7 +96,7 @@ impl Classifier {
                     parse_failure: true,
                 };
             }
-            match json_level(line, &self.field, false) {
+            match json_level(line, self.field.as_deref(), false) {
                 Ok(level) => Classification {
                     level: level.unwrap_or(Level::Unknown),
                     parse_failure: false,
@@ -118,7 +131,7 @@ impl Classifier {
         if std::str::from_utf8(line).is_err() || !valid_unicode_escapes(line) {
             return Some(bad);
         }
-        match json_level(line, "messageType", true) {
+        match json_level(line, Some("messageType"), true) {
             Ok(level) => level.map(|level| Classification {
                 level,
                 parse_failure: false,
@@ -208,8 +221,24 @@ fn iso_timestamp(bytes: &[u8]) -> bool {
             .iter()
             .all(|b| b.is_ascii_digit() || b".Zz+-:".contains(b))
 }
+// A fixed allowlist avoids searching message/context fields for severity words.
+const LEVEL_FIELDS: &[&str] = &[
+    "level",
+    "severity",
+    "levelname",
+    "Level",
+    "log.level",
+    "severityText",
+    "SeverityText",
+];
+fn field_index(key: &str, field: Option<&str>) -> Option<usize> {
+    match field {
+        Some(field) => (key == field).then_some(0),
+        None => LEVEL_FIELDS.iter().position(|candidate| key == *candidate),
+    }
+}
 struct LevelSeed<'a> {
-    field: &'a str,
+    field: Option<&'a str>,
     apple: bool,
 }
 impl<'de> DeserializeSeed<'de> for LevelSeed<'_> {
@@ -228,11 +257,13 @@ impl<'de> Visitor<'de> for LevelSeed<'_> {
     }
     fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Self::Value, M::Error> {
         let mut found = None;
+        let mut seen = 0u16;
         while let Some(key) = map.next_key::<Cow<'de, str>>()? {
-            if key == self.field {
-                if found.is_some() {
+            if let Some(index) = field_index(&key, self.field) {
+                if seen & (1 << index) != 0 {
                     return Err(de::Error::custom("duplicate severity field"));
                 }
+                seen |= 1 << index;
                 let raw: &RawValue = map.next_value()?;
                 let value = if self.apple && raw.get() == "null" {
                     None
@@ -252,7 +283,10 @@ impl<'de> Visitor<'de> for LevelSeed<'_> {
                         Level::Unknown
                     })
                 };
-                found = Some(value);
+                found = Some(match found {
+                    Some(previous) if previous != value => Some(Level::Unknown),
+                    _ => value,
+                });
             } else {
                 map.next_value::<IgnoredAny>()?;
             }
@@ -274,7 +308,11 @@ fn apple_level(value: &[u8]) -> Level {
     }
     Level::Unknown
 }
-fn json_level(line: &[u8], field: &str, apple: bool) -> Result<Option<Level>, serde_json::Error> {
+fn json_level(
+    line: &[u8],
+    field: Option<&str>,
+    apple: bool,
+) -> Result<Option<Level>, serde_json::Error> {
     let mut de = serde_json::Deserializer::from_slice(line);
     let level = LevelSeed { field, apple }.deserialize(&mut de)?;
     de.end()?;

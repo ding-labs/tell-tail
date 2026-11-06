@@ -46,9 +46,9 @@ pub struct Args {
     pub from: Option<From>,
     #[arg(long, value_enum, default_value = "auto")]
     pub format: Format,
-    /// Top-level JSON severity field.
-    #[arg(long, default_value = "level")]
-    pub level_field: String,
+    /// Exact top-level JSON severity field; omit to recognize common field names.
+    #[arg(long)]
+    pub level_field: Option<String>,
     /// Rolling window in seconds (1..=3600).
     #[arg(long, default_value_t = 60, value_parser = clap::value_parser!(u32).range(1..=3600))]
     pub window: u32,
@@ -118,7 +118,10 @@ impl Args {
             }
         }
         if self.input_format() == Format::AppleUnified
-            && !matches!(self.level_field.as_str(), "level" | "messageType")
+            && !matches!(
+                self.level_field.as_deref(),
+                None | Some("level" | "messageType")
+            )
         {
             return Err("--format apple-unified uses messageType; omit --level-field");
         }
@@ -151,7 +154,11 @@ impl Args {
         if self.path().is_none() && (self.once || self.from.is_some()) {
             return Err("--once and --from require a file input");
         }
-        if self.level_field.is_empty() {
+        if self
+            .level_field
+            .as_ref()
+            .is_some_and(|field| field.is_empty())
+        {
             return Err("--level-field must not be empty");
         }
         if self.metrics_file.is_some() && self.output != Output::Prometheus {
