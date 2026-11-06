@@ -90,6 +90,7 @@ To install the checkout, use `cargo install --path . --locked`; then run
 
 The [demo walkthrough](docs/DEMO.md) explains every phase, what to observe,
 supported options, shutdown behavior, and how to distinguish it from a benchmark.
+When ready, [keep the flags and switch to your own logs](docs/DEMO.md#move-from-the-demo-to-your-logs).
 
 ## Everyday workflows
 

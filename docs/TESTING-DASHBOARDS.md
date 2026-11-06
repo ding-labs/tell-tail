@@ -59,8 +59,26 @@ current source. Dependencies and Chromium may need network access during setup.
 | Record ages, freeze/resume, retained final values, exact history tables | [`dashboard.test.mjs`](../browser-tests/dashboard.test.mjs) |
 | Stale/disconnected status, burst coalescing, session reset and live history wrap | [`live.test.mjs`](../browser-tests/live.test.mjs) |
 | Terminal layout, severity sparklines, compact coverage and activity | [`tui.rs`](../src/tui.rs), [`check_terminal.py`](../scripts/check_terminal.py) |
-| Demo phases, partial reads without an accumulating queue, stdin independence and cancellation | [`demo.rs`](../src/input/demo.rs), [`live.rs`](../tests/live.rs) |
+| Demo phases, mixed-format evidence, intentional numeric/conflicting unknowns, partial reads without an accumulating queue | [`demo.rs`](../src/input/demo.rs) |
+| Demo profiles, custom/escaped paths, literal fields, and Docker/CRI combinations across read boundaries | [`demo.rs`](../src/input/demo.rs), [`cli.rs`](../src/cli.rs) |
+| Demo stdin independence, profile/envelope/selector CLI wiring, and cancellation with a final report | [`live.rs`](../tests/live.rs) |
 | CLI JSON schema remains unchanged | [`web_frame.rs`](../tests/web_frame.rs), existing output fixtures |
+
+For a focused demo regression run:
+
+```sh
+cargo test --locked --lib input::demo
+cargo test --locked --lib cli::tests::demo
+cargo test --locked --test live built_in_demo
+```
+
+The unit cases exercise representative phase times without waiting through a
+40-second cycle. They feed generated records through the real engine, checking
+severity totals, parser evidence, ambiguous-record counters, and zero malformed
+records. Selector cases cover all four profiles, escaped JSON paths, custom
+keys (including `message`), and both envelopes with 1-byte, 7-byte, and large
+reads. Live cases verify that the actual CLI passes flags to the source and
+shuts down correctly; they do not substitute for watching a full cycle below.
 
 Test counts are revision-dependent. Preserve actual command output rather than
 copying a count from an older milestone document. A pass on one host does not
@@ -79,15 +97,20 @@ comparison. Use the [phase table](DEMO.md#what-happens-during-each-cycle) for ex
 
 1. **Startup:** the source identifies synthetic input; coverage becomes 100% as
    recognized records arrive. Before a complete second, history has no points.
+   Expand parsing coverage: text, JSON, logfmt, and syslog session counts grow.
 2. **Warning and error phases:** warning and error histories change while volume
    stays approximately steady. Expand the exact tables and check that severity
    counts never exceed total records for the matching interval.
+   After the window fills with this phase, coverage is about 80%; numeric and
+   conflicting-field hints appear. Unknowns increase but parse failures remain
+   zero. Recent errors include text, JSON, logfmt, color, and syslog examples.
 3. **Quiet phase:** last-record and last-error ages increase, and the live
    connection remains live. After the five-second window expires, coverage and
    ratios are unavailable, not zero. Session totals and previews remain.
 4. **Recovery:** new info records reset last-record age; last-error age continues
    increasing. Recovery is an observed change in the synthetic stream, not a
    claim about an application's health.
+   Rolling coverage returns to 100%; session parsing counts and hints persist.
 5. **Freeze:** focus Freeze display and press Space. Counts, ages, charts, and
    previews hold while connection status stays live. Resume jumps to current
    values. There is no global browser space shortcut.
@@ -104,9 +127,31 @@ space, `?`, Escape, arrows, `f`, and `q`. Resize through 100 × 26, 60 × 20,
 needs 60 × 18. Small views may clip longer activity/help text. The terminal
 must restore after quitting, signals, and input completion.
 
+Restart the browser demo with each flag combination below. Keep `--demo
+--window 5 --output web --open` and append the selected flags. Allow at least
+24 seconds per run to observe warnings, errors, and raw error previews.
+
+| Additional flags | Expected evidence and previews |
+| --- | --- |
+| `--profile pino` | Profile counts; error preview contains numeric `"level":50` |
+| `--profile python` | Profile counts; error preview contains numeric `"levelno":40` |
+| `--profile otel` | Profile counts; error preview contains numeric `"severityNumber":17` |
+| `--profile serilog` | Profile counts; error preview contains `"@l":"Error"` |
+| `--level-field priority` | JSON counts; the literal `priority` field carries the severity |
+| `--level-path /log/level` | JSON counts; severity is inside a `log` object |
+| `--profile python --level-path /event/priority` | Profile counts; nested `priority` contains numeric `40` for errors |
+| `--envelope docker` | Mixed rule counts and intentional unknowns remain; previews retain the outer JSON wrapper |
+| `--envelope cri --profile pino` | Profile counts; previews retain the timestamp, `stdout F`, and inner numeric JSON |
+
+Profile/field/path runs should have no unknowns or parse failures at the default
+record-size limit, with 100% coverage in nonempty windows. Envelope-only runs
+preserve the default demo's ambiguity. These flags generate matching synthetic
+input; do not describe the result as reclassifying the original mixed stream.
+
 Use real parser cases as well: the synthetic demo mixes formats and intentional
-ambiguity, but does not include malformed records. This finite example has four records, one recognized severity,
-one malformed record, and two otherwise unrecognized records:
+ambiguity, but does not include malformed records. This finite example has four
+records, one recognized severity, one malformed record, and two otherwise
+unrecognized records:
 
 ```sh
 printf '%s\n' 'INFO ready' '{broken' '{"level":30}' 'request complete' |
