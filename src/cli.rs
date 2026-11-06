@@ -64,8 +64,8 @@ pub enum From {
 pub struct Args {
     /// File to follow; omit or use - to read stdin.
     pub file: Option<PathBuf>,
-    /// Run a built-in synthetic stream: healthy, warnings, errors, silence, recovery.
-    #[arg(long, conflicts_with_all = ["file", "apple_unified", "once", "from", "format", "level_field", "level_path", "profile", "envelope"])]
+    /// Run mixed-format synthetic logs; profile/field/path/envelope flags select matching examples.
+    #[arg(long, conflicts_with_all = ["file", "apple_unified", "once", "from", "format"])]
     pub demo: bool,
     /// Stream macOS unified logs at info level; no pipe or jq required.
     #[arg(long, conflicts_with_all = ["file", "once", "from"])]
@@ -238,7 +238,7 @@ impl Args {
 mod tests {
     use super::*;
     #[test]
-    fn demo_is_an_explicit_input_and_rejects_conflicting_sources_or_parsers() {
+    fn demo_rejects_other_sources_and_accepts_sample_selectors() {
         let args = Args::parse_from(["tell-tail", "--demo"]);
         assert!(args.demo);
         assert!(args.validate().is_ok());
@@ -249,9 +249,17 @@ mod tests {
             vec!["--once"],
             vec!["--from", "start"],
             vec!["--format", "json"],
-            vec!["--level-field", "severity"],
         ] {
             assert!(Args::try_parse_from([vec!["tell-tail", "--demo"], extra].concat()).is_err());
+        }
+        for extra in [
+            vec!["--profile", "pino"],
+            vec!["--level-field", "severity"],
+            vec!["--level-path", "/log/level"],
+            vec!["--envelope", "cri"],
+        ] {
+            let args = Args::parse_from([vec!["tell-tail", "--demo"], extra].concat());
+            assert!(args.validate().is_ok());
         }
     }
 

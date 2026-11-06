@@ -67,27 +67,34 @@ fn append(path: &Path, bytes: &[u8]) {
 }
 #[test]
 fn built_in_demo_runs_without_stdin_and_cancels_with_a_final_report() {
-    let dir = tempfile::tempdir().unwrap();
-    let reports = dir.path().join("demo.ndjson");
-    let mut child = Process(
-        Command::new(env!("CARGO_BIN_EXE_tell-tail"))
-            .args(["--demo", "--output", "json", "--interval-ms", "100"])
-            .stdin(Stdio::null())
-            .stdout(File::create(&reports).unwrap())
-            .spawn()
-            .unwrap(),
-    );
-    let report = wait_report(&reports, |s| s["totals"]["records"].as_u64().unwrap() >= 5);
-    assert_eq!(report["source"], "demo (synthetic · 40s cycle)");
-    assert_eq!(
-        report["totals"]["levels"]["info"],
-        report["totals"]["records"]
-    );
-    stop(&mut child.0, "-TERM", 143);
-    assert_eq!(
-        wait_report(&reports, |s| s["kind"] == "final")["state"],
-        "stopped"
-    );
+    for flags in [
+        vec![],
+        vec!["--profile", "pino"],
+        vec!["--envelope", "docker", "--level-path", "/log/level"],
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let reports = dir.path().join("demo.ndjson");
+        let mut child = Process(
+            Command::new(env!("CARGO_BIN_EXE_tell-tail"))
+                .args(["--demo", "--output", "json", "--interval-ms", "100"])
+                .args(flags)
+                .stdin(Stdio::null())
+                .stdout(File::create(&reports).unwrap())
+                .spawn()
+                .unwrap(),
+        );
+        let report = wait_report(&reports, |s| s["totals"]["records"].as_u64().unwrap() >= 5);
+        assert_eq!(report["source"], "demo (synthetic · 40s cycle)");
+        assert_eq!(
+            report["totals"]["levels"]["info"],
+            report["totals"]["records"]
+        );
+        stop(&mut child.0, "-TERM", 143);
+        assert_eq!(
+            wait_report(&reports, |s| s["kind"] == "final")["state"],
+            "stopped"
+        );
+    }
 }
 
 #[test]

@@ -30,7 +30,7 @@ pub enum Input {
 impl Input {
     pub fn open(args: &Args) -> io::Result<Self> {
         if args.demo {
-            return Ok(Self::Demo(demo::Demo::new()));
+            return Ok(Self::Demo(demo::Demo::new(args)));
         }
         if args.apple_unified {
             return Ok(Self::Apple(AppleStream::open()?));

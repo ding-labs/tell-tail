@@ -89,6 +89,30 @@ The five-second window is a walkthrough setting, not a changed default. Without
 demo phases. Warning/error histories always retain up to 60 completed seconds.
 See [the monitoring guide](MONITORING.md) for exact definitions and controls.
 
+## Try parser flags without a log file
+
+Add an existing parser flag to select matching synthetic input:
+
+```sh
+./target/debug/tell-tail --demo --profile pino --window 5 --output web --open
+./target/debug/tell-tail --demo --level-field priority --window 5 --output web --open
+./target/debug/tell-tail --demo --level-path /log/level --window 5 --output web --open
+./target/debug/tell-tail --demo --envelope cri --profile pino --window 5 --output web --open
+```
+
+The other profiles (`python`, `otel`, `serilog`) work the same way. Profile and
+field/path overrides combine as they do for real input. These options select the
+**generated examples**, not just the parser: a profile/field/path demo emits only
+matching JSON and omits the default demo's deliberate ambiguous records. It has
+100% recognition at the default record-size limit, with 80% info / 20% warn in
+the warning phase and 30% info / 20% warn / 50% error in the error phase. This does
+not claim that applying one profile fixes an arbitrary mixed real-world stream.
+
+An envelope alone wraps the default mixed-format examples, preserving their
+unknowns and hints. Combined with a selector, it wraps the selected JSON samples.
+All samples pass through normal framing, envelope decoding, classification, and
+statistics. Forty examples are prepared once and reused; no replay queue grows.
+
 ## Other outputs and option combinations
 
 ```sh
@@ -115,7 +139,9 @@ SIGINT exits 130, and SIGTERM exits 143, subject to the normal output-error rule
 | A file argument, including `-` | Rejected: the demo is its own input source |
 | `--apple-unified` | Rejected: mutually exclusive input source |
 | `--once`, `--from` | Rejected: these are file-input options |
-| `--format`, `--level-field`, `--level-path`, `--profile`, `--envelope` | Rejected; demo text uses the built-in parser settings |
+| `--format` | Rejected; the default demo mixes formats automatically |
+| `--profile`, `--level-field`, `--level-path` | Generate matching JSON samples; normal parser validation still applies |
+| `--envelope docker` or `--envelope cri` | Wrap the generated samples before normal parsing; CRI examples are complete `F` records |
 
 For Prometheus stdout, the normal behavior is one final exposition at shutdown;
 use `--metrics-file` for periodic snapshots. Alert thresholds, minimum records,
