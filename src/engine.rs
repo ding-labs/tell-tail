@@ -1,7 +1,7 @@
 use crate::{
     cli::{Args, Output},
     framing::Framer,
-    parse::{Classification, Classifier},
+    parse::{Classification, Classifier, ParsingDiagnostics},
     recent::RecentErrors,
     stats::{Snapshot, State, Stats},
 };
@@ -14,6 +14,7 @@ pub struct Engine {
     pub stats: Stats,
     framer: Framer,
     classifier: Classifier,
+    parsing: ParsingDiagnostics,
     recent_errors: Option<RecentErrors>,
 }
 impl Engine {
@@ -36,6 +37,7 @@ impl Engine {
             ),
             framer: Framer::new(args.max_record_bytes as usize),
             classifier: Classifier::from_args(args),
+            parsing: ParsingDiagnostics::default(),
             recent_errors: review.then(RecentErrors::default),
         }
     }
@@ -45,13 +47,17 @@ impl Engine {
             stats,
             framer,
             classifier,
+            parsing,
             recent_errors,
         } = self;
         framer.feed_counted(bytes, |line, oversized, consumed| {
             let class = if oversized {
                 Some(Classification::unknown())
             } else {
-                classifier.classify_record(line)
+                classifier.assess_record(line).map(|assessment| {
+                    parsing.record(assessment);
+                    assessment.classification
+                })
             };
             if let Some(class) = class {
                 stats.record_current(class, oversized);
@@ -69,13 +75,17 @@ impl Engine {
             stats,
             framer,
             classifier,
+            parsing,
             recent_errors,
         } = self;
         framer.finish_counted(|line, oversized, consumed| {
             let class = if oversized {
                 Some(Classification::unknown())
             } else {
-                classifier.classify_record(line)
+                classifier.assess_record(line).map(|assessment| {
+                    parsing.record(assessment);
+                    assessment.classification
+                })
             };
             if let Some(class) = class {
                 stats.record_current(class, oversized);
@@ -99,6 +109,7 @@ impl Engine {
         let mut snapshot = self
             .stats
             .snapshot(at, state, self.framer.pending_bytes(), backlog);
+        snapshot.parsing = Some(self.parsing);
         if let Some(recent) = &self.recent_errors {
             snapshot.recent_errors = recent.snapshot();
         }

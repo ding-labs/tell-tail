@@ -78,6 +78,17 @@ export function parseFrame(json) {
   }
   number(m.observed_at_unix_seconds, 'metrics.observed_at_unix_seconds');
   counts(m.totals, 'metrics.totals');
+  if (frame.parsing !== undefined) {
+    const p = frame.parsing;
+    object(p, 'parsing');
+    requireField(Array.isArray(p.recognized) && p.recognized.length === 6, 'parsing.recognized', 'six rule counters');
+    p.recognized.forEach(value => counter(value, 'parsing.recognized[]'));
+    counter(p.numeric, 'parsing.numeric');
+    counter(p.conflicting, 'parsing.conflicting');
+    const recognized = p.recognized.reduce((sum, value) => sum + BigInt(value), 0n);
+    requireField(recognized <= BigInt(m.totals.records) - BigInt(m.totals.levels.unknown), 'parsing.recognized', 'no greater than recognized session records');
+    requireField(BigInt(p.numeric) + BigInt(p.conflicting) <= BigInt(m.totals.levels.unknown), 'parsing', 'issue counts no greater than session unknowns');
+  }
   for (const key of ['bytes_read', 'pending_bytes', 'skipped_bytes', 'discarded_partial_records']) counter(m[key], `metrics.${key}`);
   if (m.backlog_bytes !== null) counter(m.backlog_bytes, 'metrics.backlog_bytes');
   ratio(m.warning_ratio, 'metrics.warning_ratio');
@@ -184,4 +195,16 @@ export function elapsed(seconds) {
 export function historyPoints(metrics) {
   const end = Math.floor(metrics.elapsed_seconds);
   return metrics.history.map((count, i) => ({ second: end - metrics.history.length + i, count, value: Number(count) }));
+}
+
+export function parsingEvidence(frame) {
+  const p = frame.parsing;
+  if (!p) return {summary: 'Parser evidence unavailable.', hint: ''};
+  const names = ['text', 'JSON', 'logfmt', 'profile', 'Apple', 'syslog'];
+  const summary = 'Recognized in this session: ' + names.map((name, i) => `${name} ${integer(p.recognized[i])}`).join(' · ');
+  const hints = [];
+  if (BigInt(p.conflicting) > 0n) hints.push(`${integer(p.conflicting)} conflicting levels: select --level-field or --level-path explicitly.`);
+  if (BigInt(p.numeric) > 0n) hints.push(`${integer(p.numeric)} unresolved numeric JSON levels: select/check --profile pino, python, or otel; mappings differ.`);
+  if (!hints.length && BigInt(frame.metrics.totals.levels.unknown) > 0n) hints.push('For unknowns, check --level-field or --level-path. Some records contain no severity.');
+  return {summary, hint: hints.join(' ')};
 }

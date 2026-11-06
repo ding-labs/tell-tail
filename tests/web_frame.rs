@@ -291,3 +291,31 @@ fn invalid_data_fails_instead_of_becoming_null_or_injecting_sse_lines() {
         snapshot.window.error_ratio = None;
     }
 }
+
+#[test]
+fn parser_evidence_is_optional_exact_and_cannot_exceed_session_counts() {
+    let mut s = snapshot(Duration::from_secs(1), State::Reading);
+    s.totals.records = u64::MAX;
+    s.totals.levels.0 = [0; 7];
+    s.totals.levels.0[tell_tail::parse::Level::Info as usize] = u64::MAX;
+    s.parsing = Some(tell_tail::parse::ParsingDiagnostics {
+        recognized: [u64::MAX, 0, 0, 0, 0, 0],
+        ..Default::default()
+    });
+    assert_eq!(
+        json(1, &s)["parsing"]["recognized"][0],
+        u64::MAX.to_string()
+    );
+    assert!(serde_json::to_value(&s).unwrap().get("parsing").is_none());
+    s.parsing.as_mut().unwrap().numeric = 1;
+    assert!(matches!(
+        WebFrame::encode(1, &s),
+        Err(EncodeError::InvalidParsing)
+    ));
+    s.parsing.as_mut().unwrap().numeric = 0;
+    s.parsing.as_mut().unwrap().recognized[1] = 1;
+    assert!(matches!(
+        WebFrame::encode(1, &s),
+        Err(EncodeError::InvalidParsing)
+    ));
+}

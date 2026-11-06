@@ -130,3 +130,27 @@ remains unknown. Selecting a custom field/path disables that omitted-level
 fallback. Auto mode never applies it. These are severity conventions, not
 framework integrations, and custom logger mappings need explicit normalization
 upstream until a suitable preset exists.
+
+## Understanding parser evidence
+
+The browser's parsing disclosure reports **session** recognized counts by text,
+JSON, logfmt, explicit profile, Apple, and syslog rules. Numeric JSON levels left
+unknown and conflicting severity fields produce a corrective hint above coverage.
+The terminal's `?` help shows the same session rule counts and a prioritized hint.
+These counts freeze with the displayed snapshot and reset on restart; they are
+separate from rolling recognition coverage. A historical mismatch can therefore
+remain visible after that record leaves the rolling window.
+
+Hints offer choices, not guesses: a numeric level alone cannot distinguish Pino
+from Python. Parse failures and oversized records retain their existing diagnostic
+counters. No additional raw samples, arbitrary field names, or message content are
+retained for the hints. Headless CLI JSON, text, Prometheus, and webhook payloads
+are unchanged.
+
+Web schema 1 gains optional `parsing`: `recognized` is an array of six decimal
+u64 strings in the rule order above; `numeric` and `conflicting` are decimal u64
+strings for disjoint unresolved-record categories. Recognized sums cannot exceed
+known session records, and issue sums cannot exceed session unknowns. The encoder
+and browser reject invalid evidence. Older frames may omit the object. All fields
+share the existing 64 KiB frame limit. Rust snapshots expose optional `parsing`
+with `#[serde(skip)]`, populated by the ingestion engine.

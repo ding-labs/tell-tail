@@ -276,3 +276,20 @@ test('interrupted chart scrolling keeps offscreen geometry bounded', async t => 
   assert.ok(result.maxSegments <= 61, `at most two outgoing vertices are retained: ${result.maxSegments} segments`);
   assert.equal(result.dots, 60);
 });
+
+test('parser hints explain real input and freeze with the displayed snapshot', async t => {
+  const server = await monitor(); t.after(() => server.close());
+  const browser = await chromium.launch(); t.after(() => browser.close());
+  const page = await browser.newPage(); await page.goto(server.url);
+  server.child.stdin.write('INFO ready\n{"level":50}\n');
+  await page.waitForFunction(() => document.getElementById('parsing-hint').textContent.includes('--profile pino'));
+  await page.locator('#freeze').click();
+  const frozen = await page.locator('#parsing-hint').textContent();
+  server.child.stdin.write('{"level":"info","severity":"error"}\n');
+  await page.waitForFunction(async () => (await (await fetch('/api/snapshot')).json()).metrics.totals.records === '3');
+  assert.equal(await page.locator('#parsing-hint').textContent(), frozen);
+  await page.locator('#freeze').click();
+  await page.waitForFunction(() => document.getElementById('parsing-hint').textContent.includes('--level-field'));
+  await page.locator('#parsing-help summary').click();
+  assert.match(await page.locator('#parsing-rules').textContent(), /text 1/);
+});
