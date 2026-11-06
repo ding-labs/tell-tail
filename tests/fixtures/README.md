@@ -6,10 +6,9 @@ specifies the expected severity of every physical record, parse-failure count,
 and oversized count. Hex input represents invalid UTF-8 without relying on editor
 encoding behavior.
 
-Unsupported ANSI prefixes, logfmt, nested severity fields, and numeric profiles
-are intentional unknown cases. They must not silently become severity matches
-based on words appearing in a message. New format support needs an explicit
-contract change and updated expectations.
+ANSI SGR prefixes and logfmt are supported, with negative cases for misleading
+message text. Nested fields and numeric levels require explicit selectors/profiles.
+New format support needs an explicit contract change and updated expectations.
 
 `tests/properties.rs` complements this fixed corpus with generated inputs. Proptest
 persists failure seeds when it finds a counterexample; commit the resulting seed

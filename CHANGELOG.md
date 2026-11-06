@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Broaden automatic severity recognition to common JSON keys, logfmt, Python
+  console prefixes, bounded ANSI SGR colors, and syslog priority headers.
+- Add explicit Pino/Python/OpenTelemetry/Serilog JSON profiles, bounded nested
+  JSON object paths, and Docker/CRI capture envelopes. Fragment reconstruction
+  remains out of scope; physical-record counting is unchanged.
+- Add session parser evidence and corrective hints to both dashboards without
+  changing CLI JSON schema 2 or webhook/Prometheus/text payloads.
+- Automatic JSON classification now leaves conflicting severity fields unknown.
+  Use `--level-field level` to retain the earlier exact-key selection. Previously
+  unknown formats may now affect severity counts and configured alert thresholds.
+
 - Both dashboards show rolling severity recognition coverage, completed-second
   warning/error histories, and time since the last complete record and error.
   The web view explains unknown records and compares two completed 30-second

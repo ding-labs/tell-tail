@@ -115,7 +115,7 @@ SIGINT exits 130, and SIGTERM exits 143, subject to the normal output-error rule
 | A file argument, including `-` | Rejected: the demo is its own input source |
 | `--apple-unified` | Rejected: mutually exclusive input source |
 | `--once`, `--from` | Rejected: these are file-input options |
-| `--format`, `--level-field` | Rejected, even when explicitly set to their defaults; demo text uses the built-in parser settings |
+| `--format`, `--level-field`, `--level-path`, `--profile`, `--envelope` | Rejected; demo text uses the built-in parser settings |
 
 For Prometheus stdout, the normal behavior is one final exposition at shutdown;
 use `--metrics-file` for periodic snapshots. Alert thresholds, minimum records,

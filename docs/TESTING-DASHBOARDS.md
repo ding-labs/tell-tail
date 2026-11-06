@@ -51,6 +51,7 @@ current source. Dependencies and Chromium may need network access during setup.
 
 | Behavior | Regression coverage |
 | --- | --- |
+| Common format fixtures, ambiguous fields, profile boundaries, nested paths, and container fragments | [`log_styles.rs`](../tests/log_styles.rs), [`format guide`](LOG-FORMATS.md) |
 | Coverage includes unknowns, distinguishes no observations, expires with the window | [`stats.rs`](../src/stats.rs), [`frame.test.mjs`](../browser-tests/frame.test.mjs) |
 | Completed-second alignment, idle zeroes, ring reuse, independence from window length | [`stats.rs`](../src/stats.rs), [`web_frame.rs`](../tests/web_frame.rs) |
 | Exact large counters, optional fields, malformed history and impossible ages rejected | [`web_frame.rs`](../tests/web_frame.rs), [`frame.test.mjs`](../browser-tests/frame.test.mjs) |

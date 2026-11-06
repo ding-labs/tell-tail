@@ -17,8 +17,8 @@ and ratio denominators. Coverage is recognition, not application health.
 ## JSON fields
 
 Without `--level-field`, JSON objects recognize these exact top-level keys:
-`level`, `severity`, `levelname`, `Level`, `log.level`, `severityText`, and
-`SeverityText`, `levelno`, and `severityNumber`. Values are case-insensitive severity names; `Information` and
+`level`, `severity`, `levelname`, `Level`, `log.level`, `severityText`, `SeverityText`, `levelno`, and `severityNumber`.
+Values are case-insensitive severity names; `Information` and
 `Informational` map to info in addition to the existing warning/critical/panic
 aliases. Field names are case-sensitive.
 
@@ -47,7 +47,7 @@ Its synthetic examples measure regression behavior, not real-world market covera
 
 Text accepts a leading severity (`WARN slow`, `[WARN] slow`, `ERROR:timeout`),
 including Python's `WARNING:logger:message` layout. A preceding ISO-shaped
- timestamp can use `T` or a space between date and time, dot/comma fractional
+timestamp can use `T` or a space between date and time, dot/comma fractional
 seconds, and optional surrounding brackets. These timestamps are recognized as
 header structure, not used for metric time or calendar-validated.
 
@@ -74,8 +74,7 @@ For example, `time=2026-11-05T12:00:00Z level=WARN msg="upstream slow"` is warn.
 `_ . - / @`; values are unquoted tokens or JSON-style quoted strings with escapes.
 The entire record must consist of pairs. Invalid quoting, invalid UTF-8, invalid
 Unicode escapes, duplicate severity keys, and trailing non-pair text are malformed
-and counted once as unknown plus a parse failure. Numeric values without an
-explicit mapping remain unknown. This is a defined logfmt subset, not a parser
+and counted once as unknown plus a parse failure. Numeric logfmt values remain unknown; numeric profiles apply only to JSON. This is a defined logfmt subset, not a parser
 for every application's loosely formatted key/value message.
 
 ## Nested JSON fields
