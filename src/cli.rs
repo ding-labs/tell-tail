@@ -6,6 +6,8 @@ pub enum Format {
     Auto,
     Text,
     Json,
+    /// Whitespace-separated key=value records with quoted string support.
+    Logfmt,
     /// Apple unified log NDJSON; maps messageType and skips stream metadata.
     AppleUnified,
 }
@@ -46,7 +48,7 @@ pub struct Args {
     pub from: Option<From>,
     #[arg(long, value_enum, default_value = "auto")]
     pub format: Format,
-    /// Exact top-level JSON severity field; omit to recognize common field names.
+    /// Exact top-level JSON or logfmt severity field; omit to recognize common field names.
     #[arg(long)]
     pub level_field: Option<String>,
     /// Rolling window in seconds (1..=3600).

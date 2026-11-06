@@ -57,3 +57,23 @@ color codes remain unrecognized. Raw input byte counts do not change; dashboard
 previews keep their existing sanitization. Levels buried after arbitrary logger,
 thread, or message prefixes are not searched for. Stack-trace continuation lines
 still count individually and usually remain unknown.
+
+## Key/value records (logfmt)
+
+Auto mode selects logfmt when a record begins with an unquoted `key=` token.
+Use `--format logfmt` to require it, or `--format text` to disable this detection.
+The JSON field-name allowlist and explicit `--level-field` override apply here too.
+
+```sh
+tell-tail app.log --format logfmt
+tell-tail app.log --format logfmt --level-field priority
+```
+
+For example, `time=2026-11-05T12:00:00Z level=WARN msg="upstream slow"` is warn.
+`msg="level=error" level=info` is info. Keys use ASCII letters/digits and
+`_ . - / @`; values are unquoted tokens or JSON-style quoted strings with escapes.
+The entire record must consist of pairs. Invalid quoting, invalid UTF-8, invalid
+Unicode escapes, duplicate severity keys, and trailing non-pair text are malformed
+and counted once as unknown plus a parse failure. Numeric values without an
+explicit mapping remain unknown. This is a defined logfmt subset, not a parser
+for every application's loosely formatted key/value message.

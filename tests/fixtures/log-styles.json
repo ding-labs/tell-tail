@@ -180,21 +180,21 @@
     "name": "Go slog text",
     "input": "time=2026-11-05T12:00:00Z level=WARN msg=\"upstream slow\"",
     "flags": [],
-    "expected": "unknown",
+    "expected": "warn",
     "target": "warn"
   },
   {
     "name": "key value custom field",
     "input": "severity=error message=\"timeout\"",
     "flags": [],
-    "expected": "unknown",
+    "expected": "error",
     "target": "error"
   },
   {
     "name": "quoted fake level",
     "input": "msg=\"level=error\" level=info",
     "flags": [],
-    "expected": "unknown",
+    "expected": "info",
     "target": "info"
   },
   {

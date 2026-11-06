@@ -1,3 +1,4 @@
+mod logfmt;
 mod text;
 use crate::cli::{Args, Format};
 use serde::de::{self, DeserializeSeed, IgnoredAny, MapAccess, Visitor};
@@ -108,6 +109,10 @@ impl Classifier {
                     parse_failure: true,
                 },
             }
+        } else if self.format == Format::Logfmt
+            || (self.format == Format::Auto && logfmt::looks_like(line))
+        {
+            logfmt::classify(line, self.field.as_deref())
         } else {
             Classification {
                 level: text_level(line),
