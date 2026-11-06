@@ -44,13 +44,12 @@
   {
     "name": "ECS nested field",
     "input": "{\"log\":{\"level\":\"ERROR\"},\"message\":\"timeout\"}",
-    "flags": [],
-    "expected": "unknown",
-    "target": "error",
-    "planned_flags": [
+    "flags": [
       "--level-path",
       "/log/level"
-    ]
+    ],
+    "expected": "error",
+    "target": "error"
   },
   {
     "name": "explicit custom field",

@@ -67,18 +67,24 @@ impl Classification {
 pub struct Classifier {
     format: Format,
     field: Option<String>,
+    path: Option<Vec<String>>,
 }
 impl Classifier {
     pub fn new(format: Format, field: String) -> Self {
         Self {
             format,
             field: Some(field),
+            path: None,
         }
     }
     pub fn from_args(args: &Args) -> Self {
         Self {
             format: args.input_format(),
             field: args.level_field.clone(),
+            path: args
+                .level_path
+                .as_deref()
+                .map(|path| pointer_tokens(path).unwrap_or_default()),
         }
     }
     /// Classify one record. Use classify_record when source metadata should be
@@ -90,7 +96,8 @@ impl Classifier {
                 .unwrap_or_else(Classification::unknown);
         }
         let line = trim_start(line);
-        if self.format == Format::Json
+        if self.path.is_some()
+            || self.format == Format::Json
             || (self.format == Format::Auto && line.first() == Some(&b'{'))
         {
             if std::str::from_utf8(line).is_err() || !valid_unicode_escapes(line) {
@@ -99,7 +106,7 @@ impl Classifier {
                     parse_failure: true,
                 };
             }
-            match json_level(line, self.field.as_deref(), false) {
+            match json_selected(line, self.field.as_deref(), self.path.as_deref(), false) {
                 Ok(level) => Classification {
                     level: level.unwrap_or(Level::Unknown),
                     parse_failure: false,
@@ -184,6 +191,34 @@ fn valid_unicode_escapes(mut bytes: &[u8]) -> bool {
 fn trim_start(bytes: &[u8]) -> &[u8] {
     bytes.trim_ascii_start()
 }
+pub(crate) fn pointer_tokens(path: &str) -> Option<Vec<String>> {
+    if path.len() > 1024 || !path.starts_with('/') {
+        return None;
+    }
+    let parts: Vec<_> = path[1..].split('/').collect();
+    if parts.len() > 16 {
+        return None;
+    }
+    let mut result = Vec::with_capacity(parts.len());
+    for part in parts {
+        let mut decoded = String::new();
+        let mut chars = part.chars();
+        while let Some(c) = chars.next() {
+            decoded.push(if c == '~' {
+                match chars.next()? {
+                    '0' => '~',
+                    '1' => '/',
+                    _ => return None,
+                }
+            } else {
+                c
+            });
+        }
+        result.push(decoded);
+    }
+    Some(result)
+}
+
 // A fixed allowlist avoids searching message/context fields for severity words.
 const LEVEL_FIELDS: &[&str] = &[
     "level",
@@ -202,6 +237,7 @@ fn field_index(key: &str, field: Option<&str>) -> Option<usize> {
 }
 struct LevelSeed<'a> {
     field: Option<&'a str>,
+    path: Option<&'a [String]>,
     apple: bool,
 }
 impl<'de> DeserializeSeed<'de> for LevelSeed<'_> {
@@ -222,13 +258,25 @@ impl<'de> Visitor<'de> for LevelSeed<'_> {
         let mut found = None;
         let mut seen = 0u16;
         while let Some(key) = map.next_key::<Cow<'de, str>>()? {
-            if let Some(index) = field_index(&key, self.field) {
+            let index = match self.path {
+                Some(path) => path.first().filter(|field| **field == key).map(|_| 0),
+                None => field_index(&key, self.field),
+            };
+            if let Some(index) = index {
                 if seen & (1 << index) != 0 {
                     return Err(de::Error::custom("duplicate severity field"));
                 }
                 seen |= 1 << index;
                 let raw: &RawValue = map.next_value()?;
-                let value = if self.apple && raw.get() == "null" {
+                let value = if let Some(path) = self.path.filter(|path| path.len() > 1) {
+                    Some(if raw.get().starts_with('{') {
+                        json_selected(raw.get().as_bytes(), None, Some(&path[1..]), false)
+                            .map_err(de::Error::custom)?
+                            .unwrap_or(Level::Unknown)
+                    } else {
+                        Level::Unknown
+                    })
+                } else if self.apple && raw.get() == "null" {
                     None
                 } else {
                     let decode = |s: &str| {
@@ -276,8 +324,16 @@ fn json_level(
     field: Option<&str>,
     apple: bool,
 ) -> Result<Option<Level>, serde_json::Error> {
+    json_selected(line, field, None, apple)
+}
+fn json_selected(
+    line: &[u8],
+    field: Option<&str>,
+    path: Option<&[String]>,
+    apple: bool,
+) -> Result<Option<Level>, serde_json::Error> {
     let mut de = serde_json::Deserializer::from_slice(line);
-    let level = LevelSeed { field, apple }.deserialize(&mut de)?;
+    let level = LevelSeed { field, path, apple }.deserialize(&mut de)?;
     de.end()?;
     Ok(level)
 }

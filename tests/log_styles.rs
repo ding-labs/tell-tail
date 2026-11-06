@@ -103,3 +103,75 @@ fn automatic_json_fields_agree_or_remain_unknown_and_explicit_fields_win() {
         Level::Info
     );
 }
+
+#[test]
+fn nested_paths_are_literal_bounded_and_validate_the_complete_record() {
+    use tell_tail::parse::Classifier;
+    let args = Args::parse_from(["tell-tail", "--level-path", "/log/level"]);
+    args.validate().unwrap();
+    let c = Classifier::from_args(&args);
+    for (line, expected, malformed) in [
+        (
+            r#"{"log":{"level":"error"},"level":"info"}"#,
+            Level::Error,
+            false,
+        ),
+        (r#"{"log.level":"error"}"#, Level::Unknown, false),
+        (r#"{"log":[{"level":"error"}]}"#, Level::Unknown, false),
+        (
+            r#"{"log":{"level":"warn","level":"warn"}}"#,
+            Level::Unknown,
+            true,
+        ),
+        (
+            r#"{"log":{"level":"error"},"other":"\uD800"}"#,
+            Level::Unknown,
+            true,
+        ),
+        (
+            r#"{"log":{"level":"error"},"other":}"#,
+            Level::Unknown,
+            true,
+        ),
+    ] {
+        let result = c.classify(line.as_bytes());
+        assert_eq!(
+            (result.level, result.parse_failure),
+            (expected, malformed),
+            "{line}"
+        );
+    }
+    let escaped = Classifier::from_args(&Args::parse_from([
+        "tell-tail",
+        "--level-path",
+        "/a~1b/~0level",
+    ]));
+    assert_eq!(
+        escaped.classify(br#"{"a/b":{"~level":"warn"}}"#).level,
+        Level::Warn
+    );
+    for path in [
+        "",
+        "log.level",
+        "/~2bad",
+        "/~",
+        &"/x".repeat(17),
+        &format!("/{}", "x".repeat(1024)),
+    ] {
+        assert!(
+            Args::parse_from(["tell-tail", "--level-path", path])
+                .validate()
+                .is_err()
+        );
+    }
+    assert!(
+        Args::try_parse_from([
+            "tell-tail",
+            "--level-path",
+            "/log/level",
+            "--level-field",
+            "level"
+        ])
+        .is_err()
+    );
+}

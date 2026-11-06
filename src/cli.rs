@@ -35,7 +35,7 @@ pub struct Args {
     /// File to follow; omit or use - to read stdin.
     pub file: Option<PathBuf>,
     /// Run a built-in synthetic stream: healthy, warnings, errors, silence, recovery.
-    #[arg(long, conflicts_with_all = ["file", "apple_unified", "once", "from", "format", "level_field"])]
+    #[arg(long, conflicts_with_all = ["file", "apple_unified", "once", "from", "format", "level_field", "level_path"])]
     pub demo: bool,
     /// Stream macOS unified logs at info level; no pipe or jq required.
     #[arg(long, conflicts_with_all = ["file", "once", "from"])]
@@ -51,6 +51,9 @@ pub struct Args {
     /// Exact top-level JSON or logfmt severity field; omit to recognize common field names.
     #[arg(long)]
     pub level_field: Option<String>,
+    /// JSON Pointer to a nested object severity field (for example /log/level).
+    #[arg(long, conflicts_with = "level_field")]
+    pub level_path: Option<String>,
     /// Rolling window in seconds (1..=3600).
     #[arg(long, default_value_t = 60, value_parser = clap::value_parser!(u32).range(1..=3600))]
     pub window: u32,
@@ -126,6 +129,16 @@ impl Args {
             )
         {
             return Err("--format apple-unified uses messageType; omit --level-field");
+        }
+        if let Some(path) = &self.level_path {
+            if crate::parse::pointer_tokens(path).is_none() {
+                return Err(
+                    "--level-path must be a JSON Pointer with 1..=16 object keys, at most 1024 bytes, and valid ~0/~1 escapes",
+                );
+            }
+            if !matches!(self.input_format(), Format::Auto | Format::Json) {
+                return Err("--level-path requires auto or json format");
+            }
         }
         #[cfg(feature = "web")]
         {

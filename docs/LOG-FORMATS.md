@@ -77,3 +77,22 @@ Unicode escapes, duplicate severity keys, and trailing non-pair text are malform
 and counted once as unknown plus a parse failure. Numeric values without an
 explicit mapping remain unknown. This is a defined logfmt subset, not a parser
 for every application's loosely formatted key/value message.
+
+## Nested JSON fields
+
+`--level-path` selects an object path using JSON Pointer syntax:
+
+```sh
+tell-tail app.log --level-path /log/level
+```
+
+This reads `{"log":{"level":"error"}}`. It is separate from the literal
+`--level-field log.level` selector. Escape a slash in a key as `~1` and a tilde
+as `~0`; `/` selects an empty top-level key. Paths support at most 16 object keys
+and 1024 UTF-8 bytes. Array indexing and recursive searches are not supported.
+Missing paths or non-object intermediate values remain unknown. Duplicate keys
+along the selected path are malformed. All other JSON still undergoes validation.
+
+A path requires auto/JSON mode and selects JSON parsing exclusively. It conflicts
+with `--level-field`, the built-in demo, and Apple unified format. Traversal uses
+bounded streaming visitors and borrowed raw subobjects, not a full JSON tree.
