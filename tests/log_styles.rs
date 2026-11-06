@@ -284,3 +284,31 @@ fn numeric_profiles_are_explicit_and_keep_distinct_mappings() {
         );
     }
 }
+
+#[test]
+fn parsing_evidence_distinguishes_ambiguity_from_malformed_records() {
+    use tell_tail::parse::{Classifier, ParseIssue, ParsingDiagnostics};
+    let auto = Classifier::from_args(&Args::parse_from(["tell-tail"]));
+    let mut diagnostics = ParsingDiagnostics::default();
+    for (line, issue) in [
+        (r#"{"level":50}"#, ParseIssue::Numeric),
+        (r#"{"levelno":30}"#, ParseIssue::Numeric),
+        (
+            r#"{"level":"info","severity":"error"}"#,
+            ParseIssue::Conflicting,
+        ),
+        ("level=error severity=warn", ParseIssue::Conflicting),
+        (r#"{"level":50,"bad":}"#, ParseIssue::None),
+        ("INFO ready", ParseIssue::None),
+        (r#"{"severity":"warn"}"#, ParseIssue::None),
+        ("level=error msg=timeout", ParseIssue::None),
+    ] {
+        let assessment = auto.assess_record(line.as_bytes()).unwrap();
+        assert_eq!(assessment.issue, issue, "{line}");
+        diagnostics.record(assessment);
+    }
+    assert_eq!(diagnostics.recognized, [1, 1, 1, 0, 0, 0]);
+    assert_eq!(diagnostics.numeric, 2);
+    assert_eq!(diagnostics.conflicting, 2);
+    assert!(diagnostics.hint().contains("--level-field"));
+}

@@ -1,4 +1,4 @@
-use super::{Classification, Level, field_index};
+use super::{Classification, Level, ParseIssue, Selection, field_index};
 use serde::de::IgnoredAny;
 
 pub(super) fn looks_like(line: &[u8]) -> bool {
@@ -13,22 +13,24 @@ fn valid_key(key: &[u8]) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || b"_.-/@".contains(b))
 }
 
-pub(super) fn classify(line: &[u8], field: Option<&str>) -> Classification {
+pub(super) fn classify(line: &[u8], field: Option<&str>) -> (Classification, ParseIssue) {
     match parse(line, field) {
-        Ok(level) => Classification {
-            level,
-            parse_failure: false,
-        },
-        Err(()) => Classification {
-            level: Level::Unknown,
-            parse_failure: true,
-        },
+        Ok(selected) => (selected.classification(), selected.issue),
+        Err(()) => (
+            Classification {
+                level: Level::Unknown,
+                parse_failure: true,
+            },
+            ParseIssue::None,
+        ),
     }
 }
-fn parse(mut line: &[u8], field: Option<&str>) -> Result<Level, ()> {
+
+fn parse(mut line: &[u8], field: Option<&str>) -> Result<Selection, ()> {
     std::str::from_utf8(line).map_err(|_| ())?;
     let mut found = None;
     let mut seen = 0u16;
+    let mut issue = ParseIssue::None;
     while !line.is_empty() {
         let end = line
             .iter()
@@ -83,7 +85,10 @@ fn parse(mut line: &[u8], field: Option<&str>) -> Result<Level, ()> {
                 Level::from_bytes(raw)
             };
             found = Some(match found {
-                Some(previous) if previous != level => Level::Unknown,
+                Some(previous) if previous != level => {
+                    issue = ParseIssue::Conflicting;
+                    Level::Unknown
+                }
                 _ => level,
             });
         }
@@ -93,7 +98,10 @@ fn parse(mut line: &[u8], field: Option<&str>) -> Result<Level, ()> {
         }
         line = line.trim_ascii_start();
     }
-    Ok(found.unwrap_or(Level::Unknown))
+    Ok(Selection {
+        level: found,
+        issue,
+    })
 }
 
 #[cfg(test)]
@@ -116,15 +124,17 @@ mod tests {
             (r#"level=error msg="\uD800""#, Level::Unknown, true),
             (r#"msg="safe"level=error"#, Level::Unknown, true),
         ] {
-            let result = classify(line.as_bytes(), None);
+            let result = classify(line.as_bytes(), None).0;
             assert_eq!((result.level, result.parse_failure), (level, bad), "{line}");
         }
         assert_eq!(
-            classify(b"priority=warn level=error", Some("priority")).level,
+            classify(b"priority=warn level=error", Some("priority"))
+                .0
+                .level,
             Level::Warn
         );
         assert_eq!(
-            classify(b"msg=\xff level=error", None).level,
+            classify(b"msg=\xff level=error", None).0.level,
             Level::Unknown
         );
     }

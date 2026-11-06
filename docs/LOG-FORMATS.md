@@ -18,7 +18,7 @@ and ratio denominators. Coverage is recognition, not application health.
 
 Without `--level-field`, JSON objects recognize these exact top-level keys:
 `level`, `severity`, `levelname`, `Level`, `log.level`, `severityText`, and
-`SeverityText`. Values are case-insensitive severity names; `Information` and
+`SeverityText`, `levelno`, and `severityNumber`. Values are case-insensitive severity names; `Information` and
 `Informational` map to info in addition to the existing warning/critical/panic
 aliases. Field names are case-sensitive.
 

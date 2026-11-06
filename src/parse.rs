@@ -1,3 +1,6 @@
+mod diagnostics;
+use diagnostics::Selection;
+pub use diagnostics::{Assessment, ParseIssue, ParserKind, ParsingDiagnostics};
 mod logfmt;
 mod profiles;
 mod text;
@@ -91,83 +94,96 @@ impl Classifier {
                 .map(|path| pointer_tokens(path).unwrap_or_default()),
         }
     }
-    /// Classify one record. Use classify_record when source metadata should be
-    /// omitted; this compatibility API represents such metadata as unknown.
+    /// Compatibility API: skipped source metadata is represented as unknown.
     pub fn classify(&self, line: &[u8]) -> Classification {
-        if self.format == Format::AppleUnified {
-            return self
-                .classify_record(line)
-                .unwrap_or_else(Classification::unknown);
-        }
+        self.classify_record(line)
+            .unwrap_or_else(Classification::unknown)
+    }
+    pub fn classify_record(&self, line: &[u8]) -> Option<Classification> {
+        self.assess_record(line).map(|a| a.classification)
+    }
+    /// Classification plus bounded evidence, without storing raw input.
+    pub fn assess_record(&self, line: &[u8]) -> Option<Assessment> {
         let line = trim_start(line);
-        if self.profile.is_some()
-            || self.path.is_some()
+        let parser = if self.format == Format::AppleUnified {
+            ParserKind::Apple
+        } else if self.profile.is_some() {
+            ParserKind::Profile
+        } else if self.path.is_some()
             || self.format == Format::Json
             || (self.format == Format::Auto && line.first() == Some(&b'{'))
         {
-            if std::str::from_utf8(line).is_err() || !valid_unicode_escapes(line) {
-                return Classification {
-                    level: Level::Unknown,
-                    parse_failure: true,
-                };
-            }
-            match json_selected(
+            ParserKind::Json
+        } else if self.format == Format::Logfmt
+            || (self.format == Format::Auto && logfmt::looks_like(line))
+        {
+            ParserKind::Logfmt
+        } else {
+            ParserKind::Text
+        };
+        if matches!(parser, ParserKind::Text) {
+            return Some(Assessment {
+                classification: Classification {
+                    level: text_level(line),
+                    parse_failure: false,
+                },
+                parser,
+                issue: ParseIssue::None,
+            });
+        }
+        if matches!(parser, ParserKind::Logfmt) {
+            let (classification, issue) = logfmt::classify(line, self.field.as_deref());
+            return Some(Assessment {
+                classification,
+                parser,
+                issue,
+            });
+        }
+        let apple = matches!(parser, ParserKind::Apple);
+        if apple && line.first() != Some(&b'{') {
+            return None;
+        }
+        let selection = if std::str::from_utf8(line).is_ok() && valid_unicode_escapes(line) {
+            json_selected(
                 line,
-                self.field
-                    .as_deref()
-                    .or_else(|| self.profile.map(Profile::field)),
+                if apple {
+                    Some("messageType")
+                } else {
+                    self.field
+                        .as_deref()
+                        .or_else(|| self.profile.map(Profile::field))
+                },
                 self.path.as_deref(),
-                false,
+                apple,
                 self.profile,
                 self.profile == Some(Profile::Serilog)
                     && self.field.is_none()
                     && self.path.is_none(),
-            ) {
-                Ok(level) => Classification {
-                    level: level.unwrap_or(Level::Unknown),
-                    parse_failure: false,
-                },
-                Err(_) => Classification {
+            )
+            .ok()
+        } else {
+            None
+        };
+        Some(match selection {
+            Some(selected) => {
+                if apple && selected.level.is_none() {
+                    return None;
+                }
+                Assessment {
+                    classification: selected.classification(),
+                    parser,
+                    issue: selected.issue,
+                }
+            }
+            None => Assessment {
+                classification: Classification {
                     level: Level::Unknown,
                     parse_failure: true,
                 },
-            }
-        } else if self.format == Format::Logfmt
-            || (self.format == Format::Auto && logfmt::looks_like(line))
-        {
-            logfmt::classify(line, self.field.as_deref())
-        } else {
-            Classification {
-                level: text_level(line),
-                parse_failure: false,
-            }
-        }
-    }
-    /// Source-aware classification. None denotes Apple stream metadata, which
-    /// ingestion excludes from entry counts and accounts for as skipped bytes.
-    pub fn classify_record(&self, line: &[u8]) -> Option<Classification> {
-        if self.format != Format::AppleUnified {
-            return Some(self.classify(line));
-        }
-        let line = trim_start(line);
-        // The native tool writes a text banner alongside its NDJSON records.
-        if line.first() != Some(&b'{') {
-            return None;
-        }
-        let bad = Classification {
-            level: Level::Unknown,
-            parse_failure: true,
-        };
-        if std::str::from_utf8(line).is_err() || !valid_unicode_escapes(line) {
-            return Some(bad);
-        }
-        match json_level(line, Some("messageType"), true) {
-            Ok(level) => level.map(|level| Classification {
-                level,
-                parse_failure: false,
-            }),
-            Err(_) => Some(bad),
-        }
+                parser,
+                issue: ParseIssue::None,
+            },
+        })
     }
 }
 // serde's IgnoredAny validates JSON syntax but skips surrogate pairing in
@@ -244,6 +260,8 @@ const LEVEL_FIELDS: &[&str] = &[
     "log.level",
     "severityText",
     "SeverityText",
+    "levelno",
+    "severityNumber",
 ];
 fn field_index(key: &str, field: Option<&str>) -> Option<usize> {
     match field {
@@ -259,7 +277,7 @@ struct LevelSeed<'a> {
     clef_default: bool,
 }
 impl<'de> DeserializeSeed<'de> for LevelSeed<'_> {
-    type Value = Option<Level>;
+    type Value = Selection;
     fn deserialize<D: de::Deserializer<'de>>(
         self,
         deserializer: D,
@@ -268,7 +286,7 @@ impl<'de> DeserializeSeed<'de> for LevelSeed<'_> {
     }
 }
 impl<'de> Visitor<'de> for LevelSeed<'_> {
-    type Value = Option<Level>;
+    type Value = Selection;
     fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str("a JSON log object")
     }
@@ -277,6 +295,7 @@ impl<'de> Visitor<'de> for LevelSeed<'_> {
         let mut seen = 0u16;
         let mut clef_seen = 0u8;
         let mut clef_valid = 0u8;
+        let mut issue = ParseIssue::None;
         while let Some(key) = map.next_key::<Cow<'de, str>>()? {
             let index = match self.path {
                 Some(path) => path.first().filter(|field| **field == key).map(|_| 0),
@@ -290,7 +309,7 @@ impl<'de> Visitor<'de> for LevelSeed<'_> {
                 let raw: &RawValue = map.next_value()?;
                 let value = if let Some(path) = self.path.filter(|path| path.len() > 1) {
                     Some(if raw.get().starts_with('{') {
-                        json_selected(
+                        let nested = json_selected(
                             raw.get().as_bytes(),
                             None,
                             Some(&path[1..]),
@@ -298,8 +317,9 @@ impl<'de> Visitor<'de> for LevelSeed<'_> {
                             self.profile,
                             false,
                         )
-                        .map_err(de::Error::custom)?
-                        .unwrap_or(Level::Unknown)
+                        .map_err(de::Error::custom)?;
+                        issue = nested.issue;
+                        nested.level.unwrap_or(Level::Unknown)
                     } else {
                         Level::Unknown
                     })
@@ -318,11 +338,23 @@ impl<'de> Visitor<'de> for LevelSeed<'_> {
                     } else if let Ok(s) = serde_json::from_str::<String>(raw.get()) {
                         decode(&s)
                     } else {
+                        if issue != ParseIssue::Conflicting
+                            && raw
+                                .get()
+                                .as_bytes()
+                                .first()
+                                .is_some_and(|b| b.is_ascii_digit() || *b == b'-')
+                        {
+                            issue = ParseIssue::Numeric;
+                        }
                         profiles::number(self.profile, raw.get())
                     })
                 };
                 found = Some(match found {
-                    Some(previous) if previous != value => Some(Level::Unknown),
+                    Some(previous) if previous != value => {
+                        issue = ParseIssue::Conflicting;
+                        Some(Level::Unknown)
+                    }
                     _ => value,
                 });
             } else if self.clef_default && matches!(key.as_ref(), "@t" | "@m" | "@mt") {
@@ -346,9 +378,15 @@ impl<'de> Visitor<'de> for LevelSeed<'_> {
             }
         }
         if found.is_none() && self.clef_default && clef_valid & 1 != 0 && clef_valid & 6 != 0 {
-            return Ok(Some(Level::Info));
+            return Ok(Selection {
+                level: Some(Level::Info),
+                issue,
+            });
         }
-        Ok(found.flatten())
+        Ok(Selection {
+            level: found.flatten(),
+            issue,
+        })
     }
 }
 fn apple_level(value: &[u8]) -> Level {
@@ -365,13 +403,6 @@ fn apple_level(value: &[u8]) -> Level {
     }
     Level::Unknown
 }
-fn json_level(
-    line: &[u8],
-    field: Option<&str>,
-    apple: bool,
-) -> Result<Option<Level>, serde_json::Error> {
-    json_selected(line, field, None, apple, None, false)
-}
 fn json_selected(
     line: &[u8],
     field: Option<&str>,
@@ -379,7 +410,7 @@ fn json_selected(
     apple: bool,
     profile: Option<Profile>,
     clef_default: bool,
-) -> Result<Option<Level>, serde_json::Error> {
+) -> Result<Selection, serde_json::Error> {
     let mut de = serde_json::Deserializer::from_slice(line);
     let level = LevelSeed {
         field,
