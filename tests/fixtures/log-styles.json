@@ -81,57 +81,52 @@
   {
     "name": "Pino numeric",
     "input": "{\"level\":50,\"time\":1793870400000,\"pid\":123,\"hostname\":\"example\",\"msg\":\"timeout\"}",
-    "flags": [],
-    "expected": "unknown",
-    "target": "error",
-    "planned_flags": [
+    "flags": [
       "--profile",
       "pino"
-    ]
+    ],
+    "expected": "error",
+    "target": "error"
   },
   {
     "name": "Python numeric",
     "input": "{\"levelno\":30,\"message\":\"slow\"}",
-    "flags": [],
-    "expected": "unknown",
-    "target": "warn",
-    "planned_flags": [
+    "flags": [
       "--profile",
       "python"
-    ]
+    ],
+    "expected": "warn",
+    "target": "warn"
   },
   {
     "name": "OTel numeric record",
     "input": "{\"severityNumber\":17,\"body\":\"timeout\"}",
-    "flags": [],
-    "expected": "unknown",
-    "target": "error",
-    "planned_flags": [
+    "flags": [
       "--profile",
       "otel"
-    ]
+    ],
+    "expected": "error",
+    "target": "error"
   },
   {
     "name": "Serilog compact error",
     "input": "{\"@t\":\"2026-11-05T12:00:00Z\",\"@mt\":\"Timeout\",\"@l\":\"Error\"}",
-    "flags": [],
-    "expected": "unknown",
-    "target": "error",
-    "planned_flags": [
+    "flags": [
       "--profile",
       "serilog"
-    ]
+    ],
+    "expected": "error",
+    "target": "error"
   },
   {
     "name": "Serilog implicit info",
     "input": "{\"@t\":\"2026-11-05T12:00:00Z\",\"@mt\":\"Ready\"}",
-    "flags": [],
-    "expected": "unknown",
-    "target": "info",
-    "planned_flags": [
+    "flags": [
       "--profile",
       "serilog"
-    ]
+    ],
+    "expected": "info",
+    "target": "info"
   },
   {
     "name": "prefix text",

@@ -175,3 +175,112 @@ fn nested_paths_are_literal_bounded_and_validate_the_complete_record() {
         .is_err()
     );
 }
+
+#[test]
+fn numeric_profiles_are_explicit_and_keep_distinct_mappings() {
+    use tell_tail::parse::Classifier;
+    for (profile, field, numbers, levels) in [
+        (
+            "pino",
+            "level",
+            vec![0, 10, 20, 30, 40, 50, 60, 70],
+            vec![
+                Level::Unknown,
+                Level::Trace,
+                Level::Debug,
+                Level::Info,
+                Level::Warn,
+                Level::Error,
+                Level::Fatal,
+                Level::Unknown,
+            ],
+        ),
+        (
+            "python",
+            "levelno",
+            vec![0, 10, 20, 30, 40, 50, 60],
+            vec![
+                Level::Unknown,
+                Level::Debug,
+                Level::Info,
+                Level::Warn,
+                Level::Error,
+                Level::Fatal,
+                Level::Unknown,
+            ],
+        ),
+        (
+            "otel",
+            "severityNumber",
+            vec![0, 1, 4, 5, 8, 9, 12, 13, 16, 17, 20, 21, 24, 25],
+            vec![
+                Level::Unknown,
+                Level::Trace,
+                Level::Trace,
+                Level::Debug,
+                Level::Debug,
+                Level::Info,
+                Level::Info,
+                Level::Warn,
+                Level::Warn,
+                Level::Error,
+                Level::Error,
+                Level::Fatal,
+                Level::Fatal,
+                Level::Unknown,
+            ],
+        ),
+    ] {
+        let args = Args::parse_from(["tell-tail", "--profile", profile]);
+        args.validate().unwrap();
+        let c = Classifier::from_args(&args);
+        for (n, expected) in numbers.into_iter().zip(levels) {
+            assert_eq!(
+                c.classify(format!(r#"{{"{field}":{n}}}"#).as_bytes()).level,
+                expected,
+                "{profile} {n}"
+            );
+        }
+        for value in ["-1", "30.0", "1e1", "256", "null", "true", "\"30\""] {
+            assert_eq!(
+                c.classify(format!(r#"{{"{field}":{value}}}"#).as_bytes())
+                    .level,
+                Level::Unknown
+            );
+        }
+    }
+    let overridden = Classifier::from_args(&Args::parse_from([
+        "tell-tail",
+        "--profile",
+        "pino",
+        "--level-path",
+        "/event/priority",
+    ]));
+    assert_eq!(
+        overridden
+            .classify(br#"{"level":10,"event":{"priority":50}}"#)
+            .level,
+        Level::Error
+    );
+    let serilog = Classifier::from_args(&Args::parse_from(["tell-tail", "--profile", "serilog"]));
+    for (line, expected) in [
+        (r#"{"@l":"Verbose"}"#, Level::Trace),
+        (r#"{"@t":"2026-11-05T12:00:00Z","@m":"ready"}"#, Level::Info),
+        (r#"{"@t":"not a timestamp","@m":"ready"}"#, Level::Unknown),
+        (r#"{"@m":"ready"}"#, Level::Unknown),
+        (
+            r#"{"@t":"2026-11-05T12:00:00Z","@m":"ready","@l":null}"#,
+            Level::Unknown,
+        ),
+    ] {
+        assert_eq!(serilog.classify(line.as_bytes()).level, expected, "{line}");
+    }
+    assert!(Args::try_parse_from(["tell-tail", "--demo", "--profile", "pino"]).is_err());
+    for format in ["text", "logfmt", "apple-unified"] {
+        assert!(
+            Args::parse_from(["tell-tail", "--profile", "pino", "--format", format])
+                .validate()
+                .is_err()
+        );
+    }
+}

@@ -1,6 +1,7 @@
 mod logfmt;
+mod profiles;
 mod text;
-use crate::cli::{Args, Format};
+use crate::cli::{Args, Format, Profile};
 use serde::de::{self, DeserializeSeed, IgnoredAny, MapAccess, Visitor};
 use serde_json::value::RawValue;
 use std::{borrow::Cow, fmt};
@@ -68,6 +69,7 @@ pub struct Classifier {
     format: Format,
     field: Option<String>,
     path: Option<Vec<String>>,
+    profile: Option<Profile>,
 }
 impl Classifier {
     pub fn new(format: Format, field: String) -> Self {
@@ -75,11 +77,13 @@ impl Classifier {
             format,
             field: Some(field),
             path: None,
+            profile: None,
         }
     }
     pub fn from_args(args: &Args) -> Self {
         Self {
             format: args.input_format(),
+            profile: args.profile,
             field: args.level_field.clone(),
             path: args
                 .level_path
@@ -96,7 +100,8 @@ impl Classifier {
                 .unwrap_or_else(Classification::unknown);
         }
         let line = trim_start(line);
-        if self.path.is_some()
+        if self.profile.is_some()
+            || self.path.is_some()
             || self.format == Format::Json
             || (self.format == Format::Auto && line.first() == Some(&b'{'))
         {
@@ -106,7 +111,18 @@ impl Classifier {
                     parse_failure: true,
                 };
             }
-            match json_selected(line, self.field.as_deref(), self.path.as_deref(), false) {
+            match json_selected(
+                line,
+                self.field
+                    .as_deref()
+                    .or_else(|| self.profile.map(Profile::field)),
+                self.path.as_deref(),
+                false,
+                self.profile,
+                self.profile == Some(Profile::Serilog)
+                    && self.field.is_none()
+                    && self.path.is_none(),
+            ) {
                 Ok(level) => Classification {
                     level: level.unwrap_or(Level::Unknown),
                     parse_failure: false,
@@ -239,6 +255,8 @@ struct LevelSeed<'a> {
     field: Option<&'a str>,
     path: Option<&'a [String]>,
     apple: bool,
+    profile: Option<Profile>,
+    clef_default: bool,
 }
 impl<'de> DeserializeSeed<'de> for LevelSeed<'_> {
     type Value = Option<Level>;
@@ -257,6 +275,8 @@ impl<'de> Visitor<'de> for LevelSeed<'_> {
     fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Self::Value, M::Error> {
         let mut found = None;
         let mut seen = 0u16;
+        let mut clef_seen = 0u8;
+        let mut clef_valid = 0u8;
         while let Some(key) = map.next_key::<Cow<'de, str>>()? {
             let index = match self.path {
                 Some(path) => path.first().filter(|field| **field == key).map(|_| 0),
@@ -270,9 +290,16 @@ impl<'de> Visitor<'de> for LevelSeed<'_> {
                 let raw: &RawValue = map.next_value()?;
                 let value = if let Some(path) = self.path.filter(|path| path.len() > 1) {
                     Some(if raw.get().starts_with('{') {
-                        json_selected(raw.get().as_bytes(), None, Some(&path[1..]), false)
-                            .map_err(de::Error::custom)?
-                            .unwrap_or(Level::Unknown)
+                        json_selected(
+                            raw.get().as_bytes(),
+                            None,
+                            Some(&path[1..]),
+                            false,
+                            self.profile,
+                            false,
+                        )
+                        .map_err(de::Error::custom)?
+                        .unwrap_or(Level::Unknown)
                     } else {
                         Level::Unknown
                     })
@@ -283,7 +310,7 @@ impl<'de> Visitor<'de> for LevelSeed<'_> {
                         if self.apple {
                             apple_level(s.as_bytes())
                         } else {
-                            Level::from_bytes(s.as_bytes())
+                            profiles::text(self.profile, s.as_bytes())
                         }
                     };
                     Some(if let Ok(s) = serde_json::from_str::<&str>(raw.get()) {
@@ -291,16 +318,35 @@ impl<'de> Visitor<'de> for LevelSeed<'_> {
                     } else if let Ok(s) = serde_json::from_str::<String>(raw.get()) {
                         decode(&s)
                     } else {
-                        Level::Unknown
+                        profiles::number(self.profile, raw.get())
                     })
                 };
                 found = Some(match found {
                     Some(previous) if previous != value => Some(Level::Unknown),
                     _ => value,
                 });
+            } else if self.clef_default && matches!(key.as_ref(), "@t" | "@m" | "@mt") {
+                let bit = match key.as_ref() {
+                    "@t" => 1,
+                    "@m" => 2,
+                    _ => 4,
+                };
+                if clef_seen & bit != 0 {
+                    return Err(de::Error::custom("duplicate compact event field"));
+                }
+                clef_seen |= bit;
+                let raw: &RawValue = map.next_value()?;
+                if let Ok(value) = serde_json::from_str::<String>(raw.get()) {
+                    if bit != 1 || text::iso_timestamp(value.as_bytes()) {
+                        clef_valid |= bit;
+                    }
+                }
             } else {
                 map.next_value::<IgnoredAny>()?;
             }
+        }
+        if found.is_none() && self.clef_default && clef_valid & 1 != 0 && clef_valid & 6 != 0 {
+            return Ok(Some(Level::Info));
         }
         Ok(found.flatten())
     }
@@ -324,16 +370,25 @@ fn json_level(
     field: Option<&str>,
     apple: bool,
 ) -> Result<Option<Level>, serde_json::Error> {
-    json_selected(line, field, None, apple)
+    json_selected(line, field, None, apple, None, false)
 }
 fn json_selected(
     line: &[u8],
     field: Option<&str>,
     path: Option<&[String]>,
     apple: bool,
+    profile: Option<Profile>,
+    clef_default: bool,
 ) -> Result<Option<Level>, serde_json::Error> {
     let mut de = serde_json::Deserializer::from_slice(line);
-    let level = LevelSeed { field, path, apple }.deserialize(&mut de)?;
+    let level = LevelSeed {
+        field,
+        path,
+        apple,
+        profile,
+        clef_default,
+    }
+    .deserialize(&mut de)?;
     de.end()?;
     Ok(level)
 }

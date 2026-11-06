@@ -84,7 +84,7 @@ fn plain_level(line: &[u8]) -> Level {
     }
 }
 
-fn iso_timestamp(bytes: &[u8]) -> bool {
+pub(super) fn iso_timestamp(bytes: &[u8]) -> bool {
     let b = bytes
         .strip_prefix(b"[")
         .and_then(|s| s.strip_suffix(b"]"))

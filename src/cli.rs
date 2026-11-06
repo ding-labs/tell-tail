@@ -12,6 +12,27 @@ pub enum Format {
     AppleUnified,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+pub enum Profile {
+    /// JSON level: 10 trace, 20 debug, 30 info, 40 warn, 50 error, 60 fatal.
+    Pino,
+    /// JSON levelno: Python's standard numeric severity mapping.
+    Python,
+    /// One JSON LogRecord with severityNumber in the OpenTelemetry 1..=24 range.
+    Otel,
+    /// Serilog compact JSON (@l; omitted informational level requires @t and @m/@mt).
+    Serilog,
+}
+impl Profile {
+    pub fn field(self) -> &'static str {
+        match self {
+            Self::Pino => "level",
+            Self::Python => "levelno",
+            Self::Otel => "severityNumber",
+            Self::Serilog => "@l",
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 pub enum Output {
     Auto,
     Tui,
@@ -35,7 +56,7 @@ pub struct Args {
     /// File to follow; omit or use - to read stdin.
     pub file: Option<PathBuf>,
     /// Run a built-in synthetic stream: healthy, warnings, errors, silence, recovery.
-    #[arg(long, conflicts_with_all = ["file", "apple_unified", "once", "from", "format", "level_field", "level_path"])]
+    #[arg(long, conflicts_with_all = ["file", "apple_unified", "once", "from", "format", "level_field", "level_path", "profile"])]
     pub demo: bool,
     /// Stream macOS unified logs at info level; no pipe or jq required.
     #[arg(long, conflicts_with_all = ["file", "once", "from"])]
@@ -54,6 +75,9 @@ pub struct Args {
     /// JSON Pointer to a nested object severity field (for example /log/level).
     #[arg(long, conflicts_with = "level_field")]
     pub level_path: Option<String>,
+    /// Explicit JSON severity convention; field/path flags override its default selector.
+    #[arg(long, value_enum)]
+    pub profile: Option<Profile>,
     /// Rolling window in seconds (1..=3600).
     #[arg(long, default_value_t = 60, value_parser = clap::value_parser!(u32).range(1..=3600))]
     pub window: u32,
@@ -129,6 +153,9 @@ impl Args {
             )
         {
             return Err("--format apple-unified uses messageType; omit --level-field");
+        }
+        if self.profile.is_some() && !matches!(self.input_format(), Format::Auto | Format::Json) {
+            return Err("--profile requires auto or json format");
         }
         if let Some(path) = &self.level_path {
             if crate::parse::pointer_tokens(path).is_none() {

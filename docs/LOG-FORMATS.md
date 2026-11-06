@@ -96,3 +96,37 @@ along the selected path are malformed. All other JSON still undergoes validation
 A path requires auto/JSON mode and selects JSON parsing exclusively. It conflicts
 with `--level-field`, the built-in demo, and Apple unified format. Traversal uses
 bounded streaming visitors and borrowed raw subobjects, not a full JSON tree.
+
+## Explicit JSON profiles
+
+A profile selects a field and its value convention in one flag. Profiles require
+JSON records (auto or JSON format); they are never guessed from bare numbers.
+`--level-field` or `--level-path` overrides the profile's default selector while
+retaining its mapping. Profiles conflict with the demo and non-JSON formats.
+
+| Flag | Default field | Numeric mapping |
+| --- | --- | --- |
+| `--profile pino` | `level` | 10 trace, 20 debug, 30 info, 40 warn, 50 error, 60 fatal |
+| `--profile python` | `levelno` | 10 debug, 20 info, 30 warn, 40 error, 50 fatal |
+| `--profile otel` | `severityNumber` | 1–4 trace, 5–8 debug, 9–12 info, 13–16 warn, 17–20 error, 21–24 fatal |
+| `--profile serilog` | `@l` | No numeric mapping; compact JSON named levels, including Verbose → trace |
+
+```sh
+node app.js 2>&1 | tell-tail --profile pino
+# Numeric values in a custom nested field, using Python's convention:
+tell-tail app.log --profile python --level-path /event/priority
+```
+
+All profiles also accept recognized string severity names. Numbers must be JSON
+integers in the listed set/range: fractions, exponent notation, numeric strings,
+negative/custom values, and OpenTelemetry zero remain unknown. An explicit
+profile selects its own field even when other fields disagree. The OTel profile
+handles one JSON LogRecord per physical line, not an OTLP batch or binary stream.
+Python's default text layout needs no profile; its profile is for numeric JSON.
+
+Only the Serilog profile may interpret an omitted `@l` as info, and only with a
+string ISO-shaped `@t` and a string `@m` or `@mt`. An explicit null/unknown level
+remains unknown. Selecting a custom field/path disables that omitted-level
+fallback. Auto mode never applies it. These are severity conventions, not
+framework integrations, and custom logger mappings need explicit normalization
+upstream until a suitable preset exists.
