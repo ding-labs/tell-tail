@@ -1,7 +1,9 @@
+mod text;
 use crate::cli::{Args, Format};
 use serde::de::{self, DeserializeSeed, IgnoredAny, MapAccess, Visitor};
 use serde_json::value::RawValue;
 use std::{borrow::Cow, fmt};
+use text::text_level;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(usize)]
@@ -176,50 +178,6 @@ fn valid_unicode_escapes(mut bytes: &[u8]) -> bool {
 }
 fn trim_start(bytes: &[u8]) -> &[u8] {
     bytes.trim_ascii_start()
-}
-fn text_level(mut line: &[u8]) -> Level {
-    let token_end = line
-        .iter()
-        .position(u8::is_ascii_whitespace)
-        .unwrap_or(line.len());
-    if iso_timestamp(&line[..token_end]) {
-        line = trim_start(&line[token_end..]);
-    }
-    if let Some(bracketed) = line.strip_prefix(b"[") {
-        let Some(end) = bracketed.iter().take(16).position(|&b| b == b']') else {
-            return Level::Unknown;
-        };
-        let after = &bracketed[end + 1..];
-        if !after.is_empty() && !after[0].is_ascii_whitespace() {
-            return Level::Unknown;
-        }
-        Level::from_bytes(&bracketed[..end])
-    } else {
-        let end = line
-            .iter()
-            .position(u8::is_ascii_whitespace)
-            .unwrap_or(line.len());
-        Level::from_bytes(line[..end].strip_suffix(b":").unwrap_or(&line[..end]))
-    }
-}
-fn iso_timestamp(bytes: &[u8]) -> bool {
-    let b = bytes
-        .strip_prefix(b"[")
-        .and_then(|s| s.strip_suffix(b"]"))
-        .unwrap_or(bytes);
-    b.len() >= 19
-        && b.len() <= 40
-        && b[4] == b'-'
-        && b[7] == b'-'
-        && matches!(b[10], b'T' | b't')
-        && b[13] == b':'
-        && b[16] == b':'
-        && [0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 14, 15, 17, 18]
-            .iter()
-            .all(|&i| b[i].is_ascii_digit())
-        && b[19..]
-            .iter()
-            .all(|b| b.is_ascii_digit() || b".Zz+-:".contains(b))
 }
 // A fixed allowlist avoids searching message/context fields for severity words.
 const LEVEL_FIELDS: &[&str] = &[

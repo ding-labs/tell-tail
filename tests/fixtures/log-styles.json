@@ -159,21 +159,21 @@
     "name": "Python default",
     "input": "WARNING:root:upstream slow",
     "flags": [],
-    "expected": "unknown",
+    "expected": "warn",
     "target": "warn"
   },
   {
     "name": "Python timestamp",
     "input": "2026-11-05 12:00:00,123 ERROR timeout",
     "flags": [],
-    "expected": "unknown",
+    "expected": "error",
     "target": "error"
   },
   {
     "name": "colored prefix",
     "input": "\u001b[31mERROR\u001b[0m timeout",
     "flags": [],
-    "expected": "unknown",
+    "expected": "error",
     "target": "error"
   },
   {

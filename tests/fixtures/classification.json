@@ -279,10 +279,10 @@
     "oversized_records": 0
   },
   {
-    "name": "ansi_prefix_is_unsupported",
+    "name": "ansi_sgr_prefix",
     "input": "\u001b[31mERROR\u001b[0m failed",
     "levels": [
-      "unknown"
+      "error"
     ],
     "parse_failures": 0,
     "oversized_records": 0

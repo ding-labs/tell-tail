@@ -42,3 +42,18 @@ severity for records with no level, or interpret bare numbers as severity.
 
 The compatibility corpus is described in [the fixture guide](../tests/fixtures/README.md).
 Its synthetic examples measure regression behavior, not real-world market coverage.
+
+## Console text
+
+Text accepts a leading severity (`WARN slow`, `[WARN] slow`, `ERROR:timeout`),
+including Python's `WARNING:logger:message` layout. A preceding ISO-shaped
+ timestamp can use `T` or a space between date and time, dot/comma fractional
+seconds, and optional surrounding brackets. These timestamps are recognized as
+header structure, not used for metric time or calendar-validated.
+
+ANSI SGR color/style sequences in the first 512 input bytes are ignored for
+classification using a fixed stack buffer. Other escape sequences and incomplete
+color codes remain unrecognized. Raw input byte counts do not change; dashboard
+previews keep their existing sanitization. Levels buried after arbitrary logger,
+thread, or message prefixes are not searched for. Stack-trace continuation lines
+still count individually and usually remain unknown.
