@@ -253,6 +253,42 @@ pub struct Server {
     probe: Arc<socket::Probe>,
 }
 
+enum ServerPhase {
+    Serving,
+    RetainingFinal,
+    Draining(Instant),
+}
+
+impl ServerPhase {
+    fn accepts_connections(&self) -> bool {
+        matches!(self, Self::Serving | Self::RetainingFinal)
+    }
+
+    fn observe(&mut self, input: InputState, stop: &AtomicUsize, failed: bool) {
+        if !self.accepts_connections() {
+            return;
+        }
+        if failed {
+            let _ = stop.compare_exchange(0, 1, Ordering::Relaxed, Ordering::Relaxed);
+        }
+        if stop.load(Ordering::Relaxed) != 0 {
+            *self = Self::Draining(Instant::now() + FINAL_GRACE);
+        } else if input == InputState::Complete && matches!(self, Self::Serving) {
+            *self = Self::RetainingFinal;
+            crate::writer::diagnostic(
+                "tell-tail: input complete; keeping the web server available until Ctrl+C\n",
+            );
+        }
+    }
+
+    async fn drain_finished(&self) {
+        match self {
+            Self::Draining(deadline) => tokio::time::sleep_until(*deadline).await,
+            Self::Serving | Self::RetainingFinal => std::future::pending().await,
+        }
+    }
+}
+
 impl Server {
     pub fn bind(port: u16) -> io::Result<Self> {
         let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, port)).map_err(|error| {
@@ -292,8 +328,7 @@ impl Server {
         let mut control = tokio::time::interval(Duration::from_millis(10));
         control.set_missed_tick_behavior(MissedTickBehavior::Skip);
         let mut open = true;
-        let mut completed = false;
-        let mut deadline = None;
+        let mut phase = ServerPhase::Serving;
         let mut failure = None;
         crate::writer::diagnostic(&format!("tell-tail: web http://{host}/ (Ctrl+C to stop)\n"));
         let mut browser = if self.open_browser && stop.load(Ordering::Relaxed) == 0 {
@@ -311,27 +346,16 @@ impl Server {
             if browser.as_mut().is_some_and(browser::Browser::failed) {
                 browser::report_failure();
             }
-            if tx.borrow().state == InputState::Complete && !completed {
-                completed = true;
-                crate::writer::diagnostic(
-                    "tell-tail: input complete; keeping the web server available until Ctrl+C\n",
-                );
-            }
-            if tx.borrow().state == InputState::Failed && failure.is_none() {
+            let input_state = tx.borrow().state;
+            if input_state == InputState::Failed && failure.is_none() {
                 failure = Some(io::Error::other("ingestion failed"));
             }
-            if failure.is_some() && deadline.is_none() {
-                let _ = stop.compare_exchange(0, 1, Ordering::Relaxed, Ordering::Relaxed);
-                deadline = Some(Instant::now() + FINAL_GRACE);
-            }
-            if stop.load(Ordering::Relaxed) != 0 && deadline.is_none() {
-                deadline = Some(Instant::now() + FINAL_GRACE);
-            }
+            phase.observe(input_state, &stop, failure.is_some());
             // A short control tick bridges the existing signal flag, never metric
             // publication. Snapshot updates arrive only through notifications.
             tokio::select! {
                 biased;
-                _ = tokio::time::sleep_until(deadline.unwrap_or_else(|| Instant::now() + Duration::from_secs(86400))) => { break; }
+                _ = phase.drain_finished() => { break; }
                 _ = control.tick() => (),
                 joined = tasks.join_next(), if !tasks.is_empty() => {
                     if joined.is_some_and(|result| result.is_err()) {
@@ -358,7 +382,7 @@ impl Server {
                         }
                     }
                 }
-                accepted = listener.accept(), if deadline.is_none() => {
+                accepted = listener.accept(), if phase.accepts_connections() => {
                     match accepted {
                         Ok((socket, _)) => {
                             let Ok(permit) = connections.clone().try_acquire_owned() else { continue; };

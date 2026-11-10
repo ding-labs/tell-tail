@@ -323,6 +323,58 @@ async fn malformed_large_and_foreign_requests_do_not_reach_data_routes() {
 }
 
 #[tokio::test(flavor = "current_thread")]
+async fn shutdown_delivers_a_racing_eof_to_an_existing_stream_and_stops_admission() {
+    let mut harness = Harness::new("stdin".into());
+    let (_, mut stream) = harness.events(false).await;
+    next_data(&mut stream).await;
+
+    let mut snapshot = harness.current();
+    snapshot.state = InputState::Complete;
+    snapshot.kind = "final";
+    harness
+        .stop
+        .store(signal_hook::consts::SIGTERM as usize, Ordering::Relaxed);
+    harness.slot.publish(snapshot);
+    let frame = next_data(&mut stream).await;
+    assert_eq!(frame["metrics"]["state"], "complete");
+    assert_eq!(frame["sequence"], "1");
+
+    // A connection can enter the kernel backlog during the grace period.
+    // Only connections already admitted by the server may receive a response.
+    let mut response = Vec::new();
+    let request = async {
+        let mut socket = TcpStream::connect(harness.address).await?;
+        socket
+            .write_all(
+                format!(
+                    "GET /api/snapshot HTTP/1.1\r\nHost: {}\r\n\r\n",
+                    harness.address
+                )
+                .as_bytes(),
+            )
+            .await?;
+        socket.read_to_end(&mut response).await
+    };
+    if let Err(error) = timeout(Duration::from_secs(1), request).await.unwrap() {
+        assert!(
+            matches!(
+                error.kind(),
+                io::ErrorKind::ConnectionRefused
+                    | io::ErrorKind::ConnectionReset
+                    | io::ErrorKind::BrokenPipe
+            ),
+            "{error}"
+        );
+    }
+    assert!(response.is_empty());
+    timeout(Duration::from_secs(1), harness.task.take().unwrap())
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+}
+
+#[tokio::test(flavor = "current_thread")]
 async fn fatal_publications_and_worker_closure_attempt_final_failure_delivery() {
     for mode in ["failed", "oversize", "panic"] {
         let mut harness = Harness::new("stdin".into());
