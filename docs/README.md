@@ -38,6 +38,9 @@ or an inference service.
 
 ## Plans and historical evidence
 
+The [state-machine inventory and implementation plan](PLAN-STATE-MACHINES.md)
+maps observable transitions to their owners and tests, starting with dashboard retry behavior.
+
 [Original scope](PLAN.md), [0.2 reliability plan](PLAN-0.2.md), and
 [web delivery plan](PLAN-WEB.md) describe milestones and their decisions. Read
 them alongside the [changelog](../CHANGELOG.md), not as a list of features that
