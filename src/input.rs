@@ -285,6 +285,68 @@ mod tests {
         assert_eq!(read(&mut missing), b"INFO fresh\n");
     }
     #[test]
+    fn unlinked_file_drains_before_one_boundary_discards_its_partial_record() {
+        use crate::{cli::Args, engine::Engine};
+        use clap::Parser;
+
+        fn feed(follower: &mut Follower, engine: &mut Engine, expected: &[u8]) {
+            let mut buffer = [0; 64];
+            let Event::Data { len, skip: 0 } = follower.next(&mut buffer).unwrap() else {
+                panic!("expected data from the current file");
+            };
+            assert_eq!(&buffer[..len], expected);
+            engine.feed(&buffer[..len], Duration::ZERO);
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("app.log");
+        let mut old = File::create(&path).unwrap();
+        old.write_all(b"ERROR old\npart").unwrap();
+        let mut follower = Follower::open(path.clone(), From::Start).unwrap();
+        let mut engine = Engine::new(&Args::parse_from(["tell-tail"]));
+        std::fs::remove_file(&path).unwrap();
+        assert!(!follower.check().unwrap());
+        feed(&mut follower, &mut engine, b"ERROR old\npart");
+        let mut buffer = [0; 64];
+        assert!(matches!(
+            follower.next(&mut buffer).unwrap(),
+            Event::Idle(State::Waiting)
+        ));
+
+        old.write_all(b"ial").unwrap();
+        std::fs::write(&path, b"FATAL new\n").unwrap();
+        assert!(!follower.check().unwrap());
+        feed(&mut follower, &mut engine, b"ial");
+        let before = engine.snapshot(Duration::ZERO, State::Following, None);
+        assert_eq!(
+            (
+                before.totals.records,
+                before.pending_bytes,
+                before.skipped_bytes
+            ),
+            (1, 7, 0)
+        );
+        assert!(matches!(
+            follower.next(&mut buffer).unwrap(),
+            Event::Boundary
+        ));
+        engine.discard_partial();
+        feed(&mut follower, &mut engine, b"FATAL new\n");
+        assert!(matches!(
+            follower.next(&mut buffer).unwrap(),
+            Event::Idle(State::Following)
+        ));
+        let after = engine.snapshot(Duration::ZERO, State::Following, None);
+        assert_eq!(
+            (after.totals.records, after.bytes_read, after.pending_bytes),
+            (2, 27, 0)
+        );
+        assert_eq!(
+            (after.discarded_partial_records, after.skipped_bytes),
+            (1, 7)
+        );
+    }
+    #[test]
     fn drains_observed_generations_even_when_replaced_again_during_drain() {
         use crate::{cli::Args, engine::Engine};
         use clap::Parser;
