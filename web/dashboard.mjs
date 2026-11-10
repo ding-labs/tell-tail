@@ -37,6 +37,7 @@ function reportError(reason, endpoint = '/api/events') {
 
 function setText(element, value) { if (element.textContent !== value) element.textContent = value; }
 function isFinal() { return latest && finalStates.has(latest.metrics.state); }
+function requiresManualRetry() { return ['capacity', 'invalid', 'failure'].includes(phase); }
 
 // One latest frame and one scheduled paint, including while display is frozen.
 function paint() {
@@ -70,7 +71,7 @@ function paint() {
     }
     setText(connection, message);
     connection.dataset.tone = tone;
-    retry.hidden = isFinal() || !['capacity', 'invalid', 'failure', 'reconnecting', 'stale'].includes(phase);
+    retry.hidden = isFinal() || !(requiresManualRetry() || phase === 'reconnecting' || phase === 'stale');
     freeze.disabled = !displayed;
     freeze.setAttribute('aria-pressed', String(frozen));
     setText(freeze, frozen ? 'Resume display' : 'Freeze display');
@@ -153,12 +154,17 @@ async function recover(stale = false) {
   }
   if (ticket !== epoch || document.hidden) return;
   // Own retries instead of EventSource's opaque automatic reconnect loop.
-  retryTimer = setTimeout(connect, Math.min(8000, 500 * 2 ** Math.min(attempts++, 4)));
+  retryTimer = setTimeout(() => {
+    retryTimer = 0;
+    connect();
+  }, Math.min(8000, 500 * 2 ** Math.min(attempts++, 4)));
 }
 
-function connect() {
+function connect({ manual = false } = {}) {
+  if (document.hidden || isFinal()) return;
+  // Visibility and cached-page restoration can both announce the same return.
+  if (!manual && (requiresManualRetry() || source || request || retryTimer)) return;
   retire();
-  if (document.hidden || isFinal()) { paint(); return; }
   failureDetail = '';
   phase = latest ? 'reconnecting' : 'connecting';
   paint();
@@ -180,19 +186,24 @@ function connect() {
 }
 
 freeze.addEventListener('click', () => { frozen = !frozen; if (frozen) stopChartAnimation(); paint(); });
-retry.addEventListener('click', () => { attempts = 0; connect(); });
+retry.addEventListener('click', () => { attempts = 0; connect({ manual: true }); });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     stopChartAnimation();
     retire();
     cancelAnimationFrame(animation);
     animation = 0;
-    if (!['capacity', 'invalid', 'failure'].includes(phase)) phase = 'hidden';
-  } else if (!['capacity', 'invalid', 'failure'].includes(phase)) connect();
+    if (!requiresManualRetry()) phase = 'hidden';
+  } else connect();
   paint();
 });
 window.addEventListener('pagehide', () => { stopChartAnimation(); retire(); });
-window.addEventListener('pageshow', event => { if (event.persisted) connect(); });
+window.addEventListener('pageshow', event => {
+  if (event.persisted) {
+    connect();
+    paint();
+  }
+});
 setInterval(() => {
   if (!document.hidden && source && !isFinal() && performance.now() - lastAdvance >= 1000) void recover(true);
 }, 250);

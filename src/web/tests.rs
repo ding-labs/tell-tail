@@ -137,16 +137,22 @@ impl Drop for Harness {
     }
 }
 
-async fn next_data(reader: &mut BufReader<TcpStream>) -> serde_json::Value {
+async fn next_event(reader: &mut BufReader<TcpStream>) -> (String, serde_json::Value) {
     timeout(Duration::from_secs(1), async {
+        let mut event = None;
         loop {
             let mut line = String::new();
             assert!(
                 reader.read_line(&mut line).await.unwrap() > 0,
                 "closed before event"
             );
-            if let Some(data) = line.strip_prefix("data: ") {
-                return serde_json::from_str(data).unwrap();
+            if let Some(name) = line.strip_prefix("event: ") {
+                event = Some(name.trim_end().to_owned());
+            } else if let Some(data) = line.strip_prefix("data: ") {
+                return (
+                    event.expect("named SSE event"),
+                    serde_json::from_str(data).unwrap(),
+                );
             }
         }
     })
@@ -323,11 +329,72 @@ async fn malformed_large_and_foreign_requests_do_not_reach_data_routes() {
 }
 
 #[tokio::test(flavor = "current_thread")]
+async fn shutdown_delivers_a_racing_eof_to_an_existing_stream_and_stops_admission() {
+    let mut harness = Harness::new("stdin".into());
+    let (_, mut stream) = harness.events(false).await;
+    next_event(&mut stream).await;
+
+    let mut snapshot = harness.current();
+    snapshot.state = InputState::Complete;
+    snapshot.kind = "final";
+    harness
+        .stop
+        .store(signal_hook::consts::SIGTERM as usize, Ordering::Relaxed);
+    harness.slot.publish(snapshot);
+    let (event, frame) = next_event(&mut stream).await;
+    assert_eq!(event, "snapshot");
+    assert_eq!(frame["metrics"]["state"], "complete");
+    assert_eq!(frame["sequence"], "1");
+
+    // A connection can enter the kernel backlog during the grace period.
+    // Only connections already admitted by the server may receive a response.
+    let mut response = Vec::new();
+    let request = async {
+        let mut socket = TcpStream::connect(harness.address).await?;
+        socket
+            .write_all(
+                format!(
+                    "GET /api/snapshot HTTP/1.1\r\nHost: {}\r\n\r\n",
+                    harness.address
+                )
+                .as_bytes(),
+            )
+            .await?;
+        socket.read_to_end(&mut response).await
+    };
+    if let Err(error) = timeout(Duration::from_secs(1), request).await.unwrap() {
+        assert!(
+            matches!(
+                error.kind(),
+                io::ErrorKind::ConnectionRefused
+                    | io::ErrorKind::ConnectionReset
+                    | io::ErrorKind::BrokenPipe
+            ),
+            "{error}"
+        );
+    }
+    assert!(response.is_empty());
+    timeout(Duration::from_secs(1), harness.task.take().unwrap())
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+}
+
+#[tokio::test(flavor = "current_thread")]
 async fn fatal_publications_and_worker_closure_attempt_final_failure_delivery() {
     for mode in ["failed", "oversize", "panic"] {
         let mut harness = Harness::new("stdin".into());
+        // Admit a snapshot request before shutdown, then finish its headers
+        // after the stream has observed the terminal publication.
+        let mut http = TcpStream::connect(harness.address).await.unwrap();
+        let headers = format!(
+            "GET /api/snapshot HTTP/1.1\r\nHost: {}\r\n",
+            harness.address
+        );
+        http.write_all(headers.as_bytes()).await.unwrap();
         let (_, mut reader) = harness.events(false).await;
-        next_data(&mut reader).await;
+        next_event(&mut reader).await;
         match mode {
             "panic" => drop(crate::snapshots::CloseSnapshots(harness.slot.clone())),
             _ => {
@@ -341,11 +408,26 @@ async fn fatal_publications_and_worker_closure_attempt_final_failure_delivery() 
                 harness.slot.publish(snapshot);
             }
         }
-        let final_data = next_data(&mut reader).await;
+        let (event, final_data) = next_event(&mut reader).await;
+        http.write_all(b"\r\n").await.unwrap();
+        let mut response = String::new();
+        timeout(Duration::from_secs(1), http.read_to_string(&mut response))
+            .await
+            .unwrap()
+            .unwrap();
         if mode == "failed" {
+            assert_eq!(event, "snapshot");
             assert_eq!(final_data["metrics"]["state"], "failed");
             assert_eq!(final_data["metrics"]["kind"], "final");
+            assert!(response.starts_with("HTTP/1.1 200 OK"));
+            let (_, body) = response.split_once("\r\n\r\n").unwrap();
+            assert_eq!(
+                serde_json::from_str::<serde_json::Value>(body).unwrap(),
+                final_data
+            );
         } else {
+            assert_eq!(event, "failure");
+            assert!(response.starts_with("HTTP/1.1 500 Internal Server Error"));
             assert_eq!(
                 final_data,
                 serde_json::json!({"message": "web output failed"})
@@ -427,7 +509,7 @@ async fn idle_heartbeats_keep_the_stream_open_without_republishing_metrics() {
     let harness = Harness::new("stdin".into());
     let (header, mut reader) = harness.events(false).await;
     assert!(header.contains("cache-control: no-store\r\n"));
-    let initial = next_data(&mut reader).await;
+    let (_, initial) = next_event(&mut reader).await;
     assert_eq!(initial["sequence"], "0");
     timeout(HEARTBEAT + Duration::from_secs(1), async {
         loop {

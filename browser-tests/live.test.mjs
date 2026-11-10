@@ -37,6 +37,87 @@ async function send(page, frames) {
 }
 async function painted(page) { await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))); }
 
+async function restoreCachedPage(page, visibilityFirst) {
+  await page.evaluate(visibilityFirst => {
+    Object.defineProperty(document, 'hidden', { configurable: true, value: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
+    delete document.hidden;
+    const visible = () => document.dispatchEvent(new Event('visibilitychange'));
+    const restored = () => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+    if (visibilityFirst) { visible(); restored(); }
+    else { restored(); visible(); }
+  }, visibilityFirst);
+  await painted(page);
+}
+
+for (const [reason, banner] of [
+  ['capacity', 'Stream capacity'], ['invalid', 'Unsupported'], ['failure', 'Web output failed'],
+]) {
+  test(`cached page restore waits for manual retry after ${reason}`, async t => {
+    const { page } = await setup(t, true);
+    await send(page, [frame(1, 7)]);
+    await painted(page);
+    if (reason === 'capacity') {
+      await page.route('**/api/snapshot', route => route.fulfill({
+        json: frame(1, 7), headers: { 'X-Tell-Tail-Streams-Available': '0' },
+      }));
+      await page.evaluate(() => window.streams[0].onerror());
+    } else if (reason === 'invalid') {
+      await send(page, [{}]);
+    } else {
+      await page.evaluate(() => window.streams[0].dispatchEvent(new Event('failure')));
+    }
+    await page.waitForFunction(prefix => document.querySelector('#connection').textContent.startsWith(prefix), banner);
+    const message = await page.locator('#connection').textContent();
+    for (const visibilityFirst of [true, false]) {
+      await restoreCachedPage(page, visibilityFirst);
+      assert.equal(await page.evaluate(() => window.streams.length), 1);
+      assert.equal(await page.locator('#connection').textContent(), message);
+      assert.equal(await page.locator('#retry').isVisible(), true);
+      assert.equal(await page.locator('#total-records').textContent(), '7');
+    }
+    await page.locator('#retry').click();
+    assert.equal(await page.evaluate(() => window.streams.length), 2);
+    await send(page, [frame(2, 8)]);
+    await painted(page);
+    assert.equal(await page.locator('#total-records').textContent(), '8');
+  });
+}
+
+test('cached page restore reconnects once, ignores retired recovery and retains a frozen final frame', async t => {
+  const { page } = await setup(t, true);
+  await send(page, [frame(1, 7)]);
+  await painted(page);
+  await page.locator('#freeze').click();
+  // Complete a retired snapshot request even after its abort signal fires.
+  await page.evaluate(oldFrame => {
+    window.fetch = () => new Promise(resolve => {
+      window.reply = () => resolve(Response.json(oldFrame, { headers: { 'X-Tell-Tail-Streams-Available': '0' } }));
+    });
+    window.streams[0].onerror();
+  }, frame(99, 99));
+  for (const [index, visibilityFirst] of [true, false].entries()) {
+    await restoreCachedPage(page, visibilityFirst);
+    assert.equal(await page.evaluate(() => window.streams.length), index + 2);
+    await send(page, [frame(index + 2, index + 8)]);
+    if (index === 0) await page.evaluate(() => window.reply());
+    await painted(page);
+    assert.match(await page.locator('#connection').textContent(), /^Live/);
+    assert.equal(await page.locator('#total-records').textContent(), '7');
+  }
+  const final = frame(4, 10);
+  Object.assign(final.metrics, { kind: 'final', state: 'complete' });
+  await send(page, [final]);
+  await restoreCachedPage(page, true);
+  assert.equal(await page.evaluate(() => window.streams.length), 3);
+  assert.match(await page.locator('#connection').textContent(), /^Complete/);
+  assert.equal(await page.locator('#total-records').textContent(), '7');
+  await page.locator('#freeze').click();
+  await painted(page);
+  assert.equal(await page.locator('#total-records').textContent(), '10');
+});
+
 test('real SSE freezes only display, resumes by keyboard and retains final state', async t => {
   const { server, page } = await setup(t);
   const requests = [];

@@ -9,6 +9,9 @@ my-app 2>&1 | tell-tail --output web --open
 tell-tail app.log --from start --output web --open
 ```
 
+Try the [built-in demo](DEMO.md#try-parser-flags-without-a-log-file) with no input
+file, including `--demo --profile pino` or `--demo --level-path /log/level`.
+
 Automatic recognition runs independently on each physical record. It does not
 lock the stream to the first format it encounters. Severity words inside a
 message never determine severity. Unknown records still count toward throughput
@@ -93,7 +96,7 @@ Missing paths or non-object intermediate values remain unknown. Duplicate keys
 along the selected path are malformed. All other JSON still undergoes validation.
 
 A path requires auto/JSON mode and selects JSON parsing exclusively. It conflicts
-with `--level-field`, the built-in demo, and Apple unified format. Traversal uses
+with `--level-field` and Apple unified format. Traversal uses
 bounded streaming visitors and borrowed raw subobjects, not a full JSON tree.
 
 ## Explicit JSON profiles
@@ -101,7 +104,7 @@ bounded streaming visitors and borrowed raw subobjects, not a full JSON tree.
 A profile selects a field and its value convention in one flag. Profiles require
 JSON records (auto or JSON format); they are never guessed from bare numbers.
 `--level-field` or `--level-path` overrides the profile's default selector while
-retaining its mapping. Profiles conflict with the demo and non-JSON formats.
+retaining its mapping. Profiles conflict with non-JSON formats.
 
 | Flag | Default field | Numeric mapping |
 | --- | --- | --- |
@@ -211,8 +214,7 @@ In both modes, one outer physical line is one counted record, bytes describe the
 outer input, and previews show the original bounded envelope. Input/activity time
 remains processing time. Malformed envelopes increment parse failures; valid but
 unsupported multiline/partial payloads only increment unknown. Use runtime output
-or normalize upstream when event reconstruction is required. Apple unified input
-and `--demo` cannot be combined with an envelope.
+or normalize upstream when event reconstruction is required. Apple unified input cannot be combined with an envelope.
 
 Docker advises using its own tooling instead of reading daemon-owned live files;
 these examples use exported captures. See the

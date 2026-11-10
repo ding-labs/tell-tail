@@ -275,7 +275,11 @@ fn numeric_profiles_are_explicit_and_keep_distinct_mappings() {
     ] {
         assert_eq!(serilog.classify(line.as_bytes()).level, expected, "{line}");
     }
-    assert!(Args::try_parse_from(["tell-tail", "--demo", "--profile", "pino"]).is_err());
+    assert!(
+        Args::parse_from(["tell-tail", "--demo", "--profile", "pino"])
+            .validate()
+            .is_ok()
+    );
     for format in ["text", "logfmt", "apple-unified"] {
         assert!(
             Args::parse_from(["tell-tail", "--profile", "pino", "--format", format])

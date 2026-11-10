@@ -12,7 +12,7 @@ how to build and run the checkout explicitly.
 | --- | --- |
 | [Log format recognition](LOG-FORMATS.md) | Automatic styles, one-flag profiles, nested keys, container wrappers, parser hints, and precise limits |
 | [Understanding a live log stream](MONITORING.md) | What coverage, histories, ratios, and activity ages mean; worked examples, parser conventions, time scopes, and controls |
-| [Built-in demo](DEMO.md) | How to try the tool offline, what each phase demonstrates, compatible flags, and shutdown |
+| [Built-in demo](DEMO.md) | One-command browser start, phase-by-phase parsing walkthrough, flag examples, switching to real logs, limits, and shutdown |
 | [Web dashboard](WEB-DASHBOARD.md) | Browser display, freeze, exact values, connection states, accessibility, and browser opening |
 | [Operations and troubleshooting](OPERATIONS.md) | Empty input, partial lines, unknown severity, stale displays, rotation, diagnostics, and service setup |
 | [Apple unified logs](APPLE-UNIFIED.md) | Native macOS capture and saved NDJSON, severity mapping, skipped metadata, and lifecycle |
@@ -37,6 +37,9 @@ or an inference service.
 | [Design](DESIGN.md) / [Dependencies](DEPENDENCIES.md) | Visual conventions and dependency choices |
 
 ## Plans and historical evidence
+
+The [state-machine inventory and implementation plan](PLAN-STATE-MACHINES.md)
+maps observable transitions to their owners and tests, starting with dashboard retry behavior.
 
 [Original scope](PLAN.md), [0.2 reliability plan](PLAN-0.2.md), and
 [web delivery plan](PLAN-WEB.md) describe milestones and their decisions. Read

@@ -65,11 +65,13 @@ pub fn run(args: &crate::cli::Args, signals: &crate::runtime::Signals) -> io::Re
     Ok(if signal > 1 { 128 + signal as i32 } else { 0 })
 }
 
-struct Delivery {
-    json: Bytes,
-    event: Bytes,
-    state: InputState,
-    failed: bool,
+enum Delivery {
+    Snapshot {
+        json: Bytes,
+        event: Bytes,
+        state: InputState,
+    },
+    PublisherFailure,
 }
 
 impl Delivery {
@@ -84,7 +86,7 @@ impl Delivery {
                     ),
                 )
             })?;
-        Ok(Self {
+        Ok(Self::Snapshot {
             event: Bytes::from(format!(
                 "retry: 500\nevent: snapshot\nid: {}\ndata: {}\n\n",
                 frame.event_id(),
@@ -92,18 +94,25 @@ impl Delivery {
             )),
             json: Bytes::copy_from_slice(frame.json().as_bytes()),
             state: publication.snapshot.state,
-            failed: false,
         })
     }
 
-    fn failure() -> Self {
-        Self {
-            json: Bytes::new(),
-            event: Bytes::from_static(
-                b"event: failure\ndata: {\"message\":\"web output failed\"}\n\n",
+    fn input_state(&self) -> Option<InputState> {
+        match self {
+            Self::Snapshot { state, .. } => Some(*state),
+            Self::PublisherFailure => None,
+        }
+    }
+
+    fn sse_event(&self) -> (Bytes, bool) {
+        match self {
+            Self::Snapshot { event, state, .. } => (event.clone(), state.is_final()),
+            Self::PublisherFailure => (
+                Bytes::from_static(
+                    b"event: failure\ndata: {\"message\":\"web output failed\"}\n\n",
+                ),
+                true,
             ),
-            state: InputState::Failed,
-            failed: true,
         }
     }
 }
@@ -117,12 +126,12 @@ struct App {
 
 async fn snapshot(State(app): State<App>) -> Response {
     let frame = app.frames.borrow().clone();
-    if frame.failed {
+    let Delivery::Snapshot { json, .. } = frame.as_ref() else {
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-    }
+    };
     let mut response = (
         [(header::CONTENT_TYPE, "application/json; charset=utf-8")],
-        frame.json.clone(),
+        json.clone(),
     )
         .into_response();
     // EventSource does not expose HTTP errors. A one-shot snapshot fetch lets
@@ -163,10 +172,10 @@ async fn events(State(app): State<App>) -> Response {
                     }
                 }
             }
-            let frame = rx.borrow_and_update().clone();
+            let (event, done) = rx.borrow_and_update().sse_event();
             Some((
-                Ok::<_, Infallible>(frame.event.clone()),
-                (rx, permit, heartbeat, false, frame.state.is_final()),
+                Ok::<_, Infallible>(event),
+                (rx, permit, heartbeat, false, done),
             ))
         },
     );
@@ -253,6 +262,42 @@ pub struct Server {
     probe: Arc<socket::Probe>,
 }
 
+enum ServerPhase {
+    Serving,
+    RetainingFinal,
+    Draining(Instant),
+}
+
+impl ServerPhase {
+    fn accepts_connections(&self) -> bool {
+        matches!(self, Self::Serving | Self::RetainingFinal)
+    }
+
+    fn observe(&mut self, input: Option<InputState>, stop: &AtomicUsize, failed: bool) {
+        if !self.accepts_connections() {
+            return;
+        }
+        if failed {
+            let _ = stop.compare_exchange(0, 1, Ordering::Relaxed, Ordering::Relaxed);
+        }
+        if stop.load(Ordering::Relaxed) != 0 {
+            *self = Self::Draining(Instant::now() + FINAL_GRACE);
+        } else if input == Some(InputState::Complete) && matches!(self, Self::Serving) {
+            *self = Self::RetainingFinal;
+            crate::writer::diagnostic(
+                "tell-tail: input complete; keeping the web server available until Ctrl+C\n",
+            );
+        }
+    }
+
+    async fn drain_finished(&self) {
+        match self {
+            Self::Draining(deadline) => tokio::time::sleep_until(*deadline).await,
+            Self::Serving | Self::RetainingFinal => std::future::pending().await,
+        }
+    }
+}
+
 impl Server {
     pub fn bind(port: u16) -> io::Result<Self> {
         let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, port)).map_err(|error| {
@@ -292,8 +337,7 @@ impl Server {
         let mut control = tokio::time::interval(Duration::from_millis(10));
         control.set_missed_tick_behavior(MissedTickBehavior::Skip);
         let mut open = true;
-        let mut completed = false;
-        let mut deadline = None;
+        let mut phase = ServerPhase::Serving;
         let mut failure = None;
         crate::writer::diagnostic(&format!("tell-tail: web http://{host}/ (Ctrl+C to stop)\n"));
         let mut browser = if self.open_browser && stop.load(Ordering::Relaxed) == 0 {
@@ -311,32 +355,21 @@ impl Server {
             if browser.as_mut().is_some_and(browser::Browser::failed) {
                 browser::report_failure();
             }
-            if tx.borrow().state == InputState::Complete && !completed {
-                completed = true;
-                crate::writer::diagnostic(
-                    "tell-tail: input complete; keeping the web server available until Ctrl+C\n",
-                );
-            }
-            if tx.borrow().state == InputState::Failed && failure.is_none() {
+            let input_state = tx.borrow().input_state();
+            if input_state == Some(InputState::Failed) && failure.is_none() {
                 failure = Some(io::Error::other("ingestion failed"));
             }
-            if failure.is_some() && deadline.is_none() {
-                let _ = stop.compare_exchange(0, 1, Ordering::Relaxed, Ordering::Relaxed);
-                deadline = Some(Instant::now() + FINAL_GRACE);
-            }
-            if stop.load(Ordering::Relaxed) != 0 && deadline.is_none() {
-                deadline = Some(Instant::now() + FINAL_GRACE);
-            }
+            phase.observe(input_state, &stop, failure.is_some());
             // A short control tick bridges the existing signal flag, never metric
             // publication. Snapshot updates arrive only through notifications.
             tokio::select! {
                 biased;
-                _ = tokio::time::sleep_until(deadline.unwrap_or_else(|| Instant::now() + Duration::from_secs(86400))) => { break; }
+                _ = phase.drain_finished() => { break; }
                 _ = control.tick() => (),
                 joined = tasks.join_next(), if !tasks.is_empty() => {
                     if joined.is_some_and(|result| result.is_err()) {
                         failure = Some(io::Error::other("web connection task panicked"));
-                        tx.send_replace(Arc::new(Delivery::failure()));
+                        tx.send_replace(Arc::new(Delivery::PublisherFailure));
                     }
                 }
                 publication = subscription.changed(), if open && failure.is_none() => {
@@ -346,19 +379,19 @@ impl Server {
                             Err(error) => {
                                 failure = Some(error);
                                 open = false;
-                                tx.send_replace(Arc::new(Delivery::failure()));
+                                tx.send_replace(Arc::new(Delivery::PublisherFailure));
                             }
                         },
                         None => {
                             open = false;
-                            if !tx.borrow().state.is_final() {
+                            if !tx.borrow().input_state().is_some_and(InputState::is_final) {
                                 failure = Some(io::Error::other("ingestion ended without a final snapshot"));
-                                tx.send_replace(Arc::new(Delivery::failure()));
+                                tx.send_replace(Arc::new(Delivery::PublisherFailure));
                             }
                         }
                     }
                 }
-                accepted = listener.accept(), if deadline.is_none() => {
+                accepted = listener.accept(), if phase.accepts_connections() => {
                     match accepted {
                         Ok((socket, _)) => {
                             let Ok(permit) = connections.clone().try_acquire_owned() else { continue; };
@@ -388,7 +421,7 @@ impl Server {
                         Err(error) if error.kind() == io::ErrorKind::Interrupted => (),
                         Err(error) => {
                             failure = Some(error);
-                            tx.send_replace(Arc::new(Delivery::failure()));
+                            tx.send_replace(Arc::new(Delivery::PublisherFailure));
                         }
                     }
                 }

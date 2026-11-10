@@ -30,7 +30,7 @@ pub enum Input {
 impl Input {
     pub fn open(args: &Args) -> io::Result<Self> {
         if args.demo {
-            return Ok(Self::Demo(demo::Demo::new()));
+            return Ok(Self::Demo(demo::Demo::new(args)));
         }
         if args.apple_unified {
             return Ok(Self::Apple(AppleStream::open()?));
@@ -56,11 +56,7 @@ impl Input {
     }
     pub fn backlog(&self) -> Option<u64> {
         match self {
-            Self::Follow(f) => f
-                .file
-                .as_ref()
-                .and_then(|file| file.metadata().ok())
-                .map(|m| m.len().saturating_sub(f.offset)),
+            Self::Follow(f) => f.current.as_ref()?.backlog(),
             _ => None,
         }
     }
@@ -86,37 +82,57 @@ fn read_event(reader: &mut impl Read, buffer: &mut [u8]) -> io::Result<Event> {
 
 pub struct Follower {
     path: PathBuf,
-    file: Option<File>,
-    offset: u64,
-    skip_partial: bool,
-    replacement: Option<(File, u64)>,
+    current: Option<FollowedFile>,
     check_at: Instant,
     state: State,
 }
+
+struct FollowedFile {
+    file: File,
+    offset: u64,
+    skip_partial: bool,
+    // Next descriptor and the observed end of this file at rotation.
+    replacement: Option<(File, u64)>,
+}
+
+impl FollowedFile {
+    fn at_start(file: File) -> Self {
+        Self {
+            file,
+            offset: 0,
+            skip_partial: false,
+            replacement: None,
+        }
+    }
+
+    fn backlog(&self) -> Option<u64> {
+        Some(self.file.metadata().ok()?.len().saturating_sub(self.offset))
+    }
+}
+
 impl Follower {
     fn open(path: PathBuf, from: From) -> io::Result<Self> {
         let mut this = Self {
             path,
-            file: None,
-            offset: 0,
-            skip_partial: false,
-            replacement: None,
+            current: None,
             check_at: Instant::now(),
             state: State::Following,
         };
         match platform::open_regular(&this.path) {
-            Ok(mut file) => {
+            Ok(file) => {
+                let mut current = FollowedFile::at_start(file);
                 if from == From::End {
-                    this.offset = file.seek(SeekFrom::End(0))?;
-                    if this.offset > 0 {
-                        file.seek(SeekFrom::Start(this.offset - 1))?;
+                    current.offset = current.file.seek(SeekFrom::End(0))?;
+                    if current.offset > 0 {
+                        current.file.seek(SeekFrom::Start(current.offset - 1))?;
                         let mut last = [0];
                         // An observed concurrent truncation is handled on the next check.
-                        this.skip_partial = file.read(&mut last)? == 1 && last[0] != b'\n';
-                        file.seek(SeekFrom::Start(this.offset))?;
+                        current.skip_partial =
+                            current.file.read(&mut last)? == 1 && last[0] != b'\n';
+                        current.file.seek(SeekFrom::Start(current.offset))?;
                     }
                 }
-                this.file = Some(file);
+                this.current = Some(current);
             }
             Err(e) if e.kind() == io::ErrorKind::NotFound => this.state = State::Waiting,
             Err(e) => return Err(e),
@@ -125,7 +141,11 @@ impl Follower {
     }
     fn check(&mut self) -> io::Result<bool> {
         self.check_at = Instant::now() + Duration::from_millis(100);
-        if self.replacement.is_some() {
+        if self
+            .current
+            .as_ref()
+            .is_some_and(|current| current.replacement.is_some())
+        {
             return Ok(false);
         }
         let path_meta = match std::fs::metadata(&self.path) {
@@ -139,30 +159,28 @@ impl Follower {
             }
             Err(e) => return Err(e),
         };
-        if let Some(file) = self.file.as_mut() {
-            let meta = file.metadata()?;
+        if let Some(current) = &mut self.current {
+            let meta = current.file.metadata()?;
             if path_meta
                 .as_ref()
                 .is_some_and(|p| !platform::same_file(&meta, p))
             {
                 match platform::open_regular(&self.path) {
-                    Ok(replacement) => self.replacement = Some((replacement, meta.len())),
+                    Ok(replacement) => current.replacement = Some((replacement, meta.len())),
                     Err(e) if e.kind() == io::ErrorKind::NotFound => self.state = State::Waiting,
                     Err(e) => return Err(e),
                 }
             }
-            if meta.len() < self.offset {
-                file.seek(SeekFrom::Start(0))?;
-                self.offset = 0;
-                self.skip_partial = false;
+            if meta.len() < current.offset {
+                current.file.seek(SeekFrom::Start(0))?;
+                current.offset = 0;
+                current.skip_partial = false;
                 return Ok(true);
             }
         } else if path_meta.is_some() {
             match platform::open_regular(&self.path) {
                 Ok(file) => {
-                    self.file = Some(file);
-                    self.offset = 0;
-                    self.skip_partial = false;
+                    self.current = Some(FollowedFile::at_start(file));
                     return Ok(true);
                 }
                 Err(e) if e.kind() == io::ErrorKind::NotFound => self.state = State::Waiting,
@@ -175,39 +193,35 @@ impl Follower {
         if Instant::now() >= self.check_at && self.check()? {
             return Ok(Event::Boundary);
         }
-        if self
-            .replacement
-            .as_ref()
-            .is_some_and(|(_, end)| self.offset >= *end)
-        {
-            let (next, _) = self.replacement.take().unwrap();
-            self.file = Some(next);
-            self.offset = 0;
-            self.skip_partial = false;
-            return Ok(Event::Boundary);
-        }
-        let limit = self
-            .replacement
-            .as_ref()
-            .map(|(_, end)| end.saturating_sub(self.offset).min(buffer.len() as u64) as usize)
-            .unwrap_or(buffer.len());
-        let Some(file) = self.file.as_mut() else {
+        let Some(current) = &mut self.current else {
             return Ok(Event::Idle(self.state));
         };
-        match file.read(&mut buffer[..limit]) {
+        if let Some((next, _)) = current
+            .replacement
+            .take_if(|(_, end)| current.offset >= *end)
+        {
+            *current = FollowedFile::at_start(next);
+            return Ok(Event::Boundary);
+        }
+        let limit = current
+            .replacement
+            .as_ref()
+            .map(|(_, end)| end.saturating_sub(current.offset).min(buffer.len() as u64) as usize)
+            .unwrap_or(buffer.len());
+        match current.file.read(&mut buffer[..limit]) {
             Ok(0) => {
                 // The old file may have shrunk after rotation detection.
-                if let Some((_, end)) = self.replacement.as_mut() {
-                    *end = self.offset;
+                if let Some((_, end)) = current.replacement.as_mut() {
+                    *end = current.offset;
                 }
                 Ok(Event::Idle(self.state))
             }
             Ok(len) => {
-                self.offset += len as u64;
-                let skip = if self.skip_partial {
+                current.offset += len as u64;
+                let skip = if current.skip_partial {
                     match memchr::memchr(b'\n', &buffer[..len]) {
                         Some(i) => {
-                            self.skip_partial = false;
+                            current.skip_partial = false;
                             i + 1
                         }
                         None => len,
@@ -285,6 +299,68 @@ mod tests {
         assert_eq!(read(&mut missing), b"INFO fresh\n");
     }
     #[test]
+    fn unlinked_file_drains_before_one_boundary_discards_its_partial_record() {
+        use crate::{cli::Args, engine::Engine};
+        use clap::Parser;
+
+        fn feed(follower: &mut Follower, engine: &mut Engine, expected: &[u8]) {
+            let mut buffer = [0; 64];
+            let Event::Data { len, skip: 0 } = follower.next(&mut buffer).unwrap() else {
+                panic!("expected data from the current file");
+            };
+            assert_eq!(&buffer[..len], expected);
+            engine.feed(&buffer[..len], Duration::ZERO);
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("app.log");
+        let mut old = File::create(&path).unwrap();
+        old.write_all(b"ERROR old\npart").unwrap();
+        let mut follower = Follower::open(path.clone(), From::Start).unwrap();
+        let mut engine = Engine::new(&Args::parse_from(["tell-tail"]));
+        std::fs::remove_file(&path).unwrap();
+        assert!(!follower.check().unwrap());
+        feed(&mut follower, &mut engine, b"ERROR old\npart");
+        let mut buffer = [0; 64];
+        assert!(matches!(
+            follower.next(&mut buffer).unwrap(),
+            Event::Idle(State::Waiting)
+        ));
+
+        old.write_all(b"ial").unwrap();
+        std::fs::write(&path, b"FATAL new\n").unwrap();
+        assert!(!follower.check().unwrap());
+        feed(&mut follower, &mut engine, b"ial");
+        let before = engine.snapshot(Duration::ZERO, State::Following, None);
+        assert_eq!(
+            (
+                before.totals.records,
+                before.pending_bytes,
+                before.skipped_bytes
+            ),
+            (1, 7, 0)
+        );
+        assert!(matches!(
+            follower.next(&mut buffer).unwrap(),
+            Event::Boundary
+        ));
+        engine.discard_partial();
+        feed(&mut follower, &mut engine, b"FATAL new\n");
+        assert!(matches!(
+            follower.next(&mut buffer).unwrap(),
+            Event::Idle(State::Following)
+        ));
+        let after = engine.snapshot(Duration::ZERO, State::Following, None);
+        assert_eq!(
+            (after.totals.records, after.bytes_read, after.pending_bytes),
+            (2, 27, 0)
+        );
+        assert_eq!(
+            (after.discarded_partial_records, after.skipped_bytes),
+            (1, 7)
+        );
+    }
+    #[test]
     fn drains_observed_generations_even_when_replaced_again_during_drain() {
         use crate::{cli::Args, engine::Engine};
         use clap::Parser;
@@ -319,7 +395,6 @@ mod tests {
         std::fs::rename(&path, &old).unwrap();
         std::fs::write(&path, b"WARN B\n").unwrap();
         assert!(!f.check().unwrap());
-        assert!(f.replacement.is_some());
         std::fs::rename(&path, dir.path().join("old-b.log")).unwrap();
         std::fs::write(&path, b"ERROR C\n").unwrap();
         pump(&mut f, &mut engine);

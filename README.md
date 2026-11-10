@@ -71,11 +71,26 @@ of recovery. Active phases generate approximately 100 records/second. The
 five-second rolling window makes the transitions easy to see; histories still
 cover 60 completed seconds. Press `q` in the terminal or Ctrl+C to stop. The demo
 uses the normal ingestion path and does not read stdin or create log files.
+
+It now mixes text (including Python prefixes and ANSI colors), JSON, logfmt, and
+syslog. During the warning/error phases, deliberate numeric and conflicting-field
+examples show why some records stay unknown. Expand **Understand parsing coverage**
+in the browser or press `?` in the terminal to see parser evidence and flag hints.
+To try a numeric convention without preparing input, add `--profile pino`:
+
+```sh
+cargo run --locked -- --demo --profile pino --window 5 --output web --open
+```
+
+Demo profile/field/path flags generate matching JSON samples; envelope flags wrap
+them. The same flags on real input only configure parsing. No config file is needed.
+
 To install the checkout, use `cargo install --path . --locked`; then run
 `tell-tail --demo --window 5` directly.
 
 The [demo walkthrough](docs/DEMO.md) explains every phase, what to observe,
 supported options, shutdown behavior, and how to distinguish it from a benchmark.
+When ready, [keep the flags and switch to your own logs](docs/DEMO.md#move-from-the-demo-to-your-logs).
 
 ## Everyday workflows
 
