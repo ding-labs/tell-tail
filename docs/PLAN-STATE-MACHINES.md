@@ -2,9 +2,17 @@
 
 This plan covers the production code in checkout `c512ada`, including features under development. The inventory follows events that change how Tell-Tail handles the *next* event. It covers the Rust library and binary, helper processes, embedded dashboard, and the boundaries between them. Release and validation tooling have their own lifecycles, listed at the end.
 
-**Start with the dashboard’s manual retry behavior.** Three different recovery conditions promise the same user action. One browser event bypasses that promise. Fixing it gives users predictable recovery, gives maintainers one place to change the rule, and gives coding agents an executable example of when to open a connection. Use small, local transition functions or Rust types where there is a comparable payoff. The existing public input state already has the right vocabulary.
+## Implementation record
+
+- `0304d2e` made automatic dashboard reconnects respect manual retry and coalesce overlapping restore events. Four regression tests failed on the original dashboard and passed after the fix. [Browser recovery tests](../browser-tests/live.test.mjs)
+- `4f29b6a` covered file disappearance with unread data and a partial record. `0d61c20` attached read position and replacement ownership to the open descriptor. Eight alternating before/after release-build pairs at each size gave median paired throughput changes of −1.85% for 256 MiB and +2.52% for 1 GiB of cached, followed text input on the local macOS host. [File handoff tests](../src/input.rs)
+- `5730f7a` made serving, retaining final metrics, and draining explicit. `3e8a33f` gave publisher failure its own delivery variant. Tests exercise a signal racing with EOF, connection admission during drain, and the HTTP status, event name, and payload for each failure outcome. [Web server tests](../src/web/tests.rs)
+
+At `3e8a33f` the local Rust test suites passed with 143 default, 118 CLI-only, and 124 notification-enabled tests. Clippy passed in all three configurations. All 32 browser tests passed against the release binary, including the native visibility check. The remaining inventory items retain their existing implementations and linked coverage.
 
 ## First change
+
+The following diagnosis and acceptance criteria describe the pre-fix checkout.
 
 The dashboard guide says a full server, an invalid frame, and a publisher failure each require **Retry connection**. The visibility handler enforces that rule. The persisted `pageshow` handler calls `connect()` directly. In a Chromium probe against the embedded dashboard, entering each of those three states and dispatching a persisted `pagehide` / `pageshow` pair increased the number of EventSource instances from one to two without a click. The probe supplied the lifecycle events and a test EventSource. A separate Back navigation in the same environment performed a fresh load. The observed discrepancy concerns restoration of an existing page instance. [Dashboard implementation](../web/dashboard.mjs) · [Dashboard guide](WEB-DASHBOARD.md#connection-behavior)
 
