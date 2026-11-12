@@ -8,8 +8,10 @@ commit; subsequent validation records and plans do not change the candidate.
 All nine required release gates have passed reviewed evidence for this exact
 source. No gate is credited from the 0.2.0 campaign. The machine-readable
 [`packaging/validation.json`](../packaging/validation.json) approves publication
-of this candidate; publication itself is pending. The optional day scenarios
-remain outside the release gates.
+of this candidate. Publication completed on November 12, 2026 across GitHub
+Releases, crates.io, and Homebrew; the [publication receipt](validation/0.3.0-release/publication.json)
+records the final verification. The optional day scenarios remain outside the
+release gates.
 
 | Evidence | Run |
 | --- | --- |
@@ -111,3 +113,29 @@ correctly sets `measurement_qualifies_for_gate=false`. Its small median paired
 loss is not credited as a passing performance result. The named controlled
 Linux reference above satisfies the existing performance gate without changing
 thresholds or discarding the noisy Mac observation.
+
+## Publication and installed artifacts
+
+[Release workflow 43299594524](https://github.com/ding-labs/tell-tail/actions/runs/43299594524)
+completed successfully on attempt 2. The public `v0.3.0` commit tag, each archive's
+`BUILD.json`, and the downloaded crates.io package identify the frozen candidate.
+The registry package is not yanked and its checksum matches the pre-publication
+source-package checks. All three public archives match the reviewed build-only
+archives byte-for-byte. A downloaded public Mac archive also passed a fresh
+native CLI and embedded-web smoke check.
+
+[Homebrew import 43306018552](https://github.com/ding-labs/homebrew-tap/actions/runs/43306018552)
+passed tooling and installation tests on macOS 15 ARM64 and Linux x86-64/ARM64,
+then committed the formula. The formula at the receipt's tap commit exactly
+matches the one generated from the public release manifest. The registry version
+was also freshly installed and smoke-tested by the publication workflow.
+
+The first publication attempt completed GitHub and crates.io but exposed an
+initial run-visibility 404 and the tap's retired macOS 14 runner. Focused fixes
+landed in [Tell-Tail #24](https://github.com/ding-labs/tell-tail/pull/24) and
+[tap #6](https://github.com/ding-labs/homebrew-tap/pull/6); the publishing helper's
+27 tests and [main checks](https://github.com/ding-labs/tell-tail/actions/runs/43299538183)
+passed. A subsequent import was cancelled before its Mac install executed
+because GitHub could not allocate a hosted ARM runner. Retrying the failed
+publication job completed all channels. No version, public tag, archive, or
+frozen-source validation was replaced during recovery.
