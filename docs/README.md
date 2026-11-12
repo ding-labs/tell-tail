@@ -38,6 +38,10 @@ or an inference service.
 
 ## Plans and historical evidence
 
+[Linux log inputs](PLAN-LINUX-INPUTS.md) defines the proposed journal parser,
+native system/user/kernel capture, later kernel-device support, and acceptance
+checks. These are planned features, not flags available in 0.3.0.
+
 The [state-machine inventory and implementation plan](PLAN-STATE-MACHINES.md)
 maps observable transitions to their owners and tests, starting with dashboard retry behavior.
 
