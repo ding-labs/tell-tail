@@ -5,8 +5,11 @@ For hosted user documentation, visit the
 The [local MCP guide](MCP.md) describes this checkout's implementation;
 the [publication checklist](RELEASING.md#hosted-documentation) covers updating the site.
 
-Measured November 12, 2026, on macOS / Apple M3 arm64, Rust 1.88.0. This is
-validation of the unreleased source checkout, not of the published 0.2.0 package.
+Tell-Tail 0.4.0 now includes this feature in normal installations. The
+[0.4 release validation](VALIDATION-0.4-RELEASE.md) records exact-source gates and
+public-package checks. The historical implementation measurements below were
+taken before release on November 12, 2026, on macOS / Apple M3 arm64, Rust 1.88.0;
+they retain their original source scope rather than approving later commits.
 Machine-readable results are in
 [`validation/mcp-watcher-2026-11-12.json`](validation/mcp-watcher-2026-11-12.json).
 

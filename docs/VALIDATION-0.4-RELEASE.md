@@ -9,8 +9,9 @@ The feature is merged in [PR #26](https://github.com/ding-labs/tell-tail/pull/26
 All nine required release gates have passed reviewed evidence for this exact
 source. No 0.3 evidence approves this candidate. The machine-readable
 [`packaging/validation.json`](../packaging/validation.json) now approves
-publication. Package publication is the next step; approval alone does not
-mean a public channel has been updated.
+publication. Publication completed on November 12, 2026 across GitHub Releases,
+crates.io and Homebrew. The [publication receipt](validation/0.4.0-release/publication.json)
+records the verified source and channel identities.
 
 | Campaign | Run |
 | --- | --- |
@@ -129,3 +130,25 @@ runs use window 3600 and a 16 MiB record limit for at least 60 seconds; default
 runs use window 60 and a 1 MiB record limit. All 49 extended/controlled
 accounting reports pass; the largest observed shutdown was 345 ms. The
 additional native Linux performance measurement also qualifies.
+
+## Publication and public installation
+
+[Release workflow 43317916073](https://github.com/ding-labs/tell-tail/actions/runs/43317916073)
+completed on attempt 2. The first attempt's Mac job never acquired a hosted
+runner; GitHub reported macOS ARM64 capacity constraints before any build steps
+ran. Rerunning the failed job preserved the source and completed Linux builds.
+No public artifacts were replaced during recovery.
+
+The public tag, every archive's `BUILD.json`, and the downloaded crates.io package
+identify the frozen source. All public archive hashes match the reviewed build-only
+artifacts byte-for-byte. The registry checksum matches both pre-publication source
+packages. The publication workflow freshly installed the registry version and
+passed the embedded web and MCP smoke checks.
+
+[Homebrew import 43321789634](https://github.com/ding-labs/homebrew-tap/actions/runs/43321789634)
+passed tooling and installation on macOS ARM64 and Linux x86-64/ARM64, then
+updated the public formula. The formula exactly matches the public release manifest.
+The [downloaded public Mac binary](validation/0.4.0-release/public-mcp-launch-smoke.json)
+also passed the ordinary `tell-tail mcp --open` command, synthetic demo, embedded
+assets, failed-browser-opener fallback, and graceful shutdown. The ordinary-command
+check intercepts the opener and retains no private log content.
