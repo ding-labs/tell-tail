@@ -167,9 +167,21 @@ nine actual release gates still needs reviewed evidence.
 ### Recover a partial publication
 
 Publication across services is sequential, not atomic. A later channel can fail
-after an earlier one is public. Fix the integration or service failure, then use
-GitHub Actions **Re-run failed jobs** on the same run to preserve its candidate
-and evidence. Do not bump the version just to retry Homebrew.
+after an earlier one is public. If recovery does not change this repository's
+orchestration code, fix the integration or service failure and use GitHub Actions
+**Re-run failed jobs** on the same run to preserve its candidate and evidence.
+
+If recovery changes a publishing script or workflow, merge that focused fix and
+dispatch from current `main` with the **same frozen `source_commit`** and reviewed
+validation record. [GitHub reruns retain the original workflow commit](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs),
+so rerunning an old job does not load a newly merged orchestration fix. The new
+run verifies and reuses matching public versions and archives; it does not
+replace them. Do not bump the version just to retry Homebrew.
+
+The Homebrew observer allows up to two minutes for the exact dispatched run ID
+to become visible. It never redispatches to work around a 404. Authentication or
+server failures, disappearance after observation, failed/cancelled runs, and the
+overall timeout remain failures with a link to inspect the downstream run.
 
 - A published GitHub release is reused only if its commit tag and checksummed
   artifacts identify the requested source/version. Existing tags and public
