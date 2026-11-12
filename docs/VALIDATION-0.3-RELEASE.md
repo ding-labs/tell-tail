@@ -8,8 +8,8 @@ commit; subsequent validation records and plans do not change the candidate.
 Publication is pending. No gate is credited from the 0.2.0 campaign. The required
 checks below must finish and their exact-source reports must be reviewed before
 `packaging/validation.json` approves publication. Correctness, responsiveness,
-compatibility, distribution, and controlled performance are reviewed and pass;
-fuzzing and extended dashboard/resource results remain pending.
+compatibility, distribution, controlled performance, and fuzzing are reviewed and
+pass; extended dashboard/resource results remain pending.
 
 | Evidence | Run |
 | --- | --- |
@@ -70,3 +70,12 @@ loss. Streaming relative ranges are 0.70%/0.34%, with no generator saturation
 warning. Cached 200-byte text reaches 15.66M records/s with 0.49% relative range.
 These satisfy the existing thresholds on the named host; they are not universal
 production throughput guarantees.
+
+## Reviewed fuzzing
+
+All three targets completed 1,801 seconds against the frozen source without
+reported crashes or sanitizer findings. Classification executed 45,069,300
+cases, framing 53,354,969, and the timed engine 3,375,081. The
+[fuzz summary](validation/0.3.0-release/fuzz-summary.json) preserves counts, log
+hashes, and the toolchain. These are completed bounded campaigns, not a claim
+that every possible input has been proven safe.

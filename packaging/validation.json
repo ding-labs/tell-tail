@@ -11,9 +11,11 @@
       ]
     },
     "fuzzing": {
-      "passed": false,
-      "evidence": [],
-      "status": "pending_review"
+      "passed": true,
+      "evidence": [
+        "https://github.com/ding-labs/tell-tail/actions/runs/43286063233",
+        "docs/validation/0.3.0-release/fuzz-summary.json"
+      ]
     },
     "dashboard_hour": {
       "passed": false,
