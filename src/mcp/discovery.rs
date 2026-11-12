@@ -83,8 +83,11 @@ fn location(root: &Root) -> String {
 
 pub fn discover(roots: &[Root]) -> Discovery {
     let mut out = Discovery::default();
-    let mut visits = 0;
     for root in roots.iter().take(2) {
+        // Reserve traversal and candidate capacity for each host. A large Codex
+        // archive must not prevent Claude's older dedicated logs being seen.
+        let mut visits = MAX_VISITS - MAX_VISITS / roots.len().clamp(1, 2);
+        let mut found = Discovery::default();
         let mut view = RootView {
             host: root.host,
             location: location(root),
@@ -97,7 +100,7 @@ pub fn discover(roots: &[Root]) -> Discovery {
                 root.host,
                 0,
                 &mut visits,
-                &mut out,
+                &mut found,
                 &mut view.status,
             ),
             Ok(_) => view.status = "not a directory",
@@ -106,6 +109,9 @@ pub fn discover(roots: &[Root]) -> Discovery {
             }
             Err(_) => view.status = "directory inaccessible",
         }
+        out.limited |= found.limited;
+        out.rejected += found.rejected;
+        out.candidates.extend(found.candidates);
         out.roots.push(view);
     }
     out.candidates.sort_by(|a, b| {
@@ -113,6 +119,21 @@ pub fn discover(roots: &[Root]) -> Discovery {
             .cmp(&a.modified_ms)
             .then_with(|| a.path.cmp(&b.path))
     });
+    // Round-robin host ranks retain freshness within a host and fair coverage
+    // across hosts at both the candidate and active-source limits.
+    let mut ranks = [0usize; 2];
+    let mut ranked: Vec<_> = out
+        .candidates
+        .drain(..)
+        .map(|candidate| {
+            let host = usize::from(candidate.host == Host::ClaudeDesktop);
+            let rank = ranks[host];
+            ranks[host] += 1;
+            ((rank, host), candidate)
+        })
+        .collect();
+    ranked.sort_by_key(|(rank, _)| *rank);
+    out.candidates = ranked.into_iter().map(|(_, candidate)| candidate).collect();
     if out.candidates.len() > MAX_CANDIDATES {
         out.candidates.truncate(MAX_CANDIDATES);
         out.limited = true;

@@ -112,6 +112,16 @@ impl Collector {
             }
             keep
         });
+        let mut historical_remaining = candidates
+            .iter()
+            .filter(|c| {
+                c.modified_ms <= self.started_ms
+                    && !self
+                        .sources
+                        .iter()
+                        .any(|s| platform::same_file(&s.identity, &c.metadata))
+            })
+            .count();
         for c in candidates {
             if self
                 .sources
@@ -125,7 +135,14 @@ impl Collector {
                 continue;
             }
             let historical = c.modified_ms <= self.started_ms;
-            match Source::open(c, self.next_id, historical, &mut self.history_remaining) {
+            let allowance = self.history_remaining / historical_remaining.max(1) as u64;
+            let mut budget = allowance;
+            let opened = Source::open(c, self.next_id, historical, &mut budget);
+            self.history_remaining -= allowance - budget;
+            if historical {
+                historical_remaining = historical_remaining.saturating_sub(1);
+            }
+            match opened {
                 Ok(s) => {
                     self.next_id += 1;
                     self.sources.push(s);
@@ -350,5 +367,36 @@ mod tests {
         assert_eq!(rows[0].4, "keep");
         assert_eq!(rows[0].2, 5);
         assert_eq!(c.views()[0].history_omitted_bytes, 4);
+    }
+    #[test]
+    fn busy_host_cannot_starve_other_host_or_exhaust_all_history_first() {
+        let codex = tempfile::tempdir().unwrap();
+        let claude = tempfile::tempdir().unwrap();
+        let p = claude.path().join("mcp.log");
+        std::fs::write(&p, "old\n".repeat(100)).unwrap();
+        File::open(&p)
+            .unwrap()
+            .set_times(std::fs::FileTimes::new().set_modified(UNIX_EPOCH + Duration::from_secs(1)))
+            .unwrap();
+        for n in 0..600 {
+            std::fs::write(codex.path().join(format!("{n}.log")), "new\n".repeat(100)).unwrap();
+        }
+        let mut c = Collector::new(vec![
+            Root {
+                host: Host::CodexDesktop,
+                path: codex.path().into(),
+            },
+            Root {
+                host: Host::ClaudeDesktop,
+                path: claude.path().into(),
+            },
+        ]);
+        c.history_remaining = 640;
+        c.rescan();
+        assert_eq!(c.views().len(), MAX_SOURCES);
+        assert!(c.views().iter().any(|s| s.host == Host::ClaudeDesktop));
+        assert!(c.views().iter().all(|s| s.history_omitted_bytes < 400));
+        assert_eq!(c.history_remaining, 0);
+        assert!(c.limited);
     }
 }
