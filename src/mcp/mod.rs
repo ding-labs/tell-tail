@@ -7,3 +7,5 @@ pub mod discovery;
 pub mod collection;
 
 pub mod parse;
+
+pub mod store;

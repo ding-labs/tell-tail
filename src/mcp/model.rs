@@ -140,7 +140,8 @@ pub struct Event {
     pub host: Host,
     pub server: String,
     /// Process-local opaque scope. Never a host conversation ID.
-    pub scope: u64,
+    pub scope: String,
+    pub scope_known: bool,
     pub timestamp_ms: Option<i64>,
     pub observed_ms: i64,
     pub historical: bool,
