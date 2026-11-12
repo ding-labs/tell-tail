@@ -152,5 +152,13 @@
     "check_terminal.py": "passed",
     "check_terminal.py --alerts": "passed",
     "check_backpressure.py": "passed"
+  },
+  "final_recovery_guard": {
+    "revision": "bf17df0",
+    "scoped_state_tests_passed": 7,
+    "mcp_integration_tests_passed": 8,
+    "release_mcp_browser_tests_passed": 1,
+    "default_all_target_clippy": "passed",
+    "release_binary_sha256": "81cb838b5b1c6530fe09bee71a2685e97b5fc5d2a60d98afdb59fb4c699c5fcd"
   }
 }

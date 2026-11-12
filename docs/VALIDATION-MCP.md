@@ -35,6 +35,12 @@ work, as described in the plan.
 | Installed MCP `--open`, assets, safe overview, failed-opener fallback, SIGTERM | Passed |
 | Synthetic MCP lifecycle | Failures, recovery, normal closes, unexpected closes, and mirror pairs passed |
 
+The full-suite, package and performance baseline was recorded before the final
+unknown-server recovery guard (`bf17df0`). That guard also passed seven scoped-state
+unit tests, eight MCP CLI/web integration tests, the release-binary MCP browser
+check, and all-target default Clippy with warnings denied. The release binary
+was rebuilt afterward. Unidentified/sanitized server names cannot confirm recovery.
+
 The browser MCP check exercises historical labels, issue inspection, clipboard
 redaction, Escape dismissal, pause while capture continues, filtered history,
 recovery, idle source ages, disconnect labeling, no external requests, and
