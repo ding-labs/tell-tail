@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
 - Broaden automatic severity recognition to common JSON keys, logfmt, Python
   console prefixes, bounded ANSI SGR colors, and syslog priority headers.
@@ -26,6 +26,12 @@
   published 0.2.0 commands from features available only in the source checkout.
 - Web schema 1 gains additive `severity_history` and `activity` fields. CLI JSON
   schema 2, Prometheus metrics, and webhook payloads remain unchanged.
+
+- Dashboard restoration now preserves manual-retry states and coalesces reconnects.
+- File rotation keeps read position and replacement ownership with the open file,
+  including draining unread data when a followed path disappears.
+- Web serving, retained EOF, and bounded shutdown have explicit lifecycle states;
+  publisher failures remain distinct from input failures.
 
 ## 0.2.0 (2026-10-28)
 
