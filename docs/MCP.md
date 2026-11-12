@@ -56,10 +56,16 @@ local to one run and are not durable identifiers for exporting evidence.
 
 ## Supported sources
 
-| Client | Automatic macOS discovery | Recognized evidence |
-| --- | --- | --- |
-| Codex Desktop | `~/Library/Logs/com.openai.codex/YYYY/MM/DD/*.log` (also root `.log` files) | Structured MCP starting/ready/failed/cancelled statuses; app-tool discovery failures; explicit auth, timeout, missing executable, and transport reasons |
-| Claude Desktop | `~/Library/Logs/Claude/mcp.log`, numbered `mcpN.log` rotations, and `mcp-server-*.log` | Startup/connection lifecycle; intentional shutdown, renderer release, unexpected disconnect; dedicated-server errors; allowlisted protocol methods |
+**Codex Desktop.** Automatic macOS discovery reads dated `.log` files under
+`~/Library/Logs/com.openai.codex/` (`YYYY/MM/DD/*.log`), plus root `.log` files.
+Recognized evidence includes structured MCP starting/ready/failed/cancelled
+statuses, app-tool discovery failures, and explicit authentication, timeout,
+missing executable and transport reasons.
+
+**Claude Desktop.** Automatic macOS discovery reads `mcp.log`, numbered `mcpN.log`
+rotations and `mcp-server-*.log` under `~/Library/Logs/Claude/`. Recognized evidence
+includes startup and connection lifecycle, intentional shutdown, renderer release,
+unexpected disconnect, dedicated-server errors and allowlisted protocol methods.
 
 Both Claude prefix orders, full JSON and metadata-only protocol messages are
 recognized. A 50 ms cross-source mirror window accounts for observed timestamp
