@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Add `tell-tail mcp --open`: passive macOS Codex/Claude Desktop log discovery,
+  bounded multi-file following, scoped failure/recovery groups, Claude mirror
+  deduplication, and an embedded searchable timeline with safe evidence details.
+- MCP mode includes text/NDJSON output, explicit source directories, one-shot
+  inspection, and a synthetic `mcp --demo --open` replay. No client configuration
+  changes or server calls are required. Raw payloads and execution IDs are omitted.
+- Reserve the first positional argument `mcp` for diagnostics; files named `mcp`
+  remain accessible as `./mcp` or after `--`.
+
 - Broaden automatic severity recognition to common JSON keys, logfmt, Python
   console prefixes, bounded ANSI SGR colors, and syslog priority headers.
 - Add explicit Pino/Python/OpenTelemetry/Serilog JSON profiles, bounded nested

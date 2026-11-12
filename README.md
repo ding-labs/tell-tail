@@ -45,12 +45,28 @@ for x86_64 and ARM64. The dashboard is embedded; the archives need no Rust, Node
 or Python. See the [distribution guide](docs/RELEASING.md) for platform details.
 
 **Current main, not yet released:** the built-in demo, parsing coverage, severity
-history, activity ages, and expanded format recognition described below are not in the 0.2.0 packages.
+history, activity ages, expanded format recognition, and MCP diagnostics described below are not in the 0.2.0 packages.
 
 Read [Understanding a live log stream](docs/MONITORING.md) for a complete guide
 to interpreting coverage, history, activity ages, controls, and their limits.
 The [documentation index](docs/README.md) links all user guides, API contracts,
 troubleshooting, and validation procedures.
+
+### MCP diagnostics (unreleased)
+
+Watch existing Codex Desktop and Claude Desktop MCP logs on macOS:
+
+```sh
+cargo run --release --locked -- mcp --open
+# Synthetic failures and recovery; reads no client logs:
+cargo run --release --locked -- mcp --demo --open
+```
+
+The local dashboard groups reported failures by server and execution, shows a
+live searchable timeline, and distinguishes history, recovery, and source
+freshness. No server configuration change, plugin, or account is needed.
+After installing this checkout, the command is `tell-tail mcp --open`.
+See [MCP diagnostics](docs/MCP.md) for sources, headless output, and coverage limits.
 
 ### Built-in demo (unreleased)
 

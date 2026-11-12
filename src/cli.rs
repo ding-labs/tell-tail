@@ -60,7 +60,11 @@ pub enum From {
 
 /// Measure log throughput and severity with bounded memory.
 #[derive(Clone, Debug, Parser)]
-#[command(version, about, after_help = "MCP diagnostics:\n  tell-tail mcp --open        Watch existing desktop MCP logs\n  tell-tail mcp --demo --open  Try synthetic MCP failures and recovery\n  tell-tail mcp --help         MCP options\n\nFor a log file literally named mcp, use ./mcp or -- mcp.")]
+#[command(
+    version,
+    about,
+    after_help = "MCP diagnostics:\n  tell-tail mcp --open        Watch existing desktop MCP logs\n  tell-tail mcp --demo --open  Try synthetic MCP failures and recovery\n  tell-tail mcp --help         MCP options\n\nFor a log file literally named mcp, use ./mcp or -- mcp."
+)]
 pub struct Args {
     /// File to follow; omit or use - to read stdin.
     pub file: Option<PathBuf>,

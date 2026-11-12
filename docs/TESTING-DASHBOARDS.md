@@ -7,6 +7,12 @@ the repository root unless specified otherwise. The repository pins Rust 1.88.0;
 browser development checks require Node 22+, npm, and Chromium. The installed
 Tell-Tail binary itself does not require Node or Python.
 
+For the passive MCP mode, see [MCP validation](VALIDATION-MCP.md) and its
+[reference measurements](validation/mcp-watcher-2026-11-12.json). The browser suite
+also exercises `mcp --output web`; package checks exercise the installed MCP demo
+and failed-opener fallback. Run Rust feature builds sequentially: they share the
+`target/debug/tell-tail` executable.
+
 ## Automated checks
 
 Run the Rust checks in all supported feature configurations. Tests build their

@@ -1,7 +1,8 @@
 # Passive MCP log watcher plan
 
-Status: proposed November 12, 2026. Local feasibility has been inspected; the MCP
-command and adapters are not implemented. The [local audit](MCP-LOG-AUDIT-2026-11-12.md)
+Status: implemented in focused commits November 12, 2026; unreleased. See the
+[user guide](MCP.md) and [validation record](VALIDATION-MCP.md) for actual behavior,
+measured acceptance, and external checks still pending. The [local audit](MCP-LOG-AUDIT-2026-11-12.md)
 establishes useful existing log signals and their limits.
 
 ## Outcome
@@ -173,8 +174,8 @@ loopback binding, Host/Origin validation, CSP, and slow-client isolation.
 
 ## Resource budgets and performance targets
 
-These are initial design budgets and acceptance targets, not measurements of an
-implemented watcher. Tune them only with recorded evidence and visible overflow
+These are the original design budgets and acceptance targets. Actual measurements
+are recorded in [implementation validation](VALIDATION-MCP.md). Tune them only with recorded evidence and visible overflow
 behavior.
 
 | Resource or behavior | Initial target |

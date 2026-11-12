@@ -10,6 +10,7 @@ how to build and run the checkout explicitly.
 
 | Guide | What it answers |
 | --- | --- |
+| [MCP diagnostics](MCP.md) | Existing desktop MCP logs, grouped failures, live timeline, safe evidence, source coverage, demo, and API |
 | [Log format recognition](LOG-FORMATS.md) | Automatic styles, one-flag profiles, nested keys, container wrappers, parser hints, and precise limits |
 | [Understanding a live log stream](MONITORING.md) | What coverage, histories, ratios, and activity ages mean; worked examples, parser conventions, time scopes, and controls |
 | [Built-in demo](DEMO.md) | One-command browser start, phase-by-phase parsing walkthrough, flag examples, switching to real logs, limits, and shutdown |
@@ -38,10 +39,11 @@ or an inference service.
 
 ## Plans and historical evidence
 
-The [passive MCP watcher plan](PLAN-MCP.md) defines the proposed
+The [passive MCP watcher plan](PLAN-MCP.md) records the implemented
 `tell-tail mcp --open` workflow, supported-source boundaries, implementation
 increments, and acceptance checks. Its [local log audit](MCP-LOG-AUDIT-2026-11-12.md)
-records the evidence for proceeding; the command is not implemented yet.
+records the evidence for proceeding. [Implementation validation](VALIDATION-MCP.md)
+records measurements and remaining external acceptance work.
 
 The [state-machine inventory and implementation plan](PLAN-STATE-MACHINES.md)
 maps observable transitions to their owners and tests, starting with dashboard retry behavior.
