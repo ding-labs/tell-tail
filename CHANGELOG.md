@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0
 
 - Add `tell-tail mcp --open`: passive macOS Codex/Claude Desktop log discovery,
   bounded multi-file following, scoped failure/recovery groups, Claude mirror
