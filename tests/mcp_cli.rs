@@ -55,6 +55,8 @@ fn absent_logs_and_literal_mcp_filenames_remain_usable() {
 }
 #[test]
 fn invalid_mcp_options_fail_before_reading_logs() {
+    let help = bin().arg("--help").output().unwrap();
+    assert!(String::from_utf8_lossy(&help.stdout).contains("tell-tail mcp --open"));
     for args in [
         vec!["mcp", "--open", "--output", "json"],
         vec!["mcp", "--log-dir", "."],
