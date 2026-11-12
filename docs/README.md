@@ -2,9 +2,9 @@
 
 Tell-Tail helps you understand what one process or log source is doing now.
 Start with the [installation and quick start](../README.md#install-and-try-it).
-The built-in demo, parsing coverage, severity history, and activity freshness are
-on current main and **not yet in the published 0.2.0 packages**. Their guides show
-how to build and run the checkout explicitly.
+The built-in demo, expanded parsers, parsing coverage, severity history, and
+activity freshness require **0.3.0 or later**. Their guides use the installed
+`tell-tail` command.
 
 ## Using Tell-Tail
 

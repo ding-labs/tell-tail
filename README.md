@@ -7,7 +7,7 @@ plain text, NDJSON, Prometheus, and a local HTTP/SSE metrics API.
 
 ## Install and try it
 
-Version 0.2.0 is available through Homebrew and
+Install Tell-Tail through Homebrew or
 [crates.io](https://crates.io/crates/tell-tail):
 
 ```sh
@@ -39,30 +39,27 @@ terminal shows up to 20 error/fatal previews, each capped at 512 bytes and kept
 only in memory. Long previews are marked with an ellipsis. Previews are omitted
 from CLI JSON, text, Prometheus, and webhook payloads.
 
-[GitHub Releases](https://github.com/ding-labs/tell-tail/releases/tag/v0.2.0)
+[GitHub Releases](https://github.com/ding-labs/tell-tail/releases/tag/v0.3.0)
 provides native archives for Apple Silicon on macOS 14+ and static Linux binaries
 for x86_64 and ARM64. The dashboard is embedded; the archives need no Rust, Node,
 or Python. See the [distribution guide](docs/RELEASING.md) for platform details.
 
-**Current main, not yet released:** the built-in demo, parsing coverage, severity
-history, activity ages, and expanded format recognition described below are not in the 0.2.0 packages.
+The examples below target **0.3.0 or later**. Upgrade an existing Homebrew
+installation with `brew upgrade ding-labs/tap/tell-tail`, or reinstall with Cargo.
+Check `tell-tail --version` before trying the demo or parser profiles.
 
 Read [Understanding a live log stream](docs/MONITORING.md) for a complete guide
 to interpreting coverage, history, activity ages, controls, and their limits.
 The [documentation index](docs/README.md) links all user guides, API contracts,
 troubleshooting, and validation procedures.
 
-### Built-in demo (unreleased)
+### Built-in demo
 
-Current main includes an offline demo; it is not in the published 0.2.0 packages.
-Clone the repository (it pins Rust 1.88.0), then try either dashboard without a
-log file or generator:
+Try either dashboard without a log file or generator:
 
 ```sh
-git clone https://github.com/ding-labs/tell-tail.git
-cd tell-tail
-cargo run --locked -- --demo --window 5
-cargo run --locked -- --demo --window 5 --output web --open
+tell-tail --demo --window 5
+tell-tail --demo --window 5 --output web --open
 ```
 
 The source is labeled synthetic. Its 40-second cycle has eight seconds of normal
@@ -79,14 +76,14 @@ in the browser or press `?` in the terminal to see parser evidence and flag hint
 To try a numeric convention without preparing input, add `--profile pino`:
 
 ```sh
-cargo run --locked -- --demo --profile pino --window 5 --output web --open
+tell-tail --demo --profile pino --window 5 --output web --open
 ```
 
 Demo profile/field/path flags generate matching JSON samples; envelope flags wrap
 them. The same flags on real input only configure parsing. No config file is needed.
 
-To install the checkout, use `cargo install --path . --locked`; then run
-`tell-tail --demo --window 5` directly.
+For development, clone the repository and use
+`cargo run --locked -- --demo --window 5 --output web --open`.
 
 The [demo walkthrough](docs/DEMO.md) explains every phase, what to observe,
 supported options, shutdown behavior, and how to distinguish it from a benchmark.
@@ -115,9 +112,9 @@ Tell-Tail can only measure records once they arrive. A fast scan of an old file
 shows processing throughput, not its original event rate. No recent logs alone
 cannot establish whether the application is healthy or stalled.
 
-## Log formats with minimal setup (unreleased)
+## Log formats with minimal setup
 
-Current main recognizes common JSON severity fields, logfmt key/value records,
+Tell-Tail recognizes common JSON severity fields, logfmt key/value records,
 Python-style console prefixes, timestamped/colored levels, and syslog priority
 headers automatically. Recognition runs per record, so supported styles can mix.
 
@@ -195,7 +192,7 @@ my-app 2>&1 | tell-tail --output web
 
 Web mode serves an embedded live dashboard and prints its loopback URL to stderr.
 It shows rolling rates and ratios, exact session totals, a 60-second throughput
-chart, severity counts, and ingestion diagnostics. Current main also shows
+chart, severity counts, and ingestion diagnostics. It also shows
 parsing coverage, warning/error histories, and activity ages as described above. Freeze/resume affects only
 the display; connection and failure status stay live. Hidden tabs release their
 stream and reconnect when shown. The binary works offline without Node or a CDN.
@@ -434,7 +431,7 @@ contents. Missing files and incomplete lines have separate waiting guidance.
   does not create another record. CRLF is supported.
 - Severity categories are trace, debug, info, warn, error, fatal, and unknown.
   Names are case-insensitive. Aliases: warning → warn; critical and panic → fatal.
-- Current main recognizes common JSON keys such as `level`, `severity`, and
+- Tell-Tail recognizes common JSON keys such as `level`, `severity`, and
   `log.level`. `--level-field` selects one literal key; `--level-path` selects a
   nested object value. Duplicate selected keys are malformed; conflicting
   automatically selected values remain unknown. Named profiles map numeric levels.
