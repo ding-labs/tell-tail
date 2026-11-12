@@ -51,7 +51,7 @@ pub fn run(args: &Args, signals: &crate::runtime::Signals) -> io::Result<i32> {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()?;
-    let mut running = Running::start(args.roots()?, signals.requested.clone(), false)?;
+    let mut running = Running::start(args, signals.requested.clone())?;
     let result = runtime.block_on(serve(listener, host, args.open, &mut running, signals));
     running.stop();
     running.join()?;

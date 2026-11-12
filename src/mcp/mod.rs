@@ -11,4 +11,5 @@ pub mod parse;
 pub mod store;
 
 pub mod cli;
+pub mod demo;
 pub mod runtime;

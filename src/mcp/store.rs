@@ -50,6 +50,7 @@ pub struct Counts {
 }
 #[derive(Clone, Serialize)]
 pub struct Snapshot {
+    pub demo: bool,
     pub schema_version: u32,
     pub sequence: u64,
     pub observed_ms: i64,
@@ -71,6 +72,7 @@ pub struct Snapshot {
     pub view_omitted: usize,
 }
 pub struct Store {
+    pub demo: bool,
     pub events: VecDeque<Event>,
     pub issues: VecDeque<Issue>,
     pub servers: VecDeque<ServerState>,
@@ -89,6 +91,7 @@ pub struct Store {
 impl Default for Store {
     fn default() -> Self {
         Self {
+            demo: false,
             events: VecDeque::new(),
             issues: VecDeque::new(),
             servers: VecDeque::new(),
@@ -314,6 +317,7 @@ impl Store {
         issues.sort_by_key(|i| std::cmp::Reverse(i.last_ms));
         issues.truncate(40);
         Snapshot {
+            demo: self.demo,
             schema_version: SCHEMA_VERSION,
             sequence: self.sequence,
             observed_ms: now_ms(),

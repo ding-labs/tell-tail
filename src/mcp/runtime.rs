@@ -1,7 +1,7 @@
 use super::{
     cli::{Args, Output},
     collection::Collector,
-    discovery::Root,
+    demo::Demo,
     model::SCHEMA_VERSION,
     store::{Snapshot, Store},
 };
@@ -23,8 +23,15 @@ pub struct Running {
     worker: Option<JoinHandle<()>>,
 }
 impl Running {
-    pub fn start(roots: Vec<Root>, stop: Arc<AtomicUsize>, once: bool) -> io::Result<Self> {
+    pub fn start(args: &Args, stop: Arc<AtomicUsize>) -> io::Result<Self> {
+        let mut demo = args.demo.then(Demo::new).transpose()?;
+        let roots = match &demo {
+            Some(d) => d.roots(),
+            None => args.roots()?,
+        };
+        let once = args.once;
         let shared = Arc::new(Mutex::new(Store::default()));
+        shared.lock().unwrap().demo = args.demo;
         let slot = shared.clone();
         let cancel = stop.clone();
         let worker = thread::Builder::new()
@@ -32,6 +39,9 @@ impl Running {
             .spawn(move || {
                 let mut collector = Collector::new(roots);
                 loop {
+                    if let Some(demo) = &mut demo {
+                        demo.tick().expect("synthetic replay failed");
+                    }
                     collector.poll(|r| slot.lock().unwrap().accept(r));
                     let backlog = collector.views().iter().any(|s| s.backlog_bytes > 0);
                     {
@@ -96,7 +106,7 @@ pub fn run(args: &Args) -> io::Result<i32> {
     if args.mode() == Output::Web {
         return crate::web::mcp::run(args, &signals);
     }
-    let mut running = Running::start(args.roots()?, signals.requested.clone(), args.once)?;
+    let mut running = Running::start(args, signals.requested.clone())?;
     let mut output = crate::platform::StdoutWriter::new(signals.requested.clone())?;
     let mut last_id = 0;
     let mut status_at = Instant::now() - Duration::from_secs(1);

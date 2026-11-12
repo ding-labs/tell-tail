@@ -19,6 +19,7 @@ function renderSources(snapshot) {
   $('limits').textContent = `${number(snapshot.retained_events)} events retained · ${number(snapshot.counts.evicted_events)} events evicted · ${number(snapshot.counts.evicted_issues)} issue groups evicted · ${number(snapshot.counts.evicted_states)} states evicted. ${snapshot.discovery_limited ? 'Discovery limit reached; some files are omitted. ' : ''}${snapshot.rejected_files ? `${number(snapshot.rejected_files)} file entries skipped. ` : ''}${snapshot.open_failures ? `${number(snapshot.open_failures)} file-open failures. ` : ''}${snapshot.retired_sources ? `${number(snapshot.retired_sources)} sources retired. ` : ''}${snapshot.view_omitted ? `${number(snapshot.view_omitted)} overview rows omitted to fit the response budget. ` : ''}Mirror matching is limited to retained evidence.`;
 }
 function render(snapshot) {
+  document.querySelector('.local-label').textContent = snapshot.demo ? 'SYNTHETIC DEMO · NO CLIENT LOGS READ' : 'LOCAL · READ ONLY';
   displayed = snapshot; options(snapshot);
   $('event-count').textContent = number(snapshot.counts.observations); $('issue-count').textContent = number(snapshot.retained_issues); $('mirror-count').textContent = number(snapshot.counts.mirrors); $('source-count').textContent = number(snapshot.sources.length);
   const issues = snapshot.issues.filter(i => (!$('host').value || i.host === $('host').value) && (!$('server').value || i.server === $('server').value));

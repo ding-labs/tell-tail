@@ -68,3 +68,35 @@ fn invalid_mcp_options_fail_before_reading_logs() {
         assert!(String::from_utf8_lossy(&out.stderr).contains("web feature"));
     }
 }
+
+#[test]
+fn synthetic_demo_never_requires_home_or_client_logs() {
+    let out = bin()
+        .env_remove("HOME")
+        .args(["mcp", "--demo", "--once", "--output", "json"])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let rows: Vec<serde_json::Value> = String::from_utf8(out.stdout)
+        .unwrap()
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    let state = rows.last().unwrap();
+    assert_eq!(state["demo"], true);
+    assert_eq!(state["counts"]["observations"], 2);
+    assert_eq!(state["counts"]["mirrors"], 1);
+    assert_eq!(state["sources"].as_array().unwrap().len(), 3);
+    assert!(
+        !bin()
+            .args(["mcp", "--demo", "--source", "codex-desktop"])
+            .output()
+            .unwrap()
+            .status
+            .success()
+    );
+}

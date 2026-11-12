@@ -32,6 +32,9 @@ pub struct Args {
     /// Inspect bounded existing history and exit; headless outputs only.
     #[arg(long)]
     pub once: bool,
+    /// Replay synthetic logs in temporary files; do not read client logs.
+    #[arg(long, conflicts_with_all = ["source", "log_dir"])]
+    pub demo: bool,
 }
 impl Args {
     pub fn mode(&self) -> Output {
