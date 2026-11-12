@@ -1,0 +1,611 @@
+{
+  "source_commit": "05b3376e2ba1f809bf0a789faa477f3f17e1bcf2",
+  "extended_run": "https://github.com/ding-labs/tell-tail/actions/runs/43286063233",
+  "controlled_run": "https://github.com/ding-labs/tell-tail/actions/runs/43286068503",
+  "dashboard": {
+    "macos-15": {
+      "hour": {
+        "production_seconds": 3600.0455551249997,
+        "records": 3597000,
+        "bytes": 38521567920,
+        "peak_sampled_rss_mib": 7.8125,
+        "rss_10minute_medians_mib": [
+          7.765625,
+          6.546875,
+          6.546875,
+          6.546875,
+          6.546875
+        ],
+        "max_observation_gap_seconds": 0.26120495796203613,
+        "shutdown_observed_seconds": 0.3245218750003005,
+        "terminal_actions": 360,
+        "binary_sha256": "902f369749fc508265e1e016f4e76087cfc11f2ef40b861319f5a94e88868db2",
+        "sample_interval_seconds": 1
+      },
+      "maximum": {
+        "production_seconds": 60.012797583000065,
+        "peak_sampled_rss_mib": 37.390625,
+        "binary_sha256": "902f369749fc508265e1e016f4e76087cfc11f2ef40b861319f5a94e88868db2"
+      },
+      "report_sha256": {
+        "dashboard-hour.json": "154664483749d55dcef80e6f6bff757da6d0f047eb50cd833b841e90a4689000",
+        "maximum.json": "81295ff7967a9651f31ba609ca439cf58c2df30338d458a8901e62cfec4cb0a0"
+      }
+    },
+    "ubuntu-24.04": {
+      "hour": {
+        "production_seconds": 3600.00395188,
+        "records": 3597000,
+        "bytes": 38521567920,
+        "peak_sampled_rss_mib": 9.765625,
+        "rss_10minute_medians_mib": [
+          9.72265625,
+          9.75390625,
+          9.7578125,
+          9.76171875,
+          9.765625,
+          9.765625
+        ],
+        "max_observation_gap_seconds": 0.10134506225585938,
+        "shutdown_observed_seconds": 0.1588483929999711,
+        "terminal_actions": 360,
+        "binary_sha256": "844cad034954f45d2448fe8ba09cb0efeaa9b316616910fecb865c4a61ecd462",
+        "sample_interval_seconds": 1
+      },
+      "maximum": {
+        "production_seconds": 60.00010271999963,
+        "peak_sampled_rss_mib": 26.8359375,
+        "binary_sha256": "844cad034954f45d2448fe8ba09cb0efeaa9b316616910fecb865c4a61ecd462"
+      },
+      "report_sha256": {
+        "dashboard-hour.json": "48445f358d9a12d8778e98714debf50b9922b9de699e853e9ec769a6ba545b19",
+        "maximum.json": "1a2bbab5e2c3f5dcc86c86f0512084daa2af4d839fa081713bad3f0780a91482"
+      }
+    }
+  },
+  "fuzz": {
+    "classification": {
+      "executions": 45069300,
+      "seconds": 1801,
+      "log_sha256": "95b3cc0ac27344991c5d08aa3cef1b5b29c289de740017a6e97d7b561525fcb4",
+      "toolchain": "rustc 1.101.0-nightly (822182db4 2026-10-13)"
+    },
+    "framing": {
+      "executions": 53354969,
+      "seconds": 1801,
+      "log_sha256": "24443ae146cb712d1493b02e09b1e2a0a4dc1eeebfc80b19cf0b34a52d354c5b",
+      "toolchain": "rustc 1.101.0-nightly (822182db4 2026-10-13)"
+    },
+    "timed_engine": {
+      "executions": 3375081,
+      "seconds": 1801,
+      "log_sha256": "e84ffe81b2c0e236241346ab909b275c2d014fdbf4d6dbb386c06fe91a6fc2c2",
+      "toolchain": "rustc 1.101.0-nightly (822182db4 2026-10-13)"
+    }
+  },
+  "performance": {
+    "candidate-performance-linux": {
+      "commit": "05b3376e2ba1f809bf0a789faa477f3f17e1bcf2",
+      "harness_commit": "05b3376e2ba1f809bf0a789faa477f3f17e1bcf2",
+      "binary_sha256": "844cad034954f45d2448fe8ba09cb0efeaa9b316616910fecb865c4a61ecd462",
+      "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
+      "host": "runnervm7aw5e",
+      "cpu_model": "AMD EPYC 9V74 80-Core Processor",
+      "cpu_affinity": {
+        "available_cpus": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "consumer_cpu": 3,
+        "producer_cpu": 0
+      },
+      "configuration": {
+        "binary": "/home/runner/work/tell-tail/tell-tail/work/candidate/target/release/tell-tail",
+        "consumer_cpu": 3,
+        "disk_limit_mib": 512,
+        "pairs": 5,
+        "pin_cpus": true,
+        "profile": "mixed",
+        "records": 2000000,
+        "repeats": 5,
+        "report": "work/performance.json",
+        "seconds": 60.0,
+        "seed": 1,
+        "source_directory": "/home/runner/work/tell-tail/tell-tail/work/candidate",
+        "suite": "all"
+      },
+      "measurement_qualifies_for_gate": true,
+      "timing_variation_warning": false,
+      "possible_generator_limit": false,
+      "report_sha256": "7e51ed9b76cfe82976a13fd3f4708c46c4f93793af83bc9063e5d3175fca4552",
+      "median_tui_loss_fraction": 0.026704348008408152,
+      "throughput": {
+        "json": {
+          "max": 7394707,
+          "median": 7365811,
+          "min": 7343495,
+          "relative_range": 0.0069526627821430665
+        },
+        "tui": {
+          "max": 7191919,
+          "median": 7187105,
+          "min": 7167613,
+          "relative_range": 0.0033818902047486436
+        }
+      },
+      "text200": {
+        "max": 15702908.385126641,
+        "median": 15657422.24013374,
+        "min": 15626843.112894585,
+        "relative_range": 0.004858096758550847
+      },
+      "pairs": [
+        {
+          "order": [
+            "tui",
+            "json"
+          ],
+          "loss_fraction": 0.024049663536580113,
+          "runs": [
+            {
+              "mode": "json",
+              "records": 444473600,
+              "bytes": 103935706624,
+              "producer_cpu_fraction": 0.2979967557824784,
+              "records_per_second": 7365811
+            },
+            {
+              "mode": "tui",
+              "records": 444473600,
+              "bytes": 103935706624,
+              "producer_cpu_fraction": 0.2887271311700052,
+              "records_per_second": 7188666
+            }
+          ]
+        },
+        {
+          "order": [
+            "tui",
+            "json"
+          ],
+          "loss_fraction": 0.02769664933793614,
+          "runs": [
+            {
+              "mode": "json",
+              "records": 444473600,
+              "bytes": 103935706624,
+              "producer_cpu_fraction": 0.2830934807477789,
+              "records_per_second": 7391834
+            },
+            {
+              "mode": "tui",
+              "records": 444473600,
+              "bytes": 103935706624,
+              "producer_cpu_fraction": 0.2908030453645086,
+              "records_per_second": 7187105
+            }
+          ]
+        },
+        {
+          "order": [
+            "json",
+            "tui"
+          ],
+          "loss_fraction": 0.027423407222998852,
+          "runs": [
+            {
+              "mode": "json",
+              "records": 444473600,
+              "bytes": 103935706624,
+              "producer_cpu_fraction": 0.29708105087587006,
+              "records_per_second": 7394707
+            },
+            {
+              "mode": "tui",
+              "records": 444473600,
+              "bytes": 103935706624,
+              "producer_cpu_fraction": 0.2898134882904449,
+              "records_per_second": 7191919
+            }
+          ]
+        },
+        {
+          "order": [
+            "tui",
+            "json"
+          ],
+          "loss_fraction": 0.026704348008408152,
+          "runs": [
+            {
+              "mode": "json",
+              "records": 444473600,
+              "bytes": 103935706624,
+              "producer_cpu_fraction": 0.26460503142801306,
+              "records_per_second": 7364271
+            },
+            {
+              "mode": "tui",
+              "records": 444473600,
+              "bytes": 103935706624,
+              "producer_cpu_fraction": 0.28897733989079505,
+              "records_per_second": 7167613
+            }
+          ]
+        },
+        {
+          "order": [
+            "json",
+            "tui"
+          ],
+          "loss_fraction": 0.023820690048902304,
+          "runs": [
+            {
+              "mode": "json",
+              "records": 444473600,
+              "bytes": 103935706624,
+              "producer_cpu_fraction": 0.2926724897588353,
+              "records_per_second": 7343495
+            },
+            {
+              "mode": "tui",
+              "records": 444473600,
+              "bytes": 103935706624,
+              "producer_cpu_fraction": 0.2834730751148181,
+              "records_per_second": 7168567
+            }
+          ]
+        }
+      ]
+    },
+    "extended-performance-ubuntu-24.04": {
+      "commit": "05b3376e2ba1f809bf0a789faa477f3f17e1bcf2",
+      "harness_commit": "05b3376e2ba1f809bf0a789faa477f3f17e1bcf2",
+      "binary_sha256": "844cad034954f45d2448fe8ba09cb0efeaa9b316616910fecb865c4a61ecd462",
+      "platform": "Linux-7.0.0-1014-aws-x86_64-with-glibc2.39",
+      "host": "ip-10-0-130-224",
+      "cpu_model": "Intel(R) Xeon(R) 6975P-C",
+      "cpu_affinity": {
+        "available_cpus": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "consumer_cpu": null,
+        "producer_cpu": null
+      },
+      "configuration": {
+        "binary": "/home/runner/work/tell-tail/tell-tail/target/release/tell-tail",
+        "consumer_cpu": null,
+        "disk_limit_mib": 512,
+        "pairs": 5,
+        "pin_cpus": false,
+        "profile": "mixed",
+        "records": 2000000,
+        "repeats": 5,
+        "report": "work/performance.json",
+        "seconds": 60.0,
+        "seed": 1,
+        "source_directory": "/home/runner/work/tell-tail/tell-tail",
+        "suite": "all"
+      },
+      "measurement_qualifies_for_gate": true,
+      "timing_variation_warning": false,
+      "possible_generator_limit": false,
+      "report_sha256": "4d2e36ff67cb3ccb01657a598112fd5c4975fb384cad867405af59f5af89d800",
+      "median_tui_loss_fraction": 0.020726863986032407,
+      "throughput": {
+        "json": {
+          "max": 5686619,
+          "median": 5615536,
+          "min": 5492940,
+          "relative_range": 0.03448985101333159
+        },
+        "tui": {
+          "max": 5610282,
+          "median": 5517602,
+          "min": 5392632,
+          "relative_range": 0.039446484179177836
+        }
+      },
+      "text200": {
+        "max": 16211677.034277927,
+        "median": 16186486.583800845,
+        "min": 16165128.991100706,
+        "relative_range": 0.0028757348258519207
+      },
+      "pairs": [
+        {
+          "order": [
+            "tui",
+            "json"
+          ],
+          "loss_fraction": 0.023082007654173453,
+          "runs": [
+            {
+              "mode": "json",
+              "records": 336851200,
+              "bytes": 78769284608,
+              "producer_cpu_fraction": 0.2949819288205254,
+              "records_per_second": 5686619
+            },
+            {
+              "mode": "tui",
+              "records": 336851200,
+              "bytes": 78769284608,
+              "producer_cpu_fraction": 0.2927027129661362,
+              "records_per_second": 5555361
+            }
+          ]
+        },
+        {
+          "order": [
+            "tui",
+            "json"
+          ],
+          "loss_fraction": 0.047397635071880106,
+          "runs": [
+            {
+              "mode": "json",
+              "records": 336851200,
+              "bytes": 78769284608,
+              "producer_cpu_fraction": 0.2944771541838635,
+              "records_per_second": 5660947
+            },
+            {
+              "mode": "tui",
+              "records": 336851200,
+              "bytes": 78769284608,
+              "producer_cpu_fraction": 0.29125831130135893,
+              "records_per_second": 5392632
+            }
+          ]
+        },
+        {
+          "order": [
+            "json",
+            "tui"
+          ],
+          "loss_fraction": -0.005900034735102588,
+          "runs": [
+            {
+              "mode": "json",
+              "records": 336851200,
+              "bytes": 78769284608,
+              "producer_cpu_fraction": 0.29733678969516325,
+              "records_per_second": 5577375
+            },
+            {
+              "mode": "tui",
+              "records": 336851200,
+              "bytes": 78769284608,
+              "producer_cpu_fraction": 0.29433606805308876,
+              "records_per_second": 5610282
+            }
+          ]
+        },
+        {
+          "order": [
+            "tui",
+            "json"
+          ],
+          "loss_fraction": -0.004489749334126714,
+          "runs": [
+            {
+              "mode": "json",
+              "records": 336851200,
+              "bytes": 78769284608,
+              "producer_cpu_fraction": 0.29806005665576735,
+              "records_per_second": 5492940
+            },
+            {
+              "mode": "tui",
+              "records": 336851200,
+              "bytes": 78769284608,
+              "producer_cpu_fraction": 0.2938116911908178,
+              "records_per_second": 5517602
+            }
+          ]
+        },
+        {
+          "order": [
+            "json",
+            "tui"
+          ],
+          "loss_fraction": 0.020726863986032407,
+          "runs": [
+            {
+              "mode": "json",
+              "records": 336851200,
+              "bytes": 78769284608,
+              "producer_cpu_fraction": 0.29736669482454225,
+              "records_per_second": 5615536
+            },
+            {
+              "mode": "tui",
+              "records": 336851200,
+              "bytes": 78769284608,
+              "producer_cpu_fraction": 0.2938462432426234,
+              "records_per_second": 5499143
+            }
+          ]
+        }
+      ]
+    },
+    "extended-performance-macos-15": {
+      "commit": "05b3376e2ba1f809bf0a789faa477f3f17e1bcf2",
+      "harness_commit": "05b3376e2ba1f809bf0a789faa477f3f17e1bcf2",
+      "binary_sha256": "902f369749fc508265e1e016f4e76087cfc11f2ef40b861319f5a94e88868db2",
+      "platform": "macOS-15.8.2-arm64-arm-64bit-Mach-O",
+      "host": "sjc22-be109-2400116e-325b-4f99-826c-8d4e2b65ae47-1E3493673C35.local",
+      "cpu_model": "Apple M1 (Virtual)",
+      "cpu_affinity": {
+        "available_cpus": null,
+        "consumer_cpu": null,
+        "producer_cpu": null
+      },
+      "configuration": {
+        "binary": "/Users/runner/work/tell-tail/tell-tail/target/release/tell-tail",
+        "consumer_cpu": null,
+        "disk_limit_mib": 512,
+        "pairs": 5,
+        "pin_cpus": false,
+        "profile": "mixed",
+        "records": 2000000,
+        "repeats": 5,
+        "report": "work/performance.json",
+        "seconds": 60.0,
+        "seed": 1,
+        "source_directory": "/Users/runner/work/tell-tail/tell-tail",
+        "suite": "all"
+      },
+      "measurement_qualifies_for_gate": false,
+      "timing_variation_warning": true,
+      "possible_generator_limit": false,
+      "report_sha256": "3a77504e8b70785b517fcd37b24d1359c0c929400581a64d038d0ac67e0a951f",
+      "median_tui_loss_fraction": 0.00855287374724334,
+      "throughput": {
+        "json": {
+          "max": 7819786,
+          "median": 6836356,
+          "min": 5577539,
+          "relative_range": 0.3279886243489953
+        },
+        "tui": {
+          "max": 7836749,
+          "median": 6990292,
+          "min": 4875276,
+          "relative_range": 0.42365512055862614
+        }
+      },
+      "text200": {
+        "max": 15571311.335025353,
+        "median": 13672584.332074694,
+        "min": 9739716.213500194,
+        "relative_range": 0.4265174000678675
+      },
+      "pairs": [
+        {
+          "order": [
+            "tui",
+            "json"
+          ],
+          "loss_fraction": 0.00855287374724334,
+          "runs": [
+            {
+              "mode": "json",
+              "records": 396800000,
+              "bytes": 92787712000,
+              "producer_cpu_fraction": 0.17518402822461313,
+              "records_per_second": 6447216
+            },
+            {
+              "mode": "tui",
+              "records": 396800000,
+              "bytes": 92787712000,
+              "producer_cpu_fraction": 0.1722974620737368,
+              "records_per_second": 6392074
+            }
+          ]
+        },
+        {
+          "order": [
+            "tui",
+            "json"
+          ],
+          "loss_fraction": 0.12590915351429643,
+          "runs": [
+            {
+              "mode": "json",
+              "records": 396800000,
+              "bytes": 92787712000,
+              "producer_cpu_fraction": 0.17090111534862482,
+              "records_per_second": 5577539
+            },
+            {
+              "mode": "tui",
+              "records": 396800000,
+              "bytes": 92787712000,
+              "producer_cpu_fraction": 0.17317464025320134,
+              "records_per_second": 4875276
+            }
+          ]
+        },
+        {
+          "order": [
+            "json",
+            "tui"
+          ],
+          "loss_fraction": -0.0021692929874590483,
+          "runs": [
+            {
+              "mode": "json",
+              "records": 396800000,
+              "bytes": 92787712000,
+              "producer_cpu_fraction": 0.16115359824671732,
+              "records_per_second": 7819786
+            },
+            {
+              "mode": "tui",
+              "records": 396800000,
+              "bytes": 92787712000,
+              "producer_cpu_fraction": 0.15375440234659463,
+              "records_per_second": 7836749
+            }
+          ]
+        },
+        {
+          "order": [
+            "tui",
+            "json"
+          ],
+          "loss_fraction": -0.022517362598789115,
+          "runs": [
+            {
+              "mode": "json",
+              "records": 396800000,
+              "bytes": 92787712000,
+              "producer_cpu_fraction": 0.17486946531777303,
+              "records_per_second": 6836356
+            },
+            {
+              "mode": "tui",
+              "records": 396800000,
+              "bytes": 92787712000,
+              "producer_cpu_fraction": 0.15666045123011313,
+              "records_per_second": 6990292
+            }
+          ]
+        },
+        {
+          "order": [
+            "json",
+            "tui"
+          ],
+          "loss_fraction": 0.022599195277859474,
+          "runs": [
+            {
+              "mode": "json",
+              "records": 396800000,
+              "bytes": 92787712000,
+              "producer_cpu_fraction": 0.16809477120105307,
+              "records_per_second": 7206036
+            },
+            {
+              "mode": "tui",
+              "records": 396800000,
+              "bytes": 92787712000,
+              "producer_cpu_fraction": 0.16406029368733338,
+              "records_per_second": 7043186
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "reviewed_reports": 49,
+  "largest_shutdown_seconds": 0.3245218750003005,
+  "background_linux_day": "not_run; optional non-blocking standing repository policy"
+}

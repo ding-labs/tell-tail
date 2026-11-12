@@ -1,12 +1,16 @@
 # Distribution and publishing
 
-Tell-Tail 0.2.0 was published to crates.io from commit
-`02a6476f9921ba45c59a6ce98bd68b317bac79b6` on October 28, 2026.
-[GitHub Releases](https://github.com/ding-labs/tell-tail/releases/tag/v0.2.0)
-and Homebrew were published by the
-[unified release workflow](https://github.com/ding-labs/tell-tail/actions/runs/40798996154)
-on the same Pacific date. All three channels identify the same source. Passing
-package checks alone does not publish to any channel.
+Tell-Tail **0.3.0** was published on November 12, 2026 from commit
+`05b3376e2ba1f809bf0a789faa477f3f17e1bcf2`. It is available on
+[GitHub Releases](https://github.com/ding-labs/tell-tail/releases/tag/v0.3.0),
+[crates.io](https://crates.io/crates/tell-tail/0.3.0), and
+[Homebrew](https://github.com/ding-labs/homebrew-tap/blob/main/tell-tail.rb).
+The [completed publication workflow](https://github.com/ding-labs/tell-tail/actions/runs/43299594524)
+and [publication receipt](validation/0.3.0-release/publication.json) verify that
+all three channels identify the same source. See the
+[0.3 validation record](VALIDATION-0.3-RELEASE.md) for reviewed gates and recovery
+details. Passing package checks alone does not publish to any channel.
+Historical [0.2 release evidence](VALIDATION-0.2-RELEASE.md) remains separate.
 
 ## Hosted documentation
 
@@ -197,9 +201,21 @@ nine actual release gates still needs reviewed evidence.
 ### Recover a partial publication
 
 Publication across services is sequential, not atomic. A later channel can fail
-after an earlier one is public. Fix the integration or service failure, then use
-GitHub Actions **Re-run failed jobs** on the same run to preserve its candidate
-and evidence. Do not bump the version just to retry Homebrew.
+after an earlier one is public. If recovery does not change this repository's
+orchestration code, fix the integration or service failure and use GitHub Actions
+**Re-run failed jobs** on the same run to preserve its candidate and evidence.
+
+If recovery changes a publishing script or workflow, merge that focused fix and
+dispatch from current `main` with the **same frozen `source_commit`** and reviewed
+validation record. [GitHub reruns retain the original workflow commit](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs),
+so rerunning an old job does not load a newly merged orchestration fix. The new
+run verifies and reuses matching public versions and archives; it does not
+replace them. Do not bump the version just to retry Homebrew.
+
+The Homebrew observer allows up to two minutes for the exact dispatched run ID
+to become visible. It never redispatches to work around a 404. Authentication or
+server failures, disappearance after observation, failed/cancelled runs, and the
+overall timeout remain failures with a link to inspect the downstream run.
 
 - A published GitHub release is reused only if its commit tag and checksummed
   artifacts identify the requested source/version. Existing tags and public

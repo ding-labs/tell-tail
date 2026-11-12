@@ -8,8 +8,8 @@ counters or previews. Use a log store independently when retention is required.
 
 Start with [Understanding a live log stream](MONITORING.md) for the meanings of
 coverage, severity history, and activity ages. The [built-in demo](DEMO.md) gives
-a predictable first session without external logs. Those features are on current
-main and are not included in the published 0.2.0 packages.
+a predictable first session without external logs. Those features require
+0.3.0 or later.
 
 ## Apple unified log input
 
@@ -71,8 +71,8 @@ journal for runtime errors and the metric timestamp for freshness.
 
 | Symptom | Check |
 | --- | --- |
-| `--demo` is an unexpected argument | Build current main with `cargo build --locked` and run `./target/debug/tell-tail --demo`. Published 0.2.0 packages lack the new features; the checkout still uses that version number, so `--version` alone cannot distinguish them. |
-| `--demo --profile pino` is rejected even though `--demo` works | An earlier source build rejected parser flags in demos. Rebuild the current checkout and use its explicit binary path; the version number may still be 0.2.0. See the [demo flag guide](DEMO.md#try-parser-flags-without-a-log-file). |
+| `--demo` is an unexpected argument | Upgrade to 0.3.0 or later. Check `command -v tell-tail` and `tell-tail --version` to detect an older installation on `PATH`. |
+| `--demo --profile pino` is rejected even though `--demo` works | An earlier development build rejected parser flags in demos. Install 0.3.0 or later and check the binary on `PATH`. See the [demo flag guide](DEMO.md#try-parser-flags-without-a-log-file). |
 | The default demo has unknowns and parser hints | Warning/error phases deliberately include numeric and conflicting-field records: coverage settles near 80%, with zero parse failures at the default size limit. Hints are session totals and persist through recovery. |
 | A selected-profile demo works but real input still has unknowns | Demo selectors generate matching JSON examples. Real-input flags only configure the parser; confirm the producer's field and numeric convention. Follow the [transition guide](DEMO.md#move-from-the-demo-to-your-logs). |
 | Following an existing file shows no records | Following starts at EOF. Append a complete new line, or restart with `--from start` to include existing contents. Use `--once` for a finite text/JSON scan. |

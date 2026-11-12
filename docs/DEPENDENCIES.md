@@ -1,5 +1,9 @@
 # Dependency review
 
+The [0.3.0 candidate review](validation/0.3.0-release/dependency-review.md)
+records the November 12 audit, including two informational advisories affecting
+unused APIs. The dated results below are historical, not the current audit.
+
 The application stays on Rust 1.88.0. Development tooling is separate: sanitizer
 fuzzing uses nightly-2026-10-14 and cargo-fuzz 0.13.2; RustSec checks use
 cargo-audit 0.22.2. Install audit tooling with:
@@ -87,4 +91,5 @@ lockfile includes the same new dependencies.
 Tell-Tail is licensed under the [MIT License](../LICENSE), with source hosted at
 [ding-labs/tell-tail](https://github.com/ding-labs/tell-tail). Before public binary
 redistribution, prepare the selected dependency notices and verify the archive's
-contents. No registry publication or binary release has been performed.
+contents. Publication status and exact-source checks are recorded in the
+[release guide](RELEASING.md) and versioned validation reports.

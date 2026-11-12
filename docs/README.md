@@ -7,9 +7,9 @@ hosted builds use pinned revisions and may lag this checkout.
 
 Tell-Tail helps you understand what one process or log source is doing now.
 Start with the [installation and quick start](../README.md#install-and-try-it).
-The built-in demo, parsing coverage, severity history, and activity freshness are
-on current main and **not yet in the published 0.2.0 packages**. Their guides show
-how to build and run the checkout explicitly.
+The built-in demo, expanded parsers, parsing coverage, severity history, and
+activity freshness require **0.3.0 or later**. Their guides use the installed
+`tell-tail` command.
 
 ## Using Tell-Tail
 
@@ -50,6 +50,14 @@ increments, and acceptance checks. Its [local log audit](MCP-LOG-AUDIT-2026-11-1
 records the evidence for proceeding. [Implementation validation](VALIDATION-MCP.md)
 records measurements and remaining external acceptance work.
 
+[Linux log inputs](PLAN-LINUX-INPUTS.md) defines the proposed journal parser,
+native system/user/kernel capture, later kernel-device support, and acceptance
+checks. These are planned features, not flags available in 0.3.0.
+
+[HTTP status monitoring](PLAN-HTTP-STATUS.md) defines access-log and structured
+status parsing, independent HTTP metrics, severity policy, bounded storage,
+output compatibility, and alerting. It is also planned work after 0.3.0.
+
 The [state-machine inventory and implementation plan](PLAN-STATE-MACHINES.md)
 maps observable transitions to their owners and tests, starting with dashboard retry behavior.
 
@@ -58,7 +66,8 @@ maps observable transitions to their owners and tests, starting with dashboard r
 them alongside the [changelog](../CHANGELOG.md), not as a list of features that
 are necessarily still pending.
 
-The [0.2 release validation](VALIDATION-0.2-RELEASE.md),
+The [0.3 release validation](VALIDATION-0.3-RELEASE.md),
+[0.2 release validation](VALIDATION-0.2-RELEASE.md),
 [0.2 implementation validation](VALIDATION-0.2.md),
 [initial validation](VALIDATION.md), and dated records in
 [validation/](validation/) apply to the revisions and environments they name.

@@ -1,10 +1,9 @@
 # Understanding a live log stream
 
-This guide covers parsing coverage, severity history, activity freshness, and expanded format recognition in
-the current source checkout. These additions are **unreleased** and are not in
-the published 0.2.0 Homebrew, Cargo, or release archives. See the
+This guide covers parsing coverage, severity history, activity freshness, and
+expanded format recognition in **0.3.0 or later**. See the
 [installation instructions](../README.md#install-and-try-it) and the
-[built-in demo walkthrough](DEMO.md) to run the new dashboard locally.
+[built-in demo walkthrough](DEMO.md).
 
 Tell-Tail helps answer four questions: are records arriving, can their severity
 be recognized, is the severity mix changing, and which recent errors can I
@@ -13,30 +12,24 @@ application health. It does not infer root causes or predict incidents.
 
 ## Start with your own logs
 
-From the repository root, build the checkout once:
-
-```sh
-cargo build --locked
-```
-
-The commands below use that binary, avoiding an older installation on `PATH`.
-Replace example files and programs with your own.
+Install or upgrade to 0.3.0 or later, then replace example files and programs
+with your own.
 
 ```sh
 # Watch new records in a file using the terminal dashboard
-./target/debug/tell-tail app.log
+tell-tail app.log
 
 # Include existing contents, then follow new records in a browser
-./target/debug/tell-tail app.log --from start --output web --open
+tell-tail app.log --from start --output web --open
 
 # Watch a Python worker; -u prevents Python's stdout buffering
-python3 -u worker.py 2>&1 | ./target/debug/tell-tail --window 10
+python3 -u worker.py 2>&1 | tell-tail --window 10
 
 # Select a top-level string severity field in JSON records
-./target/debug/tell-tail worker.ndjson --level-field severity
+tell-tail worker.ndjson --level-field severity
 
 # Count a completed capture and print a final report
-./target/debug/tell-tail capture.ndjson --once
+tell-tail capture.ndjson --once
 ```
 
 One process observes one file or stdin. `--apple-unified` is a separate macOS

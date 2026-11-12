@@ -1,0 +1,106 @@
+{
+  "source_commit": "05b3376e2ba1f809bf0a789faa477f3f17e1bcf2",
+  "checks_run": "https://github.com/ding-labs/tell-tail/actions/runs/43286011546",
+  "archive_run": "https://github.com/ding-labs/tell-tail/actions/runs/43286300595",
+  "platforms": {
+    "macos-15": {
+      "freshness": {
+        "samples": 25,
+        "p95_seconds": 0.2953807080000388,
+        "max_seconds": 0.29590345799999795,
+        "shutdown_seconds": 0.2808155839999813,
+        "input": "one record per visible acknowledgment",
+        "geometry": "100x26"
+      },
+      "package": {
+        "package": "tell-tail-0.3.0",
+        "files": 168,
+        "bytes": 470164,
+        "sha256": "bedc36963a71a6f1aad3b2a5924b20962397f6f07ded350ac064b4448d0b1578",
+        "allow_dirty": false,
+        "publish_dry_run": "passed",
+        "clean_install_smoke": "passed",
+        "offline_install": true,
+        "installed_web_smoke": "passed",
+        "installed_dashboard_assets": "passed"
+      },
+      "report_sha256": {
+        "freshness.json": "710faa5abddde35a2a50b28b0b9a0f61a62ec58cec963b42fee9d38e6caef15f",
+        "rotation.json": "4b11b33909bccba98e1a697d0e8b99a7d9b60a95ffe4c79856e21f16cdbf1c7e",
+        "stdin.json": "d82bb9e0ca937f98b36bc3b34d1b1eca6cb70cc7bd8528779fd758098693f143",
+        "package.json": "a7ebcd804699cec80683a04653bcf1d0dc47cee9be48df3578856202408be372",
+        "tui.json": "53c8740d0d6c895c4235af6043564bb0cce37a91bebe7276dace090635ed99ea"
+      }
+    },
+    "ubuntu-24.04": {
+      "freshness": {
+        "samples": 25,
+        "p95_seconds": 0.21718954599998597,
+        "max_seconds": 0.21753169299998376,
+        "shutdown_seconds": 0.2119687210000052,
+        "input": "one record per visible acknowledgment",
+        "geometry": "100x26"
+      },
+      "package": {
+        "package": "tell-tail-0.3.0",
+        "files": 168,
+        "bytes": 470164,
+        "sha256": "bedc36963a71a6f1aad3b2a5924b20962397f6f07ded350ac064b4448d0b1578",
+        "allow_dirty": false,
+        "publish_dry_run": "passed",
+        "clean_install_smoke": "passed",
+        "offline_install": true,
+        "installed_web_smoke": "passed",
+        "installed_dashboard_assets": "passed"
+      },
+      "report_sha256": {
+        "freshness.json": "d57faa2c49c8494e2188f03cb073c971eadedffdcaab304bab3094963933a1aa",
+        "rotation.json": "a7b9623edfa966b7de94133b2831aaee242e8020c91c169ccdad4f9e2a8b300d",
+        "stdin.json": "b708afd60b8134ebc010888ffde87b8d38e77a955f4af52bad3165d2d610ad00",
+        "package.json": "a7ebcd804699cec80683a04653bcf1d0dc47cee9be48df3578856202408be372",
+        "tui.json": "b9da527fc3b09b75fe942c33741b133d0b51a74383344a59e201912a48ccb8c3"
+      }
+    }
+  },
+  "archives": {
+    "schema_version": 1,
+    "version": "0.3.0",
+    "source_commit": "05b3376e2ba1f809bf0a789faa477f3f17e1bcf2",
+    "dirty": false,
+    "assets": [
+      {
+        "target": "aarch64-apple-darwin",
+        "name": "tell-tail-0.3.0-aarch64-apple-darwin.tar.gz",
+        "sha256": "db144ca5bc2c337cecc660397e3bfc8973c92251a4b83746b52025a33f018c4c",
+        "size": 1952683
+      },
+      {
+        "target": "aarch64-unknown-linux-musl",
+        "name": "tell-tail-0.3.0-aarch64-unknown-linux-musl.tar.gz",
+        "sha256": "b54ca204af51303c3206a335db0be04bbbbeedbac728e9b88f978fba40130ee9",
+        "size": 2023941
+      },
+      {
+        "target": "x86_64-unknown-linux-musl",
+        "name": "tell-tail-0.3.0-x86_64-unknown-linux-musl.tar.gz",
+        "sha256": "8c853f79174cc2681085933f7466522d2097d4f6c77646457dd921d545dfae30",
+        "size": 2179587
+      }
+    ]
+  },
+  "reviewed_short_reports": 6,
+  "audit": {
+    "database": {
+      "advisory-count": 1490,
+      "last-commit": "af7b3ec33460b8e2de8d422e16d628518891a519",
+      "last-updated": "2026-11-12T15:21:59+01:00"
+    },
+    "vulnerabilities": 0,
+    "informational_advisories": [
+      "RUSTSEC-2026-0386",
+      "RUSTSEC-2026-0486"
+    ],
+    "report_sha256": "ec5e47de4ec8a75302bb74b7d1008c09ca8102947399975e327552c8642d709d",
+    "review": "docs/validation/0.3.0-release/dependency-review.md"
+  }
+}
