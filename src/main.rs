@@ -102,6 +102,24 @@ fn main() {
     if tell_tail::writer::is_helper() {
         std::process::exit(tell_tail::writer::run_helper());
     }
+    if std::env::args_os().nth(1).is_some_and(|arg| arg == "mcp") {
+        let args = tell_tail::mcp::cli::Args::parse_from(
+            std::iter::once(std::ffi::OsString::from("tell-tail mcp"))
+                .chain(std::env::args_os().skip(2)),
+        );
+        if let Err(message) = args.validate() {
+            eprintln!("tell-tail: {message}");
+            std::process::exit(2);
+        }
+        match tell_tail::mcp::runtime::run(&args) {
+            Ok(code) => std::process::exit(code),
+            Err(e) if e.kind() == io::ErrorKind::BrokenPipe => return,
+            Err(e) => {
+                tell_tail::writer::diagnostic(&format!("tell-tail: {e}\n"));
+                std::process::exit(1);
+            }
+        }
+    }
     let args = Args::parse();
     if let Err(message) = args.validate() {
         eprintln!("tell-tail: {message}");
