@@ -46,7 +46,17 @@ impl Running {
                     let backlog = collector.views().iter().any(|s| s.backlog_bytes > 0);
                     {
                         let mut s = slot.lock().unwrap();
-                        s.sources = collector.views();
+                        let sources = collector.views();
+                        if s.sources != sources
+                            || s.roots != collector.root_views
+                            || s.discovery_limited != collector.limited
+                            || s.rejected_files != collector.rejected
+                            || s.open_failures != collector.open_failures
+                            || s.retired_sources != collector.retired
+                        {
+                            s.sequence += 1;
+                        }
+                        s.sources = sources;
                         s.roots = collector.root_views.clone();
                         s.discovery_limited = collector.limited;
                         s.rejected_files = collector.rejected;

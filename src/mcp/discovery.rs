@@ -15,7 +15,7 @@ pub struct Root {
     pub host: Host,
     pub path: PathBuf,
 }
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct RootView {
     pub host: Host,
     pub location: String,

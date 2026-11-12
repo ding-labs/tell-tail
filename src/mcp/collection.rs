@@ -13,7 +13,7 @@ use std::{
     time::{Duration, Instant, UNIX_EPOCH},
 };
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct SourceView {
     pub id: u64,
     pub host: Host,

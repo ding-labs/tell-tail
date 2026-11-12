@@ -153,3 +153,42 @@ fn new_files_and_bounded_history_pagination_work() {
     let second = m.json(&format!("/api/mcp/history?before={next}"));
     assert_eq!(second["events"].as_array().unwrap().len(), 10);
 }
+
+#[test]
+fn idle_publication_coalesces_and_stream_capacity_is_bounded() {
+    let t = tempfile::tempdir().unwrap();
+    let m = Monitor::start(t.path());
+    let first = m.until(|s| !s["roots"].as_array().unwrap().is_empty());
+    std::thread::sleep(Duration::from_millis(450));
+    let idle = m.json("/api/mcp/snapshot");
+    assert_eq!(idle["sequence"], first["sequence"]);
+    assert_eq!(idle["observed_ms"], first["observed_ms"]);
+    let mut streams = vec![];
+    for _ in 0..4 {
+        let mut stream = TcpStream::connect(m.address).unwrap();
+        stream
+            .set_read_timeout(Some(Duration::from_secs(2)))
+            .unwrap();
+        write!(
+            stream,
+            "GET /api/mcp/events HTTP/1.1\r\nHost: {}\r\n\r\n",
+            m.address
+        )
+        .unwrap();
+        let mut bytes = [0; 8192];
+        let n = stream.read(&mut bytes).unwrap();
+        assert!(
+            std::str::from_utf8(&bytes[..n])
+                .unwrap()
+                .starts_with("HTTP/1.1 200")
+        );
+        streams.push(stream);
+    }
+    assert!(m.request("/api/mcp/events", "").starts_with("HTTP/1.1 429"));
+    fs::write(t.path().join("new.log"), "2026-11-12T00:00:00Z info [AppServerConnection] mcp_server_startup_status_updated server=example status=failed\n").unwrap();
+    assert_eq!(
+        m.until(|s| s["counts"]["observations"] == 1)["retained_issues"],
+        1
+    );
+    drop(streams);
+}

@@ -67,7 +67,9 @@ async fn serve(
     signals: &crate::runtime::Signals,
 ) -> io::Result<()> {
     let listener = tokio::net::TcpListener::from_std(listener)?;
-    let (tx, frames) = watch::channel(Bytes::from(running.snapshot()?.json()?));
+    let initial = running.snapshot()?;
+    let mut published = initial.sequence;
+    let (tx, frames) = watch::channel(Bytes::from(initial.json()?));
     let app = router(App {
         shared: running.shared.clone(),
         frames,
@@ -104,6 +106,12 @@ async fn serve(
         }
         tokio::select! {
             _=tick.tick()=>{
+                let sequence = running.shared.lock().map(|s|s.sequence).map_err(|_|io::Error::other("MCP collector failed"));
+                match sequence {
+                    Ok(sequence) if sequence == published => continue,
+                    Ok(sequence) => published = sequence,
+                    Err(e) => break Err(e),
+                }
                 match running.snapshot().and_then(|s|s.json().map_err(io::Error::other)){
                     Ok(bytes)=>{tx.send_replace(Bytes::from(bytes));}
                     Err(e)=>break Err(e),
@@ -123,6 +131,16 @@ async fn serve(
             }
         }
     };
+    // Give connected clients a bounded chance to receive an explicit stopped state.
+    running.stop();
+    running.join()?;
+    if let Ok(snapshot) = running
+        .snapshot()
+        .and_then(|s| s.json().map_err(io::Error::other))
+    {
+        tx.send_replace(Bytes::from(snapshot));
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
     tasks.abort_all();
     while tasks.join_next().await.is_some() {}
     result
@@ -154,8 +172,17 @@ async fn events(State(app): State<App>) -> Response {
     let body = stream::unfold(
         (app.frames, permit, true),
         |(mut rx, permit, first)| async move {
-            if !first && rx.changed().await.is_err() {
-                return None;
+            if !first {
+                match tokio::time::timeout(Duration::from_secs(15), rx.changed()).await {
+                    Ok(Ok(())) => (),
+                    Ok(Err(_)) => return None,
+                    Err(_) => {
+                        return Some((
+                            Ok::<_, Infallible>(Bytes::from_static(b": keep-alive\n\n")),
+                            (rx, permit, false),
+                        ));
+                    }
+                }
             }
             let json = rx.borrow_and_update().clone();
             let mut bytes = Vec::with_capacity(json.len() + 40);
