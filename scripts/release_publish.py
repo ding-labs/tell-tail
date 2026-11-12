@@ -165,10 +165,24 @@ def publish_tap(version, timeout=3600):
                  {'ref': 'main', 'inputs': {'tag': f'v{version}'}})
     run_id = result['workflow_run_id']
     print(f'Homebrew import: {result["html_url"]}', flush=True)
-    deadline = time.monotonic() + timeout
+    started = time.monotonic()
+    deadline = started + timeout
+    visibility_deadline = min(deadline, started + 120)
     previous = None
+    observed = False
     while time.monotonic() < deadline:
-        run = api(f'repos/{TAP}/actions/runs/{run_id}')
+        run = optional_api(f'repos/{TAP}/actions/runs/{run_id}')
+        if run is None:
+            # Dispatch can return before the new run is visible to GET. Never
+            # dispatch again, or treat a later disappearance as success.
+            if observed or time.monotonic() >= visibility_deadline:
+                raise RuntimeError(f'Homebrew run is unavailable; inspect {result["html_url"]}')
+            if previous is None:
+                print(f'Waiting for Homebrew run visibility: {result["html_url"]}', flush=True)
+                previous = ('not_visible', None)
+            time.sleep(15)
+            continue
+        observed = True
         state = (run['status'], run['conclusion'])
         if state != previous:
             print(f'Homebrew run {run_id}: {state}', flush=True)
