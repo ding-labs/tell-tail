@@ -153,6 +153,10 @@ Add fixture-backed recipes for Nginx JSON `$status`, Apache JSON with final
 `%>s`, Pino HTTP's selected response field, and standard OTel response-status
 attributes. A flattened OTel JSON log record is different from an OTLP batch;
 this feature does not ingest OTLP, spans, or binary protobuf.
+Use the [Pino HTTP serializer contract](https://github.com/pinojs/pino-http)
+and [OTel HTTP attributes](https://opentelemetry.io/docs/specs/semconv/registry/attributes/http/)
+as fixture references. Retain the older `http.status_code` key as compatibility
+input while documenting `http.response.status_code` as the current OTel name.
 
 ### Proxy and nonstandard values
 
@@ -347,6 +351,26 @@ best effort with no durable retry. Slack/Discord messages must say `HTTP 5xx`
 or the selected code set and include denominator/coverage, rather than reuse
 `errors + fatal` wording. Existing alert tests remain unchanged; new tests cover
 the independent HTTP arithmetic and payloads.
+
+## Code owners and data flow
+
+Introduce a copyable `HttpAssessment` containing a bounded status/presence result
+alongside the existing classification assessment. Keep syntax parsing, severity
+policy, statistics, and rendering in separate owners so tests can isolate each
+contract. Preserve existing public classifier entry points with wrappers where
+possible; document any unavoidable Rust library API changes in the release.
+
+| Owner | Responsibility |
+| --- | --- |
+| `src/cli.rs` | HTTP options, selectors, policy, alert expression, and conflict checks |
+| New `src/parse/access.rs` and HTTP helper module | Access scanner, status normalization, field assessment |
+| `src/parse.rs`, `src/parse/logfmt.rs` | Streaming field extraction and presence/precedence |
+| `src/engine.rs`, `src/stats.rs` | Single-record accounting, optional HTTP state, class windows/history |
+| `src/recent.rs` | One bounded ring with severity and HTTP eligibility/filter metadata |
+| `src/output.rs`, `src/prometheus.rs`, `src/web_frame.rs` | Explicit serialization contracts and bounded payloads |
+| `src/tui.rs`, `web/frame.mjs`, `web/render.mjs`, `web/dashboard.mjs` | Validation, rendering, review filters, and frozen snapshots |
+| `src/alerts.rs`, `src/slack.rs`, `src/discord.rs` | HTTP arithmetic and distinct payloads with existing delivery machinery |
+| `src/input/demo.rs`, `tests/`, `fuzz/`, `browser-tests/` | Deterministic examples, independent oracles, regressions, and performance evidence |
 
 ## Implementation sequence
 
