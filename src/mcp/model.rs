@@ -32,6 +32,7 @@ pub enum Kind {
     Failed,
     Cancelled,
     DiscoveryFailed,
+    DiagnosticFailed,
     Closed,
     IntentionalClose,
     RendererRelease,
@@ -43,12 +44,13 @@ impl Kind {
     pub fn is_failure(self) -> bool {
         matches!(
             self,
-            Self::Failed | Self::DiscoveryFailed | Self::UnexpectedClose
+            Self::Failed | Self::DiscoveryFailed | Self::DiagnosticFailed | Self::UnexpectedClose
         )
     }
     pub fn phase(self) -> &'static str {
         match self {
             Self::DiscoveryFailed => "discovery",
+            Self::DiagnosticFailed => "diagnostic",
             Self::Closed
             | Self::IntentionalClose
             | Self::RendererRelease
@@ -63,6 +65,7 @@ impl Kind {
             Self::Failed => "Server startup failed",
             Self::Cancelled => "Server startup cancelled",
             Self::DiscoveryFailed => "Tool discovery failed",
+            Self::DiagnosticFailed => "Server reported an error",
             Self::Closed => "Connection closed; outcome unknown",
             Self::IntentionalClose => "Intentional shutdown",
             Self::RendererRelease => "Renderer released connection",

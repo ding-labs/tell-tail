@@ -206,3 +206,142 @@ mod tests {
         );
     }
 }
+
+pub fn claude(line: &str) -> Option<Parsed> {
+    let (stamp, tail) = line.split_once(' ')?;
+    let (first, tail) = tail.strip_prefix('[')?.split_once("] ")?;
+    let (second, body) = tail.strip_prefix('[')?.split_once("] ")?;
+    let aggregate = matches!(first, "info" | "warn" | "warning" | "error" | "debug");
+    let (server, raw_level) = if aggregate {
+        (second, first)
+    } else {
+        (first, second)
+    };
+    let level = match raw_level {
+        "info" => "info",
+        "warn" | "warning" => "warning",
+        "error" => "error",
+        "debug" => "debug",
+        _ => "unknown",
+    };
+    let body = body.rsplit_once(" { metadata:").map_or(body, |(b, _)| b);
+    let kind = if body.starts_with("Initializing server") {
+        Kind::Starting
+    } else if body.starts_with("Server started and connected successfully") {
+        Kind::Ready
+    } else if body.starts_with("Server transport closed (intentional shutdown)")
+        || body.starts_with("Shutting down server")
+    {
+        Kind::IntentionalClose
+    } else if body.starts_with("Server transport closed (renderer released port)") {
+        Kind::RendererRelease
+    } else if body.starts_with("Server transport closed unexpectedly")
+        || body.starts_with("Server disconnected.")
+    {
+        Kind::UnexpectedClose
+    } else if body.starts_with("Server transport closed")
+        || body.starts_with("Client transport closed")
+    {
+        Kind::Closed
+    } else if body.starts_with("Message from client:") || body.starts_with("Message from server:") {
+        Kind::Protocol
+    } else if level == "error" {
+        Kind::DiagnosticFailed
+    } else {
+        Kind::Unknown
+    };
+    // Deserialize only the top-level method. Arguments/results are ignored.
+    #[derive(serde::Deserialize)]
+    struct Method {
+        method: Option<String>,
+    }
+    let metadata = body.split_once(": ").map(|(_, tail)| tail).unwrap_or("");
+    let parsed_method = if kind == Kind::Protocol && metadata.starts_with('{') {
+        serde_json::from_str::<Method>(metadata)
+            .ok()
+            .and_then(|m| m.method)
+    } else {
+        metadata
+            .strip_prefix("method=\"")
+            .and_then(|s| s.split_once('"'))
+            .map(|(m, _)| m.to_owned())
+    };
+    let method = [
+        "initialize",
+        "notifications/initialized",
+        "tools/list",
+        "resources/list",
+        "tools/call",
+        "ping",
+    ]
+    .into_iter()
+    .find(|m| Some(*m) == parsed_method.as_deref());
+    Some(Parsed {
+        host: Host::ClaudeDesktop,
+        server: label(server),
+        scope: None,
+        timestamp_ms: timestamp_ms(stamp),
+        level,
+        kind,
+        reason: if kind == Kind::UnexpectedClose {
+            Some(Reason::Transport)
+        } else {
+            kind.is_failure().then(|| reason("", body))
+        },
+        method,
+        fingerprint: fingerprint(body),
+        aggregate,
+    })
+}
+
+pub fn record(host: Host, bytes: &[u8]) -> Option<Parsed> {
+    let line = std::str::from_utf8(bytes).ok()?.trim_end_matches('\r');
+    match host {
+        Host::CodexDesktop => codex(line),
+        Host::ClaudeDesktop => claude(line),
+    }
+}
+
+#[cfg(test)]
+mod claude_tests {
+    use super::*;
+    #[test]
+    fn mirrored_formats_match_without_retaining_private_payloads() {
+        let a=claude("2026-11-12T00:00:00.000Z [info] [example] Message from client: {\"method\":\"tools/call\",\"params\":{\"secret\":\"PRIVATE\"}}").unwrap();
+        let b=claude("2026-11-12T00:00:00.031Z [example] [info] Message from client: {\"method\":\"tools/call\",\"params\":{\"secret\":\"PRIVATE\"}} { metadata: undefined }").unwrap();
+        assert_eq!(a.fingerprint, b.fingerprint);
+        assert!(a.aggregate);
+        assert!(!b.aggregate);
+        assert_eq!(a.method, Some("tools/call"));
+        assert_eq!(a.kind, Kind::Protocol);
+        assert_eq!(b.timestamp_ms.unwrap() - a.timestamp_ms.unwrap(), 31);
+    }
+    #[test]
+    fn lifecycle_semantics_beat_log_severity() {
+        for (body, kind) in [
+            ("Initializing server...", Kind::Starting),
+            ("Server started and connected successfully", Kind::Ready),
+            (
+                "Server transport closed (intentional shutdown)",
+                Kind::IntentionalClose,
+            ),
+            (
+                "Server transport closed (renderer released port)",
+                Kind::RendererRelease,
+            ),
+            (
+                "Server transport closed unexpectedly, process exiting early",
+                Kind::UnexpectedClose,
+            ),
+            ("Client transport closed", Kind::Closed),
+        ] {
+            let p = claude(&format!("2026-11-12T00:00:00Z [example] [info] {body}")).unwrap();
+            assert_eq!(p.kind, kind);
+        }
+        let p =
+            claude("2026-11-12T00:00:00Z [error] [example] failed: ENOENT /private/path").unwrap();
+        assert_eq!(p.kind, Kind::DiagnosticFailed);
+        assert_eq!(p.reason, Some(Reason::MissingExecutable));
+        assert!(claude("unframed private stderr content").is_none());
+    }
+}
