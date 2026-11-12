@@ -17,9 +17,19 @@ import tomllib
 import urllib.parse
 
 
-def check_web_install(binary, directory):
+def check_web_install(binary, directory, mcp=False):
     """Exercise default-feature web output from the extracted, installed crate."""
-    child = subprocess.Popen([str(binary), '--output', 'web'], cwd=directory,
+    command = [str(binary), 'mcp', '--demo', '--open'] if mcp else [str(binary), '--output', 'web']
+    env = os.environ.copy()
+    if mcp:
+        opener = directory / 'opener'
+        opener.mkdir()
+        for name in ['open', 'xdg-open']:
+            path = opener / name
+            path.write_text('#!/bin/sh\nprintf "%s" "$1" > "$MCP_OPENER_CAPTURE"\nexit 1\n')
+            path.chmod(0o755)
+        env.update(PATH=str(opener), MCP_OPENER_CAPTURE=str(directory / 'opened-url'))
+    child = subprocess.Popen(command, cwd=directory, env=env,
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     try:
         child.stdin.write(b'INFO first\nWARN second\n')
@@ -43,7 +53,7 @@ def check_web_install(binary, directory):
         while True:
             connection = http.client.HTTPConnection(location.hostname, location.port, timeout=1)
             try:
-                connection.request('GET', '/api/snapshot')
+                connection.request('GET', '/api/mcp/snapshot' if mcp else '/api/snapshot')
                 response = connection.getresponse()
                 assert response.status == 200 and response.getheader('Cache-Control') == 'no-store'
                 payload = response.read(65537)
@@ -51,23 +61,38 @@ def check_web_install(binary, directory):
                 frame = json.loads(payload)
             finally:
                 connection.close()
-            if frame['metrics']['state'] == 'complete':
+            ready = frame.get('counts', {}).get('observations') == 2 if mcp else frame['metrics']['state'] == 'complete'
+            if ready:
                 break
             assert time.monotonic() < deadline, 'installed server did not retain final state'
             time.sleep(.01)
-        assert frame['web_schema_version'] == 1 and isinstance(frame['sequence'], str)
-        assert frame['metrics']['totals']['records'] == '2'
-        assert frame['metrics']['totals']['levels']['warn'] == '1'
-        assert 'schema_version' not in frame['metrics']
-        for path, mime, marker in [
-            ('/', 'text/html', b'Live metrics'),
-            ('/dashboard.css', 'text/css', b'.metrics-grid'),
-            ('/dashboard.mjs', 'text/javascript', b'new EventSource'),
-            ('/frame.mjs', 'text/javascript', b'parseFrame'),
-            ('/render.mjs', 'text/javascript', b'textContent'),
-            ('/favicon.svg', 'image/svg+xml', b'<svg'),
-            ('/logo.svg', 'image/svg+xml', b'<svg'),
-        ]:
+        if mcp:
+            assert frame['schema_version'] == 1 and frame['demo'] is True
+            assert frame['counts']['mirrors'] == 1 and frame['retained_issues'] == 1
+            assert frame['running'] is True
+            with selectors.DefaultSelector() as selector:
+                selector.register(child.stderr, selectors.EVENT_READ)
+                while b'could not open a browser' not in diagnostic:
+                    assert time.monotonic() < deadline, 'opener failure was not reported'
+                    if selector.select(.05):
+                        diagnostic.extend(os.read(child.stderr.fileno(), 4096))
+            assert (directory / 'opened-url').read_text() == url
+            assets = [('/', 'text/html', b'MCP activity'),
+                      ('/mcp.css', 'text/css', b'.mcp-table'),
+                      ('/mcp.mjs', 'text/javascript', b'new EventSource')]
+        else:
+            assert frame['web_schema_version'] == 1 and isinstance(frame['sequence'], str)
+            assert frame['metrics']['totals']['records'] == '2'
+            assert frame['metrics']['totals']['levels']['warn'] == '1'
+            assert 'schema_version' not in frame['metrics']
+            assets = [('/', 'text/html', b'Live metrics'),
+                      ('/dashboard.mjs', 'text/javascript', b'new EventSource'),
+                      ('/frame.mjs', 'text/javascript', b'parseFrame'),
+                      ('/render.mjs', 'text/javascript', b'textContent')]
+        assets += [('/dashboard.css', 'text/css', b'.metrics-grid'),
+                   ('/favicon.svg', 'image/svg+xml', b'<svg'),
+                   ('/logo.svg', 'image/svg+xml', b'<svg')]
+        for path, mime, marker in assets:
             connection = http.client.HTTPConnection(location.hostname, location.port, timeout=1)
             try:
                 connection.request('GET', path)
@@ -118,7 +143,7 @@ def main():
             assert package_name + '/Cargo.lock' in names
             assert package_name + '/src/web/mod.rs' in names
             assert package_name + '/tests/fixtures/output/empty-web-v1.json' in names
-            for asset in ['index.html', 'dashboard.css', 'dashboard.mjs', 'frame.mjs', 'render.mjs', 'logo.svg', 'favicon.svg']:
+            for asset in ['index.html', 'dashboard.css', 'dashboard.mjs', 'frame.mjs', 'render.mjs', 'logo.svg', 'favicon.svg', 'mcp.html', 'mcp.css', 'mcp.mjs']:
                 assert package_name + '/web/' + asset in names
             # Copy only the validated regular files/directories. This also supports
             # Python 3.11 builds without tarfile's newer extraction-filter API.
@@ -146,11 +171,12 @@ def main():
                                                 'error': 1, 'fatal': 0, 'unknown': 1}}
         assert snapshot['pending_bytes'] == 0 and snapshot['kind'] == 'final'
         check_web_install(binary, directory)
+        check_web_install(binary, directory, mcp=True)
     print(json.dumps({'package': package_name, 'files': len(names), 'bytes': archive.stat().st_size,
                       'sha256': hashlib.sha256(archive.read_bytes()).hexdigest(),
                       'allow_dirty': args.allow_dirty, 'publish_dry_run': 'passed', 'clean_install_smoke': 'passed',
                       'offline_install': True, 'installed_web_smoke': 'passed',
-                      'installed_dashboard_assets': 'passed'}))
+                      'installed_dashboard_assets': 'passed', 'installed_mcp_and_opener_failure': 'passed'}))
 
 
 if __name__ == '__main__':
