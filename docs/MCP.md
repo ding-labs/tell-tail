@@ -9,11 +9,19 @@ at [MCP diagnostics](https://docs.ding.ing/tell-tail/next/mcp/). The preview use
 pinned source revision and can lag newer checkout changes. See the
 [documentation publication steps](RELEASING.md#hosted-documentation) for that update.
 
+From a new directory, clone and build the tested MCP implementation (Rust 1.88
+or later is required). This pinned revision includes MCP support even before it
+is merged into the default branch or published in a package:
+
 ```sh
+git clone https://github.com/ding-labs/tell-tail.git tell-tail-mcp
+cd tell-tail-mcp
+git checkout bf17df088fa5d2dafdc4e69718ef239ad8068431
 cargo run --release --locked -- mcp --open
-# After installing this checkout with cargo install --path . --locked:
-tell-tail mcp --open
 ```
+
+After installing that checkout with `cargo install --path . --locked`, run
+`tell-tail mcp --open` directly.
 
 The command opens an embedded local dashboard and watches existing MCP logs.
 It needs no account, model key, plugin, server wrapper, configuration change,
@@ -23,7 +31,7 @@ does not stop collection. A failed browser opener leaves a working printed URL.
 Try the same collector and parsers against synthetic files instead:
 
 ```sh
-tell-tail mcp --demo --open
+cargo run --release --locked -- mcp --demo --open
 ```
 
 Demo mode reads no client logs. Every two seconds it replays startup, an OAuth
