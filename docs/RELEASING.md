@@ -1,16 +1,18 @@
 # Distribution and publishing
 
-Tell-Tail **0.3.0** was published on November 12, 2026 from commit
-`05b3376e2ba1f809bf0a789faa477f3f17e1bcf2`. It is available on
-[GitHub Releases](https://github.com/ding-labs/tell-tail/releases/tag/v0.3.0),
-[crates.io](https://crates.io/crates/tell-tail/0.3.0), and
+Tell-Tail **0.4.0** was published on November 12, 2026 from commit
+`09df02f7c233b819b94c08c6229b2ea0934ec206`. It is available on
+[GitHub Releases](https://github.com/ding-labs/tell-tail/releases/tag/v0.4.0),
+[crates.io](https://crates.io/crates/tell-tail/0.4.0), and
 [Homebrew](https://github.com/ding-labs/homebrew-tap/blob/main/tell-tail.rb).
-The [completed publication workflow](https://github.com/ding-labs/tell-tail/actions/runs/43299594524)
-and [publication receipt](validation/0.3.0-release/publication.json) verify that
-all three channels identify the same source. See the
-[0.3 validation record](VALIDATION-0.3-RELEASE.md) for reviewed gates and recovery
-details. Passing package checks alone does not publish to any channel.
-Historical [0.2 release evidence](VALIDATION-0.2-RELEASE.md) remains separate.
+Normal installations include `tell-tail mcp --open` and its embedded dashboard.
+The [completed publication workflow](https://github.com/ding-labs/tell-tail/actions/runs/43317916073)
+and [publication receipt](validation/0.4.0-release/publication.json) verify all
+three channels against the same frozen source. The
+[0.4 validation record](VALIDATION-0.4-RELEASE.md) records reviewed gates and the
+Mac runner-capacity retry. Passing package checks alone does not publish a release.
+Historical [0.3](VALIDATION-0.3-RELEASE.md) and
+[0.2](VALIDATION-0.2-RELEASE.md) release evidence remains separate.
 
 ## Hosted documentation
 
