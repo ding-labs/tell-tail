@@ -1,73 +1,76 @@
 {
   "schema_version": 1,
-  "version": "0.3.0",
-  "source_commit": "05b3376e2ba1f809bf0a789faa477f3f17e1bcf2",
+  "version": "0.4.0",
+  "source_commit": "09df02f7c233b819b94c08c6229b2ea0934ec206",
   "gates": {
     "correctness": {
       "passed": true,
       "evidence": [
-        "https://github.com/ding-labs/tell-tail/actions/runs/43286011546",
-        "docs/validation/0.3.0-release/ci-summary.json"
+        "https://github.com/ding-labs/tell-tail/actions/runs/43307355126",
+        "docs/validation/0.4.0-release/ci-summary.json"
       ]
     },
     "fuzzing": {
       "passed": true,
       "evidence": [
-        "https://github.com/ding-labs/tell-tail/actions/runs/43286063233",
-        "docs/validation/0.3.0-release/fuzz-summary.json"
+        "https://github.com/ding-labs/tell-tail/actions/runs/43307353008",
+        "docs/validation/0.4.0-release/fuzz-summary.json"
       ]
     },
     "dashboard_hour": {
       "passed": true,
       "evidence": [
-        "https://github.com/ding-labs/tell-tail/actions/runs/43286063233",
-        "docs/validation/0.3.0-release/extended-summary.json"
+        "https://github.com/ding-labs/tell-tail/actions/runs/43307353008",
+        "docs/validation/0.4.0-release/extended-summary.json"
       ]
     },
     "default_memory": {
       "passed": true,
       "evidence": [
-        "https://github.com/ding-labs/tell-tail/actions/runs/43286063233",
-        "docs/validation/0.3.0-release/extended-summary.json"
+        "https://github.com/ding-labs/tell-tail/actions/runs/43307353008",
+        "docs/validation/0.4.0-release/extended-summary.json"
       ]
     },
     "maximum_memory": {
       "passed": true,
       "evidence": [
-        "https://github.com/ding-labs/tell-tail/actions/runs/43286063233",
-        "docs/validation/0.3.0-release/extended-summary.json",
-        "docs/validation/0.3.0-release/maximum-tui-macos.json"
+        "https://github.com/ding-labs/tell-tail/actions/runs/43307353008",
+        "docs/validation/0.4.0-release/extended-summary.json",
+        "docs/validation/0.4.0-release/maximum-tui-macos.json"
       ]
     },
     "responsiveness": {
       "passed": true,
       "evidence": [
-        "https://github.com/ding-labs/tell-tail/actions/runs/43286011546",
-        "docs/validation/0.3.0-release/ci-summary.json"
+        "https://github.com/ding-labs/tell-tail/actions/runs/43307355126",
+        "docs/validation/0.4.0-release/ci-summary.json",
+        "docs/validation/0.4.0-release/mcp-performance.json"
       ]
     },
     "performance": {
       "passed": true,
       "evidence": [
-        "https://github.com/ding-labs/tell-tail/actions/runs/43286068503",
-        "docs/validation/0.3.0-release/performance-summary.json"
+        "https://github.com/ding-labs/tell-tail/actions/runs/43307357400",
+        "docs/validation/0.4.0-release/performance-summary.json"
       ]
     },
     "compatibility": {
       "passed": true,
       "evidence": [
-        "https://github.com/ding-labs/tell-tail/actions/runs/43286011546",
-        "docs/validation/0.3.0-release/ci-summary.json"
+        "https://github.com/ding-labs/tell-tail/actions/runs/43307355126",
+        "docs/validation/0.4.0-release/ci-summary.json"
       ]
     },
     "distribution": {
       "passed": true,
       "evidence": [
-        "https://github.com/ding-labs/tell-tail/actions/runs/43286011546",
-        "docs/validation/0.3.0-release/ci-summary.json",
-        "https://github.com/ding-labs/tell-tail/actions/runs/43286300595",
-        "docs/validation/0.3.0-release/dependency-review.md",
-        "docs/validation/0.3.0-release/launch-smoke.json"
+        "https://github.com/ding-labs/tell-tail/actions/runs/43307355126",
+        "docs/validation/0.4.0-release/ci-summary.json",
+        "https://github.com/ding-labs/tell-tail/actions/runs/43307362571",
+        "docs/validation/0.4.0-release/dependency-review.md",
+        "docs/validation/0.4.0-release/launch-smoke.json",
+        "docs/validation/0.4.0-release/archive-smoke.json",
+        "docs/validation/0.4.0-release/mcp-launch-smoke.json"
       ]
     }
   },
@@ -78,7 +81,7 @@
       "reason": "Standing repository policy: optional background validation; no waiver required.",
       "evidence": [
         "AGENTS.md",
-        "docs/VALIDATION-0.3-RELEASE.md"
+        "docs/VALIDATION-0.4-RELEASE.md"
       ]
     }
   }
