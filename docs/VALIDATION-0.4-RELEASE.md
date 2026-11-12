@@ -97,3 +97,12 @@ ranges are 56.65%/50.00%, and `measurement_qualifies_for_gate=false`. Its small
 median difference is not credited as a passing performance result. The controlled
 Linux measurement above satisfies the existing performance gate without changing
 thresholds or discarding the noisy observation.
+
+## Reviewed fuzzing
+
+All three targets completed 1,801 seconds against the frozen source without
+reported crashes or sanitizer findings. Classification executed 34,688,799
+cases, framing 46,972,801, and the timed engine 4,093,166. The
+[fuzz summary](validation/0.4.0-release/fuzz-summary.json) preserves the exact
+source, run, counts, log hashes, and toolchain. These bounded campaigns do not
+prove safety for every possible input.
