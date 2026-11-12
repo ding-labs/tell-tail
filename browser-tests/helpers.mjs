@@ -9,7 +9,13 @@ export const { chromium } = await import(modulePath);
 export const root = fileURLToPath(new URL('..', import.meta.url));
 
 export async function monitor(args = []) {
-  const child = spawn(resolve(root, process.env.TELL_TAIL_BIN || 'target/debug/tell-tail'), ['--output', 'web', ...args], { cwd: root, stdio: ['pipe', 'pipe', 'pipe'] });
+  return start(['--output', 'web', ...args]);
+}
+export async function monitorMcp(args = []) {
+  return start(['mcp', '--output', 'web', ...args]);
+}
+async function start(args) {
+  const child = spawn(resolve(root, process.env.TELL_TAIL_BIN || 'target/debug/tell-tail'), args, { cwd: root, stdio: ['pipe', 'pipe', 'pipe'] });
   let diagnostic = '';
   let stdout = '';
   child.stdout.on('data', data => { stdout = (stdout + data).slice(-16384); });

@@ -237,6 +237,7 @@ jobs:
           output = subprocess.check_output([str(binary), '--output', 'json'], input=b'INFO first\nWARN second\n')
           assert json.loads(output.splitlines()[-1])['totals']['records'] == 2
           check_web_install(binary, root)
+          check_web_install(binary, root, mcp=True)
           PYTHON
       - name: Import the stable release into Homebrew and wait for its checks
         id: homebrew

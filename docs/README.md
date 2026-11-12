@@ -1,15 +1,21 @@
 # Tell-Tail documentation
 
+Read the [hosted released guides](https://docs.ding.ing/tell-tail/) or the
+[hosted unreleased preview](https://docs.ding.ing/tell-tail/next/) on
+[Ding docs](https://docs.ding.ing/). This directory is the source of truth;
+hosted builds use pinned revisions and may lag this checkout.
+
 Tell-Tail helps you understand what one process or log source is doing now.
 Start with the [installation and quick start](../README.md#install-and-try-it).
 The built-in demo, expanded parsers, parsing coverage, severity history, and
 activity freshness require **0.3.0 or later**. Their guides use the installed
-`tell-tail` command.
+`tell-tail` command. MCP diagnostics require **0.4.0 or later**.
 
 ## Using Tell-Tail
 
 | Guide | What it answers |
 | --- | --- |
+| [MCP diagnostics](MCP.md) | Existing desktop MCP logs, grouped failures, live timeline, safe evidence, source coverage, demo, and API |
 | [Log format recognition](LOG-FORMATS.md) | Automatic styles, one-flag profiles, nested keys, container wrappers, parser hints, and precise limits |
 | [Understanding a live log stream](MONITORING.md) | What coverage, histories, ratios, and activity ages mean; worked examples, parser conventions, time scopes, and controls |
 | [Built-in demo](DEMO.md) | One-command browser start, phase-by-phase parsing walkthrough, flag examples, switching to real logs, limits, and shutdown |
@@ -37,6 +43,12 @@ or an inference service.
 | [Design](DESIGN.md) / [Dependencies](DEPENDENCIES.md) | Visual conventions and dependency choices |
 
 ## Plans and historical evidence
+
+The [passive MCP watcher plan](PLAN-MCP.md) records the implemented
+`tell-tail mcp --open` workflow, supported-source boundaries, implementation
+increments, and acceptance checks. Its [local log audit](MCP-LOG-AUDIT-2026-11-12.md)
+records the evidence for proceeding. [Implementation validation](VALIDATION-MCP.md)
+records measurements and remaining external acceptance work.
 
 [Linux log inputs](PLAN-LINUX-INPUTS.md) defines the proposed journal parser,
 native system/user/kernel capture, later kernel-device support, and acceptance

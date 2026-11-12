@@ -12,6 +12,37 @@ all three channels identify the same source. See the
 details. Passing package checks alone does not publish to any channel.
 Historical [0.2 release evidence](VALIDATION-0.2-RELEASE.md) remains separate.
 
+## Hosted documentation
+
+The public documentation origin is [docs.ding.ing](https://docs.ding.ing/).
+[Released Tell-Tail guides](https://docs.ding.ing/tell-tail/) and the
+[unreleased preview](https://docs.ding.ing/tell-tail/next/) are separate channels.
+These repository Markdown files are the guide sources; the Ding website build
+fetches immutable source revisions rather than tracking a floating branch.
+
+When publishing documentation changes:
+
+1. Make the Tell-Tail source commit available to the public docs build. In the
+   Ding website repository, update `content/tell-tail.json`: `previewRef` for
+   unreleased behavior, or `docsRef` for behavior in the released version. Both
+   are full commit SHAs. Move the stable pin only after the corresponding package release is published.
+2. Register new hosted pages in `scripts/web/build_tell_tail_docs.py`. For MCP,
+   include `docs/MCP.md` in the stable `PAGES` map for 0.4.0 as
+   `('mcp.md', 'MCP diagnostics')`.
+   Advancing the source pin alone does not publish a new page. Repository-only
+   plans, audits and validation evidence can remain links to the pinned source.
+3. Run the website repository's complete docs build, strict link checks and
+   publication checks, following its `workers/README.md`. Confirm the preview
+   warning, navigation, rewritten links and `build-info.json` source revision.
+4. Publish the docs before advertising a new hosted page. Verify HTTP 200 and
+   the expected content at the new route; the released MCP route is
+   `https://docs.ding.ing/tell-tail/mcp/`. Keep the source pin and page map
+   together so the guide and its navigation links are published in the same build.
+
+A product release also updates the website's version, release reference, stable
+page map, installation entry point and examples together. Optional background
+soaks never gate documentation or product publication.
+
 ## Supported release artifacts
 
 | Archive target | Runtime | Build and test host |

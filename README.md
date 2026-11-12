@@ -5,6 +5,10 @@ Tell-Tail reads one file or stdin and keeps counters, bounded rolling statistics
 and a small in-memory sample of recent errors for its dashboards. It supports
 plain text, NDJSON, Prometheus, and a local HTTP/SSE metrics API.
 
+Hosted documentation: [released guides](https://docs.ding.ing/tell-tail/) ·
+[unreleased preview](https://docs.ding.ing/tell-tail/next/) ·
+[Ding docs](https://docs.ding.ing/).
+
 ## Install and try it
 
 Install Tell-Tail through Homebrew or
@@ -39,12 +43,12 @@ terminal shows up to 20 error/fatal previews, each capped at 512 bytes and kept
 only in memory. Long previews are marked with an ellipsis. Previews are omitted
 from CLI JSON, text, Prometheus, and webhook payloads.
 
-[GitHub Releases](https://github.com/ding-labs/tell-tail/releases/tag/v0.3.0)
+[GitHub Releases](https://github.com/ding-labs/tell-tail/releases/tag/v0.4.0)
 provides native archives for Apple Silicon on macOS 14+ and static Linux binaries
 for x86_64 and ARM64. The dashboard is embedded; the archives need no Rust, Node,
 or Python. See the [distribution guide](docs/RELEASING.md) for platform details.
 
-The examples below target **0.3.0 or later**. Upgrade an existing Homebrew
+The examples below target **0.4.0 or later**, including MCP diagnostics. Upgrade an existing Homebrew
 installation with `brew upgrade ding-labs/tap/tell-tail`, or reinstall with Cargo.
 Check `tell-tail --version` before trying the demo or parser profiles.
 
@@ -52,6 +56,23 @@ Read [Understanding a live log stream](docs/MONITORING.md) for a complete guide
 to interpreting coverage, history, activity ages, controls, and their limits.
 The [documentation index](docs/README.md) links all user guides, API contracts,
 troubleshooting, and validation procedures.
+
+### MCP diagnostics
+
+Watch existing Codex Desktop and Claude Desktop MCP logs on macOS:
+
+```sh
+tell-tail mcp --open
+# Synthetic failures and recovery; reads no client logs:
+tell-tail mcp --demo --open
+```
+
+The local dashboard groups reported failures by server and execution, shows a
+live searchable timeline, and distinguishes history, recovery, and source
+freshness. No server configuration change, plugin, or account is needed.
+See [MCP diagnostics](docs/MCP.md) for sources, headless output, and coverage limits.
+Read the [hosted MCP guide](https://docs.ding.ing/tell-tail/mcp/) for installation
+and usage. MCP diagnostics require 0.4.0 or later; no source build is needed.
 
 ### Built-in demo
 

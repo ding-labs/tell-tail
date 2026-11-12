@@ -1,12 +1,13 @@
 [package]
 name = "tell-tail"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 rust-version = "1.88"
 description = "Bounded-memory log throughput and severity monitor"
 license = "MIT"
 repository = "https://github.com/ding-labs/tell-tail"
 homepage = "https://github.com/ding-labs/tell-tail"
+documentation = "https://docs.ding.ing/tell-tail/"
 readme = "README.md"
 keywords = ["logs", "monitoring", "cli", "tui", "observability"]
 categories = ["command-line-utilities", "development-tools::debugging"]

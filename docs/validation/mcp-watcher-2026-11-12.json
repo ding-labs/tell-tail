@@ -1,0 +1,164 @@
+{
+  "performance": {
+    "measured_at": "2026-11-12T19:55:02.749Z",
+    "binary": "target/release/tell-tail",
+    "platform": "darwin",
+    "architecture": "arm64",
+    "processor": "Apple M3",
+    "workload": {
+      "files": 32,
+      "history_bytes": 16777216,
+      "live_samples": 30,
+      "idle_seconds": 10.004791291
+    },
+    "first_usable_browser_ms": 246.572875,
+    "append_to_browser_p95_ms": 299.55624999999964,
+    "append_to_browser_samples_ms": [
+      184.46724999999992,
+      144.214917,
+      164.44400000000007,
+      135.2253330000001,
+      123.46658400000001,
+      308.6167090000001,
+      297.690292,
+      284.35854100000006,
+      161.76187500000015,
+      148.81129199999987,
+      135.704166,
+      124.6540829999999,
+      125.570334,
+      80.36337500000036,
+      85.19045899999992,
+      164.90149999999994,
+      144.7309580000001,
+      136.9664590000002,
+      104.93220800000017,
+      110.40362499999992,
+      97.64425000000028,
+      99.38316699999996,
+      162.3427499999998,
+      148.32487500000025,
+      136.54545899999994,
+      122.04295900000034,
+      109.01108300000033,
+      299.55624999999964,
+      282.4444160000003,
+      161.58837499999936
+    ],
+    "new_file_to_browser_ms": 148.55170799999996,
+    "idle_cpu_percent_one_core": 0.29985633010642676,
+    "rss_bytes": 5668864,
+    "shutdown_ms": 128.29029199999786,
+    "forced_kill": false,
+    "observations": 63,
+    "sources": 33,
+    "limits": {
+      "first_view_ms": 2000,
+      "append_p95_ms": 500,
+      "discovery_ms": 2000,
+      "idle_cpu_percent": 1,
+      "rss_bytes": 134217728,
+      "shutdown_ms": 1000
+    },
+    "targets_met": true
+  },
+  "package": {
+    "package": "tell-tail-0.2.0",
+    "files": 188,
+    "bytes": 513350,
+    "sha256": "69ce5f46934f6745d5feeeedc6e3e366eba5acde5b781e18ca52a45fd33c4e06",
+    "allow_dirty": false,
+    "publish_dry_run": "passed",
+    "clean_install_smoke": "passed",
+    "offline_install": true,
+    "installed_web_smoke": "passed",
+    "installed_dashboard_assets": "passed",
+    "installed_mcp_and_opener_failure": "passed"
+  },
+  "passive_local": {
+    "measured_at": "2026-11-12T19:57:03.030829+00:00",
+    "duration_seconds": 60.37708287499845,
+    "source_counts_by_host": {
+      "codex-desktop": 60,
+      "claude-desktop": 4
+    },
+    "initial_counts": {
+      "observations": 2199,
+      "mirrors": 675,
+      "ignored": 26233,
+      "unknown": 218,
+      "evicted_events": 199,
+      "evicted_issues": 0,
+      "evicted_states": 0
+    },
+    "final_counts": {
+      "observations": 2199,
+      "mirrors": 675,
+      "ignored": 26236,
+      "unknown": 218,
+      "evicted_events": 199,
+      "evicted_issues": 0,
+      "evicted_states": 0
+    },
+    "live_events_seen_in_overviews": 0,
+    "live_events_by_host": {},
+    "discovery_limited": true,
+    "open_failures": 0,
+    "history_omitted_bytes": 57305621,
+    "server_configurations_changed": false,
+    "raw_logs_or_server_names_saved": false
+  },
+  "code_revision": "af9e9cd",
+  "binary_sha256": "42c67902da8cefae151cdb02c13ed675659a37c4da5291439dcd3f0776da2ce8",
+  "rust_version": "rustc 1.88.0 (6b00bc388 2025-06-23)",
+  "rust_tests": {
+    "default": {
+      "passed": 173,
+      "failed": 0,
+      "ignored": 0
+    },
+    "no-default": {
+      "passed": 143,
+      "failed": 0,
+      "ignored": 0
+    },
+    "notifications": {
+      "passed": 149,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "clippy": {
+    "default": "passed",
+    "no-default": "passed",
+    "notifications": "passed"
+  },
+  "browser": {
+    "binary": "release",
+    "passed": 33,
+    "failed": 0,
+    "skipped": 0,
+    "headed_visibility": true
+  },
+  "external_pending": [
+    "Five-developer usefulness pilot",
+    "Naturally occurring live MCP failure observation",
+    "Additional client/platform adapters"
+  ],
+  "optional_24_hour_soaks": "Not run; non-blocking, never a publish or deployment gate",
+  "format": "passed",
+  "legacy_checks": {
+    "check_output.py": "passed",
+    "check_terminal.py": "passed",
+    "check_terminal.py --alerts": "passed",
+    "check_backpressure.py": "passed"
+  },
+  "final_recovery_guard": {
+    "revision": "bf17df0",
+    "scoped_state_tests_passed": 7,
+    "mcp_integration_tests_passed": 8,
+    "release_mcp_browser_tests_passed": 1,
+    "default_all_target_clippy": "passed",
+    "release_binary_sha256": "81cb838b5b1c6530fe09bee71a2685e97b5fc5d2a60d98afdb59fb4c699c5fcd"
+  }
+}
