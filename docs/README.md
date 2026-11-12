@@ -9,7 +9,7 @@ Tell-Tail helps you understand what one process or log source is doing now.
 Start with the [installation and quick start](../README.md#install-and-try-it).
 The built-in demo, expanded parsers, parsing coverage, severity history, and
 activity freshness require **0.3.0 or later**. Their guides use the installed
-`tell-tail` command.
+`tell-tail` command. MCP diagnostics require **0.4.0 or later**.
 
 ## Using Tell-Tail
 

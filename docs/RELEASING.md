@@ -25,17 +25,18 @@ When publishing documentation changes:
 1. Make the Tell-Tail source commit available to the public docs build. In the
    Ding website repository, update `content/tell-tail.json`: `previewRef` for
    unreleased behavior, or `docsRef` for behavior in the released version. Both
-   are full commit SHAs. Do not move the stable pin to unreleased MCP behavior.
+   are full commit SHAs. Move the stable pin only after the corresponding package release is published.
 2. Register new hosted pages in `scripts/web/build_tell_tail_docs.py`. For MCP,
-   add `docs/MCP.md` to `PREVIEW_PAGES` as `('mcp.md', 'MCP diagnostics')`.
+   include `docs/MCP.md` in the stable `PAGES` map for 0.4.0 as
+   `('mcp.md', 'MCP diagnostics')`.
    Advancing the source pin alone does not publish a new page. Repository-only
    plans, audits and validation evidence can remain links to the pinned source.
 3. Run the website repository's complete docs build, strict link checks and
    publication checks, following its `workers/README.md`. Confirm the preview
    warning, navigation, rewritten links and `build-info.json` source revision.
 4. Publish the docs before advertising a new hosted page. Verify HTTP 200 and
-   the expected content at the new route; the intended MCP preview route is
-   `https://docs.ding.ing/tell-tail/next/mcp/`. Keep the source pin and page map
+   the expected content at the new route; the released MCP route is
+   `https://docs.ding.ing/tell-tail/mcp/`. Keep the source pin and page map
    together so the guide and its navigation links are published in the same build.
 
 A product release also updates the website's version, release reference, stable

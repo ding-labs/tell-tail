@@ -1,27 +1,28 @@
 # Passive MCP diagnostics
 
-**Available in this checkout; not in the published 0.2.0 packages.**
+**Requires Tell-Tail 0.4.0 or later, with the default web feature.**
 
-Hosted documentation lives on [docs.ding.ing](https://docs.ding.ing/):
-[released Tell-Tail guides](https://docs.ding.ing/tell-tail/) and
-[unreleased preview](https://docs.ding.ing/tell-tail/next/). Read this guide online
-at [MCP diagnostics](https://docs.ding.ing/tell-tail/next/mcp/). The preview uses a
-pinned source revision and can lag newer checkout changes. See the
-[documentation publication steps](RELEASING.md#hosted-documentation) for that update.
+Read this guide on [Ding docs](https://docs.ding.ing/tell-tail/mcp/).
+The [released guides](https://docs.ding.ing/tell-tail/) describe installed
+packages; the [preview channel](https://docs.ding.ing/tell-tail/next/) tracks a
+separate pinned revision.
 
-From a new directory, clone and build the tested MCP implementation (Rust 1.88
-or later is required). This pinned revision includes MCP support even before it
-is merged into the default branch or published in a package:
+Install the native binary with Homebrew:
 
 ```sh
-git clone https://github.com/ding-labs/tell-tail.git tell-tail-mcp
-cd tell-tail-mcp
-git checkout bf17df088fa5d2dafdc4e69718ef239ad8068431
-cargo run --release --locked -- mcp --open
+brew install ding-labs/tap/tell-tail
+tell-tail mcp --open
 ```
 
-After installing that checkout with `cargo install --path . --locked`, run
-`tell-tail mcp --open` directly.
+For an existing installation, run `brew update && brew upgrade ding-labs/tap/tell-tail`.
+Check `tell-tail --version`; MCP requires 0.4.0 or later. Native archives for
+Apple Silicon and Linux x86-64/ARM64 are also on
+[GitHub Releases](https://github.com/ding-labs/tell-tail/releases/tag/v0.4.0).
+With Rust 1.88+ installed, `cargo install tell-tail --version 0.4.0 --locked`
+installs from crates.io. A source checkout is not required.
+
+Automatic client discovery is supported on macOS. On Linux use an explicit
+supported log directory or the synthetic demo; see the source limits below.
 
 The command opens an embedded local dashboard and watches existing MCP logs.
 It needs no account, model key, plugin, server wrapper, configuration change,
@@ -31,7 +32,7 @@ does not stop collection. A failed browser opener leaves a working printed URL.
 Try the same collector and parsers against synthetic files instead:
 
 ```sh
-cargo run --release --locked -- mcp --demo --open
+tell-tail mcp --demo --open
 ```
 
 Demo mode reads no client logs. Every two seconds it replays startup, an OAuth
