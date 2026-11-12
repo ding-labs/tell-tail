@@ -79,3 +79,21 @@ The stdin/NDJSON and followed-file/metrics 24-hour scenarios are not scheduled
 for this release. Under [repository policy](../AGENTS.md), they remain optional,
 non-blocking background validation. No waiver or completed day result is required
 for publication, and no day result is claimed.
+
+## Reviewed controlled performance
+
+The [controlled performance summary](validation/0.4.0-release/performance-summary.json)
+identifies the clean candidate and harness, binary hash, and reference host
+`runnervm7aw5e` (AMD EPYC 9V74). Producer and consumer are pinned to separate
+CPUs. All 15 nested accounting/resource reports pass, and the five matched
+pairs use identical workloads. Median headless/TUI throughput is 7.37M/7.12M
+records/s with 2.75% median paired loss. Relative ranges are 0.76%/0.98%, with
+no generator-saturation warning. Cached 200-byte text reaches 15.64M records/s
+with 0.19% relative range. These satisfy the existing reference-host thresholds;
+they are not universal throughput guarantees.
+
+The additional Mac performance run is inconclusive: headless/TUI relative
+ranges are 56.65%/50.00%, and `measurement_qualifies_for_gate=false`. Its small
+median difference is not credited as a passing performance result. The controlled
+Linux measurement above satisfies the existing performance gate without changing
+thresholds or discarding the noisy observation.
