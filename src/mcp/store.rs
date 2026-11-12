@@ -162,9 +162,10 @@ impl Store {
                         .is_some_and(|(a, b)| a <= b)
             })
             .max_by_key(|e| (e.timestamp_ms, e.id));
-        let scope_known = p.scope.is_some()
-            || (p.host == Host::ClaudeDesktop
-                && (p.kind == Kind::Starting || prior_start.is_some()));
+        let scope_known = p.server != "unknown-server"
+            && (p.scope.is_some()
+                || (p.host == Host::ClaudeDesktop
+                    && (p.kind == Kind::Starting || prior_start.is_some())));
         let scope = if let Some(scope) = p.scope.as_deref() {
             format!("{:016x}", self.hash.hash_one((p.host, &p.server, scope)))
         } else if p.host == Host::ClaudeDesktop && p.kind == Kind::Starting {
@@ -536,5 +537,23 @@ mod tests {
         );
         assert!(s.issues[0].recovered_ms.is_none());
         assert_eq!(s.servers[0].kind, Kind::Failed);
+    }
+    #[test]
+    fn sanitized_unknown_server_names_cannot_confirm_recovery() {
+        let mut s = Store::default();
+        put(
+            &mut s,
+            1,
+            Host::CodexDesktop,
+            "2026-11-12T00:00:00Z warning [AppServerConnection] mcp_server_startup_status_updated server=../first status=failed threadId=a",
+        );
+        put(
+            &mut s,
+            1,
+            Host::CodexDesktop,
+            "2026-11-12T00:00:01Z info [AppServerConnection] mcp_server_startup_status_updated server=../second status=ready threadId=a",
+        );
+        assert!(s.events.iter().all(|e| !e.scope_known));
+        assert!(s.issues[0].recovered_ms.is_none());
     }
 }
