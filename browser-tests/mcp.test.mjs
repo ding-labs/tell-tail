@@ -1,0 +1,51 @@
+import assert from 'node:assert/strict';
+import { mkdtemp, writeFile, appendFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { test } from 'node:test';
+import { chromium, monitorMcp } from './helpers.mjs';
+
+const record = (server, status, time = new Date().toISOString()) => `${time} info [AppServerConnection] mcp_server_startup_status_updated server=${server} status=${status} threadId=PRIVATE_THREAD hostId=local ${status === 'failed' ? 'failureReason=reauthenticationRequired error="PRIVATE_SECRET"' : ''}\n`;
+test('MCP dashboard shows safe evidence, freezes, searches, resumes and fits small screens', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'tell-tail-browser-mcp-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const file = join(dir, 'desktop.log');
+  await writeFile(file, record('calendar', 'failed'));
+  const server = await monitorMcp(['--source', 'codex-desktop', '--log-dir', dir]);
+  t.after(() => server.close());
+  const browser = await chromium.launch(); t.after(() => browser.close());
+  const page = await browser.newPage();
+  const errors = [], external = [];
+  page.on('pageerror', e => errors.push(e.message));
+  page.on('request', r => { if (!r.url().startsWith(server.url)) external.push(r.url()); });
+  await page.goto(server.url);
+  await page.waitForFunction(() => document.querySelectorAll('#timeline tr').length === 1);
+  assert.match(await page.locator('#issues').textContent(), /OAuth reauthentication/);
+  assert.match(await page.locator('#timeline').textContent(), /Imported history/);
+  assert.doesNotMatch(await page.locator('body').textContent(), /PRIVATE_/);
+  await page.locator('#timeline button').first().click();
+  await page.waitForFunction(() => document.getElementById('detail-fields').textContent.includes('Source 1'));
+  assert.match(await page.locator('#detail').textContent(), /byte 0/);
+  await page.locator('#close-detail').click();
+  await page.locator('#pause').click();
+  await appendFile(file, record('calendar', 'ready'));
+  await page.waitForFunction(async () => (await (await fetch('/api/mcp/snapshot')).json()).counts.observations === 2);
+  assert.equal(await page.locator('#event-count').textContent(), '1');
+  await page.locator('#search').fill('calendar');
+  await page.waitForTimeout(350);
+  assert.equal(await page.locator('#timeline tr').count(), 1);
+  await page.locator('#pause').click();
+  await page.waitForFunction(() => document.querySelectorAll('#timeline tr').length === 2);
+  assert.match(await page.locator('#issues').textContent(), /Recovery observed/);
+  await page.locator('#category').selectOption('failure');
+  await page.waitForFunction(() => document.querySelectorAll('#timeline tr').length === 1);
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({ width, height: 1100 });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `overflow at ${width}`);
+  }
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  await page.screenshot({ path: join(tmpdir(), 'tell-tail-mcp-dashboard.png'), fullPage: true });
+  await server.close();
+  await page.waitForFunction(() => document.getElementById('connection').textContent.includes('Disconnected'));
+  assert.deepEqual(errors, []); assert.deepEqual(external, []);
+});

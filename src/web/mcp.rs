@@ -218,7 +218,10 @@ async fn history(State(app): State<App>, request: Request) -> Response {
         let Some((k, v)) = pair.split_once('=') else {
             return StatusCode::BAD_REQUEST.into_response();
         };
-        if !matches!(k, "q" | "host" | "server" | "category" | "since" | "before") {
+        if !matches!(
+            k,
+            "q" | "host" | "server" | "category" | "since" | "before" | "until"
+        ) {
             return StatusCode::BAD_REQUEST.into_response();
         }
         let Some(v) = decode(v) else {
@@ -236,6 +239,10 @@ async fn history(State(app): State<App>, request: Request) -> Response {
         Ok(v) => v,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
+    let until = match filters.get("until").map(|v| v.parse::<u64>()).transpose() {
+        Ok(v) => v,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
     let s = match app.shared.lock() {
         Ok(s) => s,
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
@@ -249,7 +256,10 @@ async fn history(State(app): State<App>, request: Request) -> Response {
         .events
         .iter()
         .filter(|e| {
-            if cursor.is_some_and(|c| key(e) >= c) || since.is_some_and(|t| key(e).0 < t) {
+            if cursor.is_some_and(|c| key(e) >= c)
+                || since.is_some_and(|t| key(e).0 < t)
+                || until.is_some_and(|id| e.id > id)
+            {
                 return false;
             }
             if let Some(host) = filters.get("host")
@@ -312,10 +322,62 @@ async fn history(State(app): State<App>, request: Request) -> Response {
     )
 }
 fn router(app: App) -> Router {
-    Router::new().route("/",get(||async{Html("<!doctype html><title>Telltale MCP</title><h1>MCP watcher</h1><p>The live API is available at /api/mcp/snapshot.</p>")}))
-        .route("/api/mcp/snapshot",get(snapshot)).route("/api/mcp/events",get(events))
-        .route("/api/mcp/event/{id}",get(detail)).route("/api/mcp/history",get(history))
-        .layer(middleware::from_fn_with_state(app.clone(),local)).with_state(app)
+    Router::new()
+        .route(
+            "/",
+            get(|| async { Html(include_str!("../../web/mcp.html")) }),
+        )
+        .route(
+            "/dashboard.css",
+            get(|| async {
+                (
+                    [(header::CONTENT_TYPE, "text/css")],
+                    include_str!("../../web/dashboard.css"),
+                )
+            }),
+        )
+        .route(
+            "/mcp.css",
+            get(|| async {
+                (
+                    [(header::CONTENT_TYPE, "text/css")],
+                    include_str!("../../web/mcp.css"),
+                )
+            }),
+        )
+        .route(
+            "/mcp.mjs",
+            get(|| async {
+                (
+                    [(header::CONTENT_TYPE, "text/javascript")],
+                    include_str!("../../web/mcp.mjs"),
+                )
+            }),
+        )
+        .route(
+            "/logo.svg",
+            get(|| async {
+                (
+                    [(header::CONTENT_TYPE, "image/svg+xml")],
+                    include_str!("../../web/logo.svg"),
+                )
+            }),
+        )
+        .route(
+            "/favicon.svg",
+            get(|| async {
+                (
+                    [(header::CONTENT_TYPE, "image/svg+xml")],
+                    include_str!("../../web/favicon.svg"),
+                )
+            }),
+        )
+        .route("/api/mcp/snapshot", get(snapshot))
+        .route("/api/mcp/events", get(events))
+        .route("/api/mcp/event/{id}", get(detail))
+        .route("/api/mcp/history", get(history))
+        .layer(middleware::from_fn_with_state(app.clone(), local))
+        .with_state(app)
 }
 
 #[cfg(test)]
