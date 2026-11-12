@@ -3,3 +3,5 @@ pub mod model;
 pub mod time;
 
 pub mod discovery;
+
+pub mod collection;
