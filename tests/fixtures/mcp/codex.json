@@ -1,0 +1,12 @@
+[
+  {"line":"2026-11-12T00:00:00.000Z info [AppServerConnection] mcp_server_startup_status_updated error=null server=example status=ready threadId=synthetic", "kind":"ready", "reason":null},
+  {"line":"2026-11-12T00:00:00.000Z info [AppServerConnection] mcp_server_startup_status_updated error=null server=example status=starting", "kind":"starting", "reason":null},
+  {"line":"2026-11-12T00:00:00.000Z warning [AppServerConnection] mcp_server_startup_status_updated error=\"private text\" failureReason=reauthenticationRequired server=example status=failed", "kind":"failed", "reason":"reauthentication"},
+  {"line":"2026-11-12T00:00:00.000Z warning [AppServerConnection] mcp_server_startup_status_updated error=\"ENOENT: private path\" server=example status=failed", "kind":"failed", "reason":"missing_executable"},
+  {"line":"2026-11-12T00:00:00.000Z info [AppServerConnection] mcp_server_startup_status_updated error=null server=example status=cancelled", "kind":"cancelled", "reason":null},
+  {"line":"2026-11-12T00:00:00.000Z warning [electron-message-handler] Failed to discover app tools error=\"MCP startup failed: connection refused\" server=example", "kind":"discovery_failed", "reason":"transport"},
+  {"line":"2026-11-12T00:00:00.000Z warning [electron-message-handler] Failed to discover app tools error=\"Timed out after 60s\" server=example", "kind":"discovery_failed", "reason":"timeout"},
+  {"line":"2026-11-12T00:00:00.000Z info [AppServerConnection] mcp_future_event error=null", "kind":"unknown", "reason":null},
+  {"line":"2026-11-12T00:00:00.000Z error [git] unrelated error mentions mcp", "kind":null},
+  {"line":"malformed private diagnostic", "kind":null}
+]

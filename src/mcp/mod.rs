@@ -5,3 +5,5 @@ pub mod time;
 pub mod discovery;
 
 pub mod collection;
+
+pub mod parse;
