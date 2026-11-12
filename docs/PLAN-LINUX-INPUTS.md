@@ -240,6 +240,23 @@ at the kernel-provided position, and count a known sequence gap separately from
 observed records. A gap does not fabricate errors or complete missing records.
 Treat unexpected sequence resets conservatively as discontinuities.
 
+For this source, one device record is one counted record; it can contain metadata
+continuation lines. State that exception to ordinary physical-line counting in
+all source docs. The kernel's `c` fragment flag does not authorize concatenating
+unrelated records: initially count each delivered record once and report fragment
+presence without reconstruction. Preserve exact device bytes, not a normalized
+synthetic line length.
+
+Saved raw kmsg needs a separate bounded framing mode: a validated header starts
+a record and leading-space metadata lines belong to it. Finish the previous
+record at the next header or finite EOF. Cap the entire assembled record at
+`--max-record-bytes`; drain oversized continuation groups and count them once.
+Do not flush an incomplete followed capture just because it is temporarily idle.
+Malformed headers/continuations and resynchronization need explicit fixtures and
+accounting. Ship saved-format support only with this framing contract, not by
+routing it through the ordinary newline framer. The native device path already
+has record boundaries and must not wait for the next record to publish one.
+
 Expose source-loss diagnostics through a versioned/additive output contract,
 including TUI/web guidance and Prometheus counters; no claim of complete kernel
 coverage is acceptable without them. Default previews remain bounded and escaped.
