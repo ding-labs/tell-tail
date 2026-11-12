@@ -38,6 +38,11 @@ or an inference service.
 
 ## Plans and historical evidence
 
+The [passive MCP watcher plan](PLAN-MCP.md) defines the proposed
+`tell-tail mcp --open` workflow, supported-source boundaries, implementation
+increments, and acceptance checks. Its [local log audit](MCP-LOG-AUDIT-2026-11-12.md)
+records the evidence for proceeding; the command is not implemented yet.
+
 The [state-machine inventory and implementation plan](PLAN-STATE-MACHINES.md)
 maps observable transitions to their owners and tests, starting with dashboard retry behavior.
 
