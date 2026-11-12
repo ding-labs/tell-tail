@@ -1,5 +1,9 @@
 # Passive MCP log watcher plan
 
+Hosted user guides: [Tell-Tail docs](https://docs.ding.ing/tell-tail/) and
+[unreleased preview](https://docs.ding.ing/tell-tail/next/). Hosted revisions may
+lag this implementation; see [MCP diagnostics](MCP.md) for the checkout's behavior.
+
 Status: implemented in focused commits November 12, 2026; unreleased. See the
 [user guide](MCP.md) and [validation record](VALIDATION-MCP.md) for actual behavior,
 measured acceptance, and external checks still pending. The [local audit](MCP-LOG-AUDIT-2026-11-12.md)

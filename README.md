@@ -5,6 +5,10 @@ Tell-Tail reads one file or stdin and keeps counters, bounded rolling statistics
 and a small in-memory sample of recent errors for its dashboards. It supports
 plain text, NDJSON, Prometheus, and a local HTTP/SSE metrics API.
 
+Hosted documentation: [released guides](https://docs.ding.ing/tell-tail/) ·
+[unreleased preview](https://docs.ding.ing/tell-tail/next/) ·
+[Ding docs](https://docs.ding.ing/).
+
 ## Install and try it
 
 Version 0.2.0 is available through Homebrew and
@@ -67,6 +71,8 @@ live searchable timeline, and distinguishes history, recovery, and source
 freshness. No server configuration change, plugin, or account is needed.
 After installing this checkout, the command is `tell-tail mcp --open`.
 See [MCP diagnostics](docs/MCP.md) for sources, headless output, and coverage limits.
+The [hosted preview](https://docs.ding.ing/tell-tail/next/) follows a pinned source
+revision and may lag this checkout; MCP is not in the released guides yet.
 
 ### Built-in demo (unreleased)
 

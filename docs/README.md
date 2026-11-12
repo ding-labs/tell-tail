@@ -1,5 +1,10 @@
 # Tell-Tail documentation
 
+Read the [hosted released guides](https://docs.ding.ing/tell-tail/) or the
+[hosted unreleased preview](https://docs.ding.ing/tell-tail/next/) on
+[Ding docs](https://docs.ding.ing/). This directory is the source of truth;
+hosted builds use pinned revisions and may lag this checkout.
+
 Tell-Tail helps you understand what one process or log source is doing now.
 Start with the [installation and quick start](../README.md#install-and-try-it).
 The built-in demo, parsing coverage, severity history, and activity freshness are

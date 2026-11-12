@@ -2,6 +2,13 @@
 
 **Available in this checkout; not in the published 0.2.0 packages.**
 
+Hosted documentation lives on [docs.ding.ing](https://docs.ding.ing/):
+[released Tell-Tail guides](https://docs.ding.ing/tell-tail/) and
+[unreleased preview](https://docs.ding.ing/tell-tail/next/). The preview uses a
+pinned source revision; this MCP guide is currently available in the checkout
+and awaits inclusion in the hosted preview. See the
+[documentation publication steps](RELEASING.md#hosted-documentation) for that update.
+
 ```sh
 cargo run --release --locked -- mcp --open
 # After installing this checkout with cargo install --path . --locked:

@@ -1,5 +1,9 @@
 # Local MCP log feasibility audit
 
+This audit is historical evidence for the [MCP guide](MCP.md). Hosted user
+documentation lives in the [Tell-Tail preview on Ding docs](https://docs.ding.ing/tell-tail/next/),
+which may lag the source checkout.
+
 Inspected November 12, 2026, on one macOS workstation. Existing local logs are
 sufficient for a useful passive MCP diagnostics watcher, especially for Codex
 Desktop startup and authentication failures. They do not establish complete
