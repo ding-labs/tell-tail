@@ -6,9 +6,11 @@ features. Application and packaging sources are frozen; later evidence commits
 do not change the candidate.
 
 The feature is merged in [PR #26](https://github.com/ding-labs/tell-tail/pull/26).
-Publication remains pending the completed, reviewed exact-source campaign. No
-0.3 evidence approves this candidate. The machine-readable approval will be
-updated only after all required results have been reviewed.
+All nine required release gates have passed reviewed evidence for this exact
+source. No 0.3 evidence approves this candidate. The machine-readable
+[`packaging/validation.json`](../packaging/validation.json) now approves
+publication. Package publication is the next step; approval alone does not
+mean a public channel has been updated.
 
 | Campaign | Run |
 | --- | --- |
@@ -106,3 +108,24 @@ cases, framing 46,972,801, and the timed engine 4,093,166. The
 [fuzz summary](validation/0.4.0-release/fuzz-summary.json) preserves the exact
 source, run, counts, log hashes, and toolchain. These bounded campaigns do not
 prove safety for every possible input.
+
+## Reviewed dashboard duration and resources
+
+The [extended summary](validation/0.4.0-release/extended-summary.json) records
+clean source/harness identities, report hashes, memory samples, and timings.
+Both native PTY runs exceeded 3,600 seconds and processed exactly 3,597,000
+records and 38,521,567,920 bytes, with 360 terminal actions covering resize,
+help and freeze/resume. All severity and diagnostic counts matched.
+
+| Measurement | macOS 15 ARM64 | Ubuntu 24.04 x86-64 |
+| --- | --- | --- |
+| Hour-run sampled peak RSS | 7.48 MiB | 9.79 MiB |
+| Maximum configuration sampled peak RSS | 37.59 MiB | 27.23 MiB |
+| Hour-run observed shutdown | 331 ms | 101 ms |
+
+RSS combines monitor/helper memory, sampled once per second. Both 64/128 MiB
+ceilings and the post-warmup ten-minute-median plateau checks pass. Maximum
+runs use window 3600 and a 16 MiB record limit for at least 60 seconds; default
+runs use window 60 and a 1 MiB record limit. All 49 extended/controlled
+accounting reports pass; the largest observed shutdown was 345 ms. The
+additional native Linux performance measurement also qualifies.
