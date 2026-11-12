@@ -46,7 +46,8 @@ maps observable transitions to their owners and tests, starting with dashboard r
 them alongside the [changelog](../CHANGELOG.md), not as a list of features that
 are necessarily still pending.
 
-The [0.2 release validation](VALIDATION-0.2-RELEASE.md),
+The [0.3 release validation](VALIDATION-0.3-RELEASE.md),
+[0.2 release validation](VALIDATION-0.2-RELEASE.md),
 [0.2 implementation validation](VALIDATION-0.2.md),
 [initial validation](VALIDATION.md), and dated records in
 [validation/](validation/) apply to the revisions and environments they name.

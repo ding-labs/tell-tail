@@ -5,11 +5,11 @@ the merged demo, expanded parser coverage, dashboard interpretation features,
 and recovery/rotation/shutdown fixes. Application changes are frozen at this
 commit; subsequent validation records and plans do not change the candidate.
 
-Publication is pending. No gate is credited from the 0.2.0 campaign. The required
-checks below must finish and their exact-source reports must be reviewed before
-`packaging/validation.json` approves publication. Correctness, responsiveness,
-compatibility, distribution, controlled performance, and fuzzing are reviewed and
-pass; extended dashboard/resource results remain pending.
+All nine required release gates have passed reviewed evidence for this exact
+source. No gate is credited from the 0.2.0 campaign. The machine-readable
+[`packaging/validation.json`](../packaging/validation.json) approves publication
+of this candidate; publication itself is pending. The optional day scenarios
+remain outside the release gates.
 
 | Evidence | Run |
 | --- | --- |
@@ -79,3 +79,35 @@ cases, framing 53,354,969, and the timed engine 3,375,081. The
 [fuzz summary](validation/0.3.0-release/fuzz-summary.json) preserves counts, log
 hashes, and the toolchain. These are completed bounded campaigns, not a claim
 that every possible input has been proven safe.
+
+## Reviewed dashboard duration and resources
+
+The [extended summary](validation/0.3.0-release/extended-summary.json) records
+clean source/harness identities, report hashes, memory samples, and timings.
+Both native PTY runs exceeded 3,600 seconds, processed exactly 3,597,000 records
+and 38,521,567,920 input bytes, and exercised 360 terminal actions for resize,
+help, and freeze/resume. Their severity and diagnostic counts matched the
+independent expected values.
+
+| Measurement | macOS 15 ARM64 | Ubuntu 24.04 x86-64 |
+| --- | --- | --- |
+| Hour-run sampled peak RSS | 7.81 MiB | 9.77 MiB |
+| Post-warmup ten-minute RSS medians | 6.55 MiB, stable | 9.75–9.77 MiB |
+| Maximum configuration sampled peak RSS | 37.39 MiB | 26.84 MiB |
+| Hour-run observed shutdown | 325 ms | 159 ms |
+
+RSS is combined monitor/helper memory sampled once per second, not an
+instantaneous maximum. Default runs use window 60 and a 1 MiB record limit;
+maximum runs use window 3600 and a 16 MiB record limit for at least 60 seconds.
+Both the 64/128 MiB ceilings and the post-warmup plateau criterion pass. The
+separate fixed-geometry Mac terminal maximum check is described above.
+All 49 reviewed extended/controlled accounting reports pass, with no shutdown
+observation exceeding 325 ms.
+
+The additional native Linux performance measurement also qualifies (2.07%
+median paired TUI loss). The additional Mac performance measurement is
+**inconclusive**: headless/TUI relative ranges are 32.80%/42.37%, and the report
+correctly sets `measurement_qualifies_for_gate=false`. Its small median paired
+loss is not credited as a passing performance result. The named controlled
+Linux reference above satisfies the existing performance gate without changing
+thresholds or discarding the noisy Mac observation.
