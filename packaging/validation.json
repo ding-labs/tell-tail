@@ -4,9 +4,11 @@
   "source_commit": "05b3376e2ba1f809bf0a789faa477f3f17e1bcf2",
   "gates": {
     "correctness": {
-      "passed": false,
-      "evidence": [],
-      "status": "pending_review"
+      "passed": true,
+      "evidence": [
+        "https://github.com/ding-labs/tell-tail/actions/runs/43286011546",
+        "docs/validation/0.3.0-release/ci-summary.json"
+      ]
     },
     "fuzzing": {
       "passed": false,
@@ -29,24 +31,35 @@
       "status": "pending_review"
     },
     "responsiveness": {
-      "passed": false,
-      "evidence": [],
-      "status": "pending_review"
+      "passed": true,
+      "evidence": [
+        "https://github.com/ding-labs/tell-tail/actions/runs/43286011546",
+        "docs/validation/0.3.0-release/ci-summary.json"
+      ]
     },
     "performance": {
-      "passed": false,
-      "evidence": [],
-      "status": "pending_review"
+      "passed": true,
+      "evidence": [
+        "https://github.com/ding-labs/tell-tail/actions/runs/43286068503",
+        "docs/validation/0.3.0-release/performance-summary.json"
+      ]
     },
     "compatibility": {
-      "passed": false,
-      "evidence": [],
-      "status": "pending_review"
+      "passed": true,
+      "evidence": [
+        "https://github.com/ding-labs/tell-tail/actions/runs/43286011546",
+        "docs/validation/0.3.0-release/ci-summary.json"
+      ]
     },
     "distribution": {
-      "passed": false,
-      "evidence": [],
-      "status": "pending_review"
+      "passed": true,
+      "evidence": [
+        "https://github.com/ding-labs/tell-tail/actions/runs/43286011546",
+        "docs/validation/0.3.0-release/ci-summary.json",
+        "https://github.com/ding-labs/tell-tail/actions/runs/43286300595",
+        "docs/validation/0.3.0-release/dependency-review.md",
+        "docs/validation/0.3.0-release/launch-smoke.json"
+      ]
     }
   },
   "background_checks": {
