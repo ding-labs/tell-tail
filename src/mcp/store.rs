@@ -154,6 +154,9 @@ impl Store {
                 e.host == p.host
                     && e.server == p.server
                     && e.kind == Kind::Starting
+                    && e.evidence
+                        .iter()
+                        .any(|v| v.source_id == r.source_id && v.generation == r.generation)
                     && e.timestamp_ms
                         .zip(p.timestamp_ms)
                         .is_some_and(|(a, b)| a <= b)
@@ -480,5 +483,58 @@ mod tests {
         assert_eq!(s.servers.len(), MAX_ISSUES);
         assert_eq!(s.counts.evicted_events, 100);
         assert!(s.snapshot().json().unwrap().len() <= 64 * 1024);
+    }
+    #[test]
+    fn claude_scope_does_not_cross_unrelated_files_or_generations() {
+        let mut s = Store::default();
+        put(
+            &mut s,
+            1,
+            Host::ClaudeDesktop,
+            "2026-11-12T00:00:00Z [example] [info] Initializing server...",
+        );
+        put(
+            &mut s,
+            2,
+            Host::ClaudeDesktop,
+            "2026-11-12T00:00:01Z [example] [info] Server started and connected successfully",
+        );
+        assert!(!s.events[1].scope_known);
+        s.accept(Record {
+            source_id: 1,
+            generation: 1,
+            offset: 0,
+            historical: false,
+            host: Host::ClaudeDesktop,
+            bytes:
+                b"2026-11-12T00:00:02Z [example] [info] Server started and connected successfully",
+        });
+        assert!(!s.events[2].scope_known);
+    }
+    #[test]
+    fn late_historical_failure_uses_later_matching_recovery_only() {
+        let mut s = Store::default();
+        put(
+            &mut s,
+            1,
+            Host::CodexDesktop,
+            "2026-11-12T00:00:02Z info [AppServerConnection] mcp_server_startup_status_updated server=example status=ready threadId=a",
+        );
+        put(
+            &mut s,
+            2,
+            Host::CodexDesktop,
+            "2026-11-12T00:00:01Z warning [AppServerConnection] mcp_server_startup_status_updated server=example status=failed threadId=a",
+        );
+        assert!(s.issues[0].recovered_ms.is_some());
+        assert_eq!(s.servers[0].kind, Kind::Ready);
+        put(
+            &mut s,
+            1,
+            Host::CodexDesktop,
+            "2026-11-12T00:00:03Z warning [AppServerConnection] mcp_server_startup_status_updated server=example status=failed threadId=a",
+        );
+        assert!(s.issues[0].recovered_ms.is_none());
+        assert_eq!(s.servers[0].kind, Kind::Failed);
     }
 }
