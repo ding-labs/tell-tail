@@ -4,9 +4,9 @@
 
 Hosted documentation lives on [docs.ding.ing](https://docs.ding.ing/):
 [released Tell-Tail guides](https://docs.ding.ing/tell-tail/) and
-[unreleased preview](https://docs.ding.ing/tell-tail/next/). The preview uses a
-pinned source revision; this MCP guide is currently available in the checkout
-and awaits inclusion in the hosted preview. See the
+[unreleased preview](https://docs.ding.ing/tell-tail/next/). Read this guide online
+at [MCP diagnostics](https://docs.ding.ing/tell-tail/next/mcp/). The preview uses a
+pinned source revision and can lag newer checkout changes. See the
 [documentation publication steps](RELEASING.md#hosted-documentation) for that update.
 
 ```sh

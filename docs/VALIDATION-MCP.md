@@ -1,8 +1,8 @@
 # MCP watcher implementation validation
 
 For hosted user documentation, visit the
-[Tell-Tail preview on Ding docs](https://docs.ding.ing/tell-tail/next/).
-The [local MCP guide](MCP.md) describes this checkout's newer implementation;
+[MCP guide on Ding docs](https://docs.ding.ing/tell-tail/next/mcp/).
+The [local MCP guide](MCP.md) describes this checkout's implementation;
 the [publication checklist](RELEASING.md#hosted-documentation) covers updating the site.
 
 Measured November 12, 2026, on macOS / Apple M3 arm64, Rust 1.88.0. This is

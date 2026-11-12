@@ -31,9 +31,8 @@ When publishing documentation changes:
    warning, navigation, rewritten links and `build-info.json` source revision.
 4. Publish the docs before advertising a new hosted page. Verify HTTP 200 and
    the expected content at the new route; the intended MCP preview route is
-   `https://docs.ding.ing/tell-tail/next/mcp/`. It was not published at the
-   November 12, 2026 check, so current source docs link to the working preview
-   index and the repository MCP guide instead.
+   `https://docs.ding.ing/tell-tail/next/mcp/`. Keep the source pin and page map
+   together so the guide and its navigation links are published in the same build.
 
 A product release also updates the website's version, release reference, stable
 page map, installation entry point and examples together. Optional background

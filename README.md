@@ -71,8 +71,9 @@ live searchable timeline, and distinguishes history, recovery, and source
 freshness. No server configuration change, plugin, or account is needed.
 After installing this checkout, the command is `tell-tail mcp --open`.
 See [MCP diagnostics](docs/MCP.md) for sources, headless output, and coverage limits.
-The [hosted preview](https://docs.ding.ing/tell-tail/next/) follows a pinned source
-revision and may lag this checkout; MCP is not in the released guides yet.
+The [hosted MCP guide](https://docs.ding.ing/tell-tail/next/mcp/) belongs to the
+unreleased preview. It follows a pinned source revision and may lag this checkout;
+MCP is not in the released guides yet.
 
 ### Built-in demo (unreleased)
 
