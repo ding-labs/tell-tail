@@ -1,6 +1,7 @@
 //! Loopback web output, enabled by the `web` Cargo feature.
 mod assets;
 mod browser;
+pub mod mcp;
 mod socket;
 
 use crate::{
@@ -220,10 +221,14 @@ fn request_status(request: &Request, host: &str) -> Option<StatusCode> {
 }
 
 async fn local_request(State(app): State<App>, request: Request, next: Next) -> Response {
-    let mut response = match request_status(&request, &app.host) {
+    let response = match request_status(&request, &app.host) {
         Some(status) => status.into_response(),
         None => next.run(request).await,
     };
+    secure_response(response)
+}
+
+fn secure_response(mut response: Response) -> Response {
     if response.status() == StatusCode::METHOD_NOT_ALLOWED {
         response
             .headers_mut()

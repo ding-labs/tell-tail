@@ -92,8 +92,9 @@ impl Drop for Running {
 
 pub fn run(args: &Args) -> io::Result<i32> {
     let signals = Signals::install()?;
+    #[cfg(feature = "web")]
     if args.mode() == Output::Web {
-        return Err(io::Error::other("MCP web dashboard is not wired yet"));
+        return crate::web::mcp::run(args, &signals);
     }
     let mut running = Running::start(args.roots()?, signals.requested.clone(), args.once)?;
     let mut output = crate::platform::StdoutWriter::new(signals.requested.clone())?;
