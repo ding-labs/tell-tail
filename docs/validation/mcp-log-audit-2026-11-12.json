@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-11-12",
+  "timezone": "America/Los_Angeles",
+  "platform": "macOS",
+  "scope": "One workstation, separate read-only scans of existing application logs",
+  "server_configuration_changes": 0,
+  "raw_logs_retained_in_repository": false,
+  "codex_desktop": {
+    "files_scanned": 64,
+    "physical_lines": 162875,
+    "mcp_substring_lines_not_event_count": 15703,
+    "startup_records": {"starting": 1944, "ready": 2927, "failed": 666, "cancelled": 3},
+    "discovery_failure_records": 1339,
+    "largest_application_log_line_bytes": 100296,
+    "utc_2026_11_12_file_partition": {
+      "startup_failed_records": 28,
+      "discovery_failure_records": 90,
+      "servers_with_reauthentication_required": 2,
+      "distinct_incident_count": null
+    }
+  },
+  "claude_desktop": {
+    "installed_version_not_historical_writer_version": "1.24012.9",
+    "aggregate_mcp_lines": 675,
+    "per_server_files": 3,
+    "per_server_lines": 675,
+    "normalized_message_multiset_overlap": 675,
+    "paired_occurrences_within_10ms": 674,
+    "maximum_paired_timestamp_difference_ms": 31,
+    "initialization_records": 43,
+    "connected_records": 43,
+    "intentional_close_records": 34,
+    "renderer_release_close_records": 8,
+    "unexpected_close_records": 1,
+    "last_dedicated_mcp_record_date": "2026-07-24",
+    "dedicated_logs_tools_call_records": 0,
+    "dedicated_logs_tool_error_results": 0,
+    "historical_main_log_remote_tool_call_starts": 457,
+    "historical_main_log_extension_cache_failures": 130
+  },
+  "opencode": {"files_scanned": 1, "physical_lines": 119, "mcp_mentions": 0, "adapter_verified": false},
+  "passive_observation": {
+    "duration_seconds": 60,
+    "poll_interval_seconds": 1,
+    "codex_appended_bytes": 1441,
+    "codex_appended_lines": 5,
+    "new_mcp_lines": 0,
+    "new_files": 0,
+    "rotation_or_truncation_events": 0,
+    "live_mcp_failure_detection_verified": false
+  },
+  "existing_binary_smoke": {
+    "clean_rebuild": false,
+    "arguments": ["<log-file>", "--once", "--output", "json"],
+    "claude": {"exit_code": 0, "records": 675, "info": 674, "error": 1, "parse_failures": 0, "oversized_records": 0},
+    "codex": {"exit_code": 0, "records": 4387, "info": 2993, "warning": 650, "error": 744, "parse_failures": 0, "oversized_records": 0}
+  },
+  "decision": "Proceed with verified desktop log adapters; do not claim complete MCP traffic visibility"
+}
