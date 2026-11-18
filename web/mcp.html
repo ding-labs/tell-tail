@@ -29,6 +29,7 @@
         <label>Server<select id="server"><option value="">All servers</option></select></label>
         <label>Category<select id="category"><option value="">All events</option><option value="failure">Failures</option><option value="reauthentication">Reauthentication</option><option value="authentication">Authentication</option><option value="transport">Connection</option><option value="timeout">Timeout</option><option value="missing_executable">Missing file</option></select></label>
         <label>Time<select id="since"><option value="">All retained</option><option value="900000">Last 15 minutes</option><option value="3600000">Last hour</option><option value="86400000">Last 24 hours</option></select></label>
+        <button id="clear-filters" type="button">Clear filters</button>
       </form>
       <section id="timeline-view" role="tabpanel" aria-labelledby="timeline-tab" tabindex="0">
       <div class="section-heading"><h2 id="timeline-title">Live timeline</h2><p id="page-note">Most recent retained evidence</p></div>

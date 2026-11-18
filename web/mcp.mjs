@@ -110,7 +110,9 @@ $('pause').addEventListener('click', () => { setPaused(!paused); if (!paused) { 
 $('older').addEventListener('click', () => { if (!paused) setPaused(true); cursor = nextCursor; history(); });
 $('latest').addEventListener('click', () => { cursor = undefined; setPaused(false); if (latest) render(latest); history(); });
 $('filters').addEventListener('submit', e => e.preventDefault());
-$('filters').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { cursor = undefined; if (displayed) render(displayed); history(); }, 180); });
+function refreshFilters() { cursor = undefined; if (displayed) render(displayed); history(); }
+$('filters').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(refreshFilters, 180); });
+$('clear-filters').addEventListener('click', () => { clearTimeout(searchTimer); $('filters').reset(); refreshFilters(); });
 function receive(snapshot) {
   if (snapshot.schema_version !== 1 || !Array.isArray(snapshot.events) || !Array.isArray(snapshot.sources)) { connection('Unsupported watcher data; refresh after updating.', 'error'); return; }
   latest = snapshot; retryDelay = 1000; $('retry').hidden = true;

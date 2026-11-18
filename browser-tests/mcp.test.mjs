@@ -111,6 +111,12 @@ test('many failure groups keep the timeline visible and support keyboard inspect
   assert.equal(await page.locator('#detail-group').isVisible(), false, 'group guidance does not leak into event inspection');
   await page.keyboard.press('Escape');
 
+  await page.locator('#pause').click();
+  await page.locator('#clear-filters').click();
+  await page.waitForFunction(() => document.querySelectorAll('#timeline tr').length === 81);
+  for (const id of ['search', 'host', 'server', 'category', 'since']) assert.equal(await page.locator(`#${id}`).inputValue(), '');
+  assert.equal(await page.locator('#pause').getAttribute('aria-pressed'), 'true', 'clearing filters preserves paused evidence');
+
   for (const width of [1440, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 900 });
     for (const view of ['timeline', 'issues']) {

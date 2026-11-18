@@ -57,6 +57,7 @@ main { padding-top: 20px; }
 .activity-tabs [aria-selected="true"] { border-bottom-color: var(--ding-brand); color: var(--ding-brand); }
 .tab-count { border-radius: 4px; background: var(--ding-subtle); padding: 0 6px; font-size: 11px; font-variant-numeric: tabular-nums; }
 .activity-panel .filters { margin: 16px 0; }
+#clear-filters { align-self: flex-end; }
 .activity-panel h2 { font-size: 16px; letter-spacing: 0; }
 .activity-panel .evidence-scroll { height: clamp(240px, 45vh, 640px); max-height: none; scrollbar-gutter: stable; overscroll-behavior: contain; border-block: 1px solid var(--ding-border); }
 .evidence-scroll thead th { position: sticky; top: 0; z-index: 1; white-space: nowrap; }
