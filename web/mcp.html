@@ -12,12 +12,12 @@
     <div class="heading"><div><p class="eyebrow">MCP DIAGNOSTICS</p><h1>MCP activity</h1><p class="intro">See what your servers report, and what needs investigating.</p></div><div class="controls"><button id="pause" aria-pressed="false">Pause display</button><button id="retry" hidden>Reconnect</button></div></div>
     <div id="connection" class="connection" role="status" data-tone="warning">Connecting to the local watcher…</div>
     <p id="display-note" class="display-note">Reading existing logs. Server state is always a last observation, not a health check.</p>
-    <section class="metrics-grid" aria-label="Observation totals">
-      <article class="metric"><h3>Observed events</h3><p class="metric-value accent" id="event-count">0</p><p>History + newly received records</p></article>
-      <article class="metric"><h3>Failure groups</h3><p class="metric-value" id="issue-count">0</p><p>Includes historical and recovered issues</p></article>
-      <article class="metric"><h3>Mirrors combined</h3><p class="metric-value" id="mirror-count">0</p><p>Duplicate aggregate / server records</p></article>
-      <article class="metric"><h3>Log sources</h3><p class="metric-value" id="source-count">0</p><p>Existing files · no server configuration changes</p></article>
-    </section>
+    <dl class="observation-totals" aria-label="Observation totals">
+      <div><dt>Observed events</dt><dd id="event-count" class="accent">0</dd></div>
+      <div><dt>Failure groups</dt><dd id="issue-count">0</dd></div>
+      <div><dt>Mirrors combined</dt><dd id="mirror-count">0</dd></div>
+      <div><dt>Log sources</dt><dd id="source-count">0</dd></div>
+    </dl>
     <section aria-labelledby="issues-title"><div class="section-heading"><h2 id="issues-title">Reported failures</h2><p id="issues-note">Waiting for observations</p></div><div id="issues" class="issues-grid"></div><p id="issues-empty" class="empty">No failures observed in the retained evidence. This does not establish server health.</p></section>
     <section class="panel timeline-panel" aria-labelledby="timeline-title">
       <div class="section-heading"><h2 id="timeline-title">Live timeline</h2><p id="page-note">Most recent retained evidence</p></div>
@@ -32,7 +32,7 @@
       <p id="timeline-empty" class="empty">Looking for supported MCP logs…</p>
       <div class="pagination"><button id="latest">Latest evidence</button><button id="older" disabled>Older evidence</button><span id="history-status" role="status"></span></div>
     </section>
-    <details class="panel coverage-panel" open><summary>Sources and coverage</summary><p class="subtle">File activity and the watcher connection do not establish MCP server health. Tool payloads are omitted.</p><div id="roots"></div><div id="sources" class="source-grid"></div><p id="coverage" class="coverage-note"></p><p id="limits" class="coverage-note"></p></details>
+    <details class="panel coverage-panel"><summary>Sources and coverage</summary><p class="subtle">File activity and the watcher connection do not establish MCP server health. Tool payloads are omitted.</p><div id="roots"></div><div id="sources" class="source-grid"></div><p id="coverage" class="coverage-note"></p><p id="limits" class="coverage-note"></p></details>
     <details class="panel coverage-panel"><summary>Last observed server states</summary><p class="subtle">Execution scopes are kept separate. An old ready record is not a current health check.</p><ul id="server-states" class="state-list"></ul><p id="states-note" class="subtle"></p></details>
     <footer>Read from supported desktop logs · Bounded local history · No requests sent to MCP servers</footer>
   </main>
