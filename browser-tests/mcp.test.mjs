@@ -57,3 +57,65 @@ test('MCP dashboard shows safe evidence, freezes, searches, resumes and fits sma
   await page.waitForFunction(() => document.getElementById('connection').textContent.includes('Disconnected'));
   assert.deepEqual(errors, []); assert.deepEqual(external, []);
 });
+
+test('many failure groups keep the timeline visible and support keyboard inspection', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'tell-tail-browser-mcp-density-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const file = join(dir, 'desktop.log');
+  await writeFile(file, Array.from({ length: 80 }, (_, i) => record(`server-${i}`, 'failed')).join(''));
+  const server = await monitorMcp(['--source', 'codex-desktop', '--log-dir', dir]);
+  t.after(() => server.close());
+  const browser = await chromium.launch(); t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await page.goto(server.url);
+  await page.waitForFunction(() => document.querySelectorAll('#timeline tr').length === 80);
+  assert.equal(await page.locator('#issues-view').isVisible(), false);
+  const before = await page.locator('#timeline tr').first().boundingBox();
+  assert.ok(before.y + before.height < 800, 'timeline evidence is visible without scrolling past failures');
+  await appendFile(file, record('new-failure', 'failed'));
+  await page.waitForFunction(() => document.getElementById('event-count').textContent === '81');
+  assert.equal((await page.locator('#timeline tr').first().boundingBox()).y, before.y, 'new groups cannot push the timeline down');
+
+  await page.locator('#timeline-tab').focus();
+  await page.keyboard.press('ArrowRight');
+  assert.equal(await page.locator('#issues-tab').getAttribute('aria-selected'), 'true');
+  assert.equal(await page.locator('#timeline-view').isVisible(), false);
+  assert.match(await page.locator('#issues-note').textContent(), /available in overview · 81 retained groups/);
+  const scroll = page.locator('#issues-view .evidence-scroll');
+  assert.ok(await scroll.evaluate(el => el.scrollHeight > el.clientHeight), 'failure groups scroll within their own bounded region');
+  await page.locator('#issues button').first().click();
+  await page.waitForFunction(() => document.getElementById('copy').disabled === false);
+  assert.equal(await page.locator('#detail-title').textContent(), 'Failure group evidence');
+  assert.match(await page.locator('#detail-advice').textContent(), /Sign in/);
+  assert.match(await page.locator('#detail-group-fields').textContent(), /First reported.*Last reported.*Observations.*Recovery/s);
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('#issues button').first().evaluate(el => el === document.activeElement), true);
+
+  await page.locator('#search').fill('new-failure');
+  await page.waitForFunction(() => document.querySelectorAll('#issues tr').length === 1);
+  await page.locator('#category').selectOption('timeout');
+  await page.waitForFunction(() => !document.getElementById('issues-empty').hidden);
+  assert.match(await page.locator('#issues-empty').textContent(), /match these filters/);
+  await page.locator('#category').selectOption('failure');
+  await page.waitForFunction(() => document.querySelectorAll('#issues tr').length === 1);
+  await page.locator('#host').selectOption('claude-desktop');
+  await page.waitForFunction(() => document.querySelectorAll('#issues tr').length === 0);
+  await page.locator('#host').selectOption('codex-desktop');
+  await page.waitForFunction(() => document.querySelectorAll('#issues tr').length === 1);
+  await page.locator('#issues-tab').focus();
+  await page.keyboard.press('Home');
+  assert.equal(await page.locator('#timeline-tab').getAttribute('aria-selected'), 'true');
+  await page.waitForFunction(() => document.querySelectorAll('#timeline tr').length === 1);
+  await page.locator('#timeline button').first().click();
+  await page.waitForFunction(() => document.getElementById('copy').disabled === false);
+  assert.equal(await page.locator('#detail-group').isVisible(), false, 'group guidance does not leak into event inspection');
+  await page.keyboard.press('Escape');
+
+  for (const width of [1440, 768, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const view of ['timeline', 'issues']) {
+      await page.locator(`#${view}-tab`).click();
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${view} overflow at ${width}`);
+    }
+  }
+});

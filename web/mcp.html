@@ -18,24 +18,35 @@
       <div><dt>Mirrors combined</dt><dd id="mirror-count">0</dd></div>
       <div><dt>Log sources</dt><dd id="source-count">0</dd></div>
     </dl>
-    <section aria-labelledby="issues-title"><div class="section-heading"><h2 id="issues-title">Reported failures</h2><p id="issues-note">Waiting for observations</p></div><div id="issues" class="issues-grid"></div><p id="issues-empty" class="empty">No failures observed in the retained evidence. This does not establish server health.</p></section>
-    <section class="panel timeline-panel" aria-labelledby="timeline-title">
-      <div class="section-heading"><h2 id="timeline-title">Live timeline</h2><p id="page-note">Most recent retained evidence</p></div>
+    <section class="panel activity-panel" aria-label="MCP evidence workspace">
+      <div class="activity-tabs" role="tablist" aria-label="Evidence views">
+        <button id="timeline-tab" role="tab" aria-selected="true" aria-controls="timeline-view">Live timeline</button>
+        <button id="issues-tab" role="tab" aria-selected="false" aria-controls="issues-view" tabindex="-1">Failure groups <span id="issues-tab-count" class="tab-count">0</span></button>
+      </div>
       <form id="filters" class="filters" role="search">
-        <label class="search-field">Search retained evidence<input id="search" type="search" maxlength="200" placeholder="Server, failure reason, method…"></label>
+        <label class="search-field"><span id="search-label">Search retained evidence</span><input id="search" type="search" maxlength="200" placeholder="Server, failure reason, method…"></label>
         <label>Client<select id="host"><option value="">All clients</option><option value="codex-desktop">Codex Desktop</option><option value="claude-desktop">Claude Desktop</option></select></label>
         <label>Server<select id="server"><option value="">All servers</option></select></label>
         <label>Category<select id="category"><option value="">All events</option><option value="failure">Failures</option><option value="reauthentication">Reauthentication</option><option value="authentication">Authentication</option><option value="transport">Connection</option><option value="timeout">Timeout</option><option value="missing_executable">Missing file</option></select></label>
         <label>Time<select id="since"><option value="">All retained</option><option value="900000">Last 15 minutes</option><option value="3600000">Last hour</option><option value="86400000">Last 24 hours</option></select></label>
       </form>
-      <div class="table-scroll"><table class="mcp-table"><thead><tr><th scope="col">Recorded time</th><th scope="col">Client / server</th><th scope="col">Observation</th><th scope="col">Evidence</th></tr></thead><tbody id="timeline"></tbody></table></div>
+      <section id="timeline-view" role="tabpanel" aria-labelledby="timeline-tab" tabindex="0">
+      <div class="section-heading"><h2 id="timeline-title">Live timeline</h2><p id="page-note">Most recent retained evidence</p></div>
+      <div class="table-scroll evidence-scroll" role="region" aria-label="Timeline events" tabindex="0"><table class="mcp-table"><thead><tr><th scope="col">Recorded time</th><th scope="col">Client / server</th><th scope="col">Observation</th><th scope="col">Evidence</th></tr></thead><tbody id="timeline"></tbody></table></div>
       <p id="timeline-empty" class="empty">Looking for supported MCP logs…</p>
       <div class="pagination"><button id="latest">Latest evidence</button><button id="older" disabled>Older evidence</button><span id="history-status" role="status"></span></div>
+      </section>
+      <section id="issues-view" role="tabpanel" aria-labelledby="issues-tab" tabindex="0" hidden>
+        <div class="section-heading"><h2 id="issues-title">Reported failures</h2><p id="issues-note">Waiting for observations</p></div>
+        <p class="subtle">Groups include historical and recovered failures, not unique outages. Inspect a group for guidance and its latest evidence.</p>
+        <div class="table-scroll evidence-scroll" role="region" aria-label="Failure groups" tabindex="0"><table class="mcp-table issues-table"><thead><tr><th scope="col">Last reported</th><th scope="col">Client / server</th><th scope="col">Failure / recovery</th><th scope="col">Count</th><th scope="col">Evidence</th></tr></thead><tbody id="issues"></tbody></table></div>
+        <p id="issues-empty" class="empty">No failures observed in the available groups. This does not establish server health.</p>
+      </section>
     </section>
     <details class="panel coverage-panel"><summary>Sources and coverage</summary><p class="subtle">File activity and the watcher connection do not establish MCP server health. Tool payloads are omitted.</p><div id="roots"></div><div id="sources" class="source-grid"></div><p id="coverage" class="coverage-note"></p><p id="limits" class="coverage-note"></p></details>
     <details class="panel coverage-panel"><summary>Last observed server states</summary><p class="subtle">Execution scopes are kept separate. An old ready record is not a current health check.</p><ul id="server-states" class="state-list"></ul><p id="states-note" class="subtle"></p></details>
     <footer>Read from supported desktop logs · Bounded local history · No requests sent to MCP servers</footer>
   </main>
 </div>
-<dialog id="detail"><div class="section-heading"><h2 id="detail-title">Event evidence</h2><button id="close-detail" aria-label="Close evidence">Close</button></div><p id="detail-summary"></p><dl id="detail-fields" class="evidence-fields"></dl><p class="subtle">Diagnostic metadata only. Raw errors, credentials, tool arguments, and results are omitted.</p><div class="controls"><button id="copy">Copy diagnostic summary</button><span id="copy-status" role="status"></span></div></dialog>
+<dialog id="detail"><div class="section-heading"><h2 id="detail-title">Event evidence</h2><button id="close-detail" aria-label="Close evidence">Close</button></div><p id="detail-summary"></p><div id="detail-group" hidden><p id="detail-advice"></p><dl id="detail-group-fields" class="evidence-fields"></dl></div><dl id="detail-fields" class="evidence-fields"></dl><p class="subtle">Diagnostic metadata only. Raw errors, credentials, tool arguments, and results are omitted.</p><div class="controls"><button id="copy">Copy diagnostic summary</button><span id="copy-status" role="status"></span></div></dialog>
 </body></html>

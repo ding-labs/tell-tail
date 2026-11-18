@@ -9,7 +9,7 @@ function age(ms) { if (ms == null) return 'unknown'; const s = Math.max(0, (Date
 function node(tag, text, cls) { const n = document.createElement(tag); if (text != null) n.textContent = text; if (cls) n.className = cls; return n; }
 function connection(text, tone) { $('connection').textContent = text; $('connection').dataset.tone = tone; }
 function preserveFocus(container, nodes) { const id = container.contains(document.activeElement) ? document.activeElement?.dataset?.event : null; container.replaceChildren(...nodes); if (id) [...container.querySelectorAll('button')].find(b => b.dataset.event === id)?.focus({ preventScroll: true }); }
-function inspectButton(id) { const b = node('button', 'Inspect'); b.dataset.event = String(id); b.setAttribute('aria-label', `Inspect event ${id}`); b.addEventListener('click', () => inspect(id)); return b; }
+function inspectButton(id, issue) { const b = node('button', 'Inspect'); b.dataset.event = String(id); b.setAttribute('aria-label', `Inspect event ${id}`); b.addEventListener('click', () => inspect(id, issue)); return b; }
 function options(snapshot) { const chosen = $('server').value; const names = [...new Set([...snapshot.events, ...snapshot.servers, ...snapshot.issues].map(e => e.server))].sort(); if (chosen && !names.includes(chosen)) names.push(chosen); const signature = names.join('\n'); if ($('server').dataset.signature === signature) return; $('server').dataset.signature = signature; $('server').replaceChildren(new Option('All servers', ''), ...names.map(n => new Option(n, n))); $('server').value = chosen; }
 function renderSources(snapshot) {
   $('roots').replaceChildren(...snapshot.roots.map(r => node('p', `${hosts[r.host]} · ${r.location} · ${r.status}`, 'root-path')));
@@ -22,13 +22,61 @@ function render(snapshot) {
   document.querySelector('.local-label').textContent = snapshot.demo ? 'SYNTHETIC DEMO · NO CLIENT LOGS READ' : 'LOCAL · READ ONLY';
   displayed = snapshot; options(snapshot);
   $('event-count').textContent = number(snapshot.counts.observations); $('issue-count').textContent = number(snapshot.retained_issues); $('mirror-count').textContent = number(snapshot.counts.mirrors); $('source-count').textContent = number(snapshot.sources.length);
-  const issues = snapshot.issues.filter(i => (!$('host').value || i.host === $('host').value) && (!$('server').value || i.server === $('server').value));
-  $('issues-empty').hidden = issues.length > 0;
-  $('issues-note').textContent = `Showing ${issues.length} of ${number(snapshot.retained_issues)} retained groups · observations, not unique outages`;
-  preserveFocus($('issues'), issues.map(i => { const n = node('article', null, `issue${i.recovered_ms ? ' recovered' : ''}`); n.append(node('h3', `${hosts[i.host]} / ${i.server}`), node('p', reasons[i.reason]), node('p', `${i.phase} · ${number(i.observations)} observations · execution ${i.scope.slice(0, 6)}`, 'issue-meta'), node('p', `First: ${date(i.first_ms)} · Last: ${date(i.last_ms)}`, 'issue-meta'), node('p', i.recovered_ms ? `Recovery observed ${date(i.recovered_ms)}` : `${i.historical ? 'Historical evidence' : 'Observed while watching'} · recovery not observed`, 'issue-meta'), node('p', i.advice, 'issue-meta'), inspectButton(i.last_event_id)); return n; }));
+  renderIssues(snapshot);
   $('server-states').replaceChildren(...snapshot.servers.map(s => node('li', `${hosts[s.host]} / ${s.server} · ${s.kind.replaceAll('_', ' ')} · ${date(s.timestamp_ms)} · execution ${s.scope.slice(0, 6)}${s.historical ? ' · history' : ''}`)));
   $('states-note').textContent = `Showing ${snapshot.servers.length} of ${snapshot.retained_states} retained execution states.`;
   renderSources(snapshot);
+}
+function renderIssues(snapshot) {
+  const query = $('search').value.trim().toLowerCase();
+  const category = $('category').value;
+  const since = $('since').value ? Date.now() - Number($('since').value) : null;
+  const issues = snapshot.issues.filter(i =>
+    (!$('host').value || i.host === $('host').value) &&
+    (!$('server').value || i.server === $('server').value) &&
+    (!category || category === 'failure' || i.reason === category) &&
+    (since == null || (i.last_ms != null && i.last_ms >= since)) &&
+    (!query || [i.server, hosts[i.host], reasons[i.reason], i.phase, i.scope, i.advice].join(' ').toLowerCase().includes(query)));
+  $('issues-tab-count').textContent = number(snapshot.retained_issues);
+  $('issues-empty').hidden = issues.length > 0;
+  $('issues-empty').textContent = snapshot.issues.length
+    ? 'No available failure groups match these filters. Clear filters to see all available groups.'
+    : 'No failures observed in the available groups. This does not establish server health.';
+  $('issues-note').textContent = `${issues.length} matching · ${snapshot.issues.length} available in overview · ${number(snapshot.retained_issues)} retained groups`;
+  preserveFocus($('issues'), issues.map(i => {
+    const row = node('tr', null, i.recovered_ms ? 'recovered' : '');
+    const time = node('td', date(i.last_ms));
+    time.append(node('small', i.historical ? 'Imported history' : 'Received while watching'));
+    const server = node('td', i.server);
+    server.append(node('small', hosts[i.host]));
+    const failure = node('td', reasons[i.reason], 'failure-label');
+    failure.append(node('small', i.recovered_ms ? `Recovery observed ${date(i.recovered_ms)}` : 'Recovery not observed'), node('small', `${i.phase} · execution ${i.scope.slice(0, 6)}`));
+    const count = node('td', number(i.observations), 'issue-count');
+    const action = node('td'); action.append(inspectButton(i.last_event_id, i));
+    row.append(time, server, failure, count, action);
+    return row;
+  }));
+}
+function selectView(id, focus = false) {
+  for (const name of ['timeline', 'issues']) {
+    const selected = name === id;
+    const tab = $(`${name}-tab`);
+    tab.setAttribute('aria-selected', String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+    $(`${name}-view`).hidden = !selected;
+    if (selected && focus) tab.focus();
+  }
+  $('search-label').textContent = id === 'issues' ? 'Search available failure groups' : 'Search retained evidence';
+  $('search').placeholder = id === 'issues' ? 'Server, failure reason, execution…' : 'Server, failure reason, method…';
+}
+for (const id of ['timeline', 'issues']) {
+  const tab = $(`${id}-tab`);
+  tab.addEventListener('click', () => selectView(id));
+  tab.addEventListener('keydown', event => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    selectView(event.key === 'Home' ? 'timeline' : event.key === 'End' ? 'issues' : id === 'timeline' ? 'issues' : 'timeline', true);
+  });
 }
 function timeline(events) {
   preserveFocus($('timeline'), events.map(e => { const row = node('tr'); const time = node('td', date(e.timestamp_ms)); time.append(node('small', e.historical ? 'Imported history' : 'Received while watching')); const server = node('td', e.server); server.append(node('small', hosts[e.host])); const message = node('td', e.summary, failures.has(e.kind) ? 'failure-label' : ''); message.append(node('small', `${e.method || e.kind.replaceAll('_', ' ')} · ${e.level}${e.scope_known ? '' : ' · execution scope unknown'}`)); const action = node('td'); action.append(inspectButton(e.id)); row.append(time, server, message, action); return row; }));
@@ -44,9 +92,14 @@ async function history() {
   catch (e) { if (e.name !== 'AbortError') $('history-status').textContent = e.message; }
 }
 function setPaused(value) { paused = value; pauseUntil = paused ? latest?.counts.observations : undefined; $('pause').textContent = paused ? 'Resume live' : 'Pause display'; $('pause').setAttribute('aria-pressed', String(paused)); $('display-note').textContent = paused ? 'Display paused. Collection and connection status continue; filters search evidence received before this pause.' : 'Following new observations. Imported history is labeled; server state is not a health check.'; }
-async function inspect(id) {
+async function inspect(id, issue) {
+  $('detail-group').hidden = !issue;
+  $('detail-title').textContent = issue ? 'Failure group evidence' : 'Event evidence';
+  $('detail-advice').textContent = issue?.advice || '';
+  const groupFields = issue ? [['First reported', date(issue.first_ms)], ['Last reported', date(issue.last_ms)], ['Observations', number(issue.observations)], ['Phase', issue.phase], ['Recovery', issue.recovered_ms ? `Observed ${date(issue.recovered_ms)}` : 'Not observed']] : [];
+  $('detail-group-fields').replaceChildren(...groupFields.flatMap(([k, v]) => [node('dt', k), node('dd', v)]));
   const request = ++detailRequest;
-  $('detail-title').textContent = 'Event evidence'; $('detail-summary').textContent = 'Loading…'; $('detail-fields').replaceChildren(); $('copy-status').textContent = ''; $('copy').disabled = true; detailEvent = null; if (!$('detail').open) $('detail').showModal();
+  $('detail-summary').textContent = 'Loading…'; $('detail-fields').replaceChildren(); $('copy-status').textContent = ''; $('copy').disabled = true; detailEvent = null; if (!$('detail').open) $('detail').showModal();
   try { const res = await fetch(`/api/mcp/event/${id}`); if (!res.ok) throw new Error(res.status === 410 ? 'This event has left the bounded history.' : 'Evidence is unavailable.'); const e = await res.json(); if (request !== detailRequest) return; detailEvent = e; $('detail-summary').textContent = e.summary; const fields = [['Client', hosts[e.host]], ['Server', e.server], ['Recorded', date(e.timestamp_ms)], ['Received', date(e.observed_ms)], ['Origin', e.historical ? 'Imported history' : 'Appended while watching'], ['Scope', e.scope_known ? `Local execution label ${e.scope}` : 'Unknown execution scope'], ['Method', e.method || 'Not available'], ['Original severity', e.level], ['Evidence locations', e.evidence.map(p => `Source ${p.source_id}, generation ${p.generation}, byte ${p.offset}`).join('; ')]]; $('detail-fields').replaceChildren(...fields.flatMap(([k, v]) => [node('dt', k), node('dd', v)])); $('copy').disabled = false; }
   catch (e) { if (request === detailRequest) $('detail-summary').textContent = e.message; }
 }
