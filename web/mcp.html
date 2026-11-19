@@ -49,7 +49,7 @@
         <p id="trace-coverage" class="subtle">Result-only observations. Tool inputs and results are omitted.</p>
         <form id="trace-filters" class="filters" role="search" aria-label="Tool call filters">
           <label class="search-field">Search calls<input id="trace-q" type="search" maxlength="200" placeholder="Tool, plugin, execution…"></label>
-          <label>Plugin<input id="trace-plugin" type="search" maxlength="128" placeholder="Exact plugin ID"></label>
+          <label>Plugin namespace<input id="trace-plugin" type="search" maxlength="128" list="trace-plugin-options" placeholder="All observed plugins"><datalist id="trace-plugin-options"></datalist></label>
           <label>Tool<input id="trace-tool" type="search" maxlength="128" placeholder="Exact tool name"></label>
           <label>Execution<input id="trace-execution" type="search" maxlength="128" placeholder="Exact local label"></label>
           <label>Outcome<select id="trace-outcome"><option value="">All outcomes</option><option value="completed">Completed</option><option value="failed">Execution failed</option><option value="conflict">Conflicting evidence</option><option value="incomplete">Incomplete</option></select></label>

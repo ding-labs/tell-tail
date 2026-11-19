@@ -214,9 +214,12 @@ fn record(b: &[u8], budget: &mut usize, epoch: &str) -> Result<Option<Observatio
         .filter(|s| label(s))
         .ok_or(Invalid("malformed_protobuf"))?;
     let namespace = text(attrs.get("tool_namespace")).filter(|s| label(s));
-    // Exact namespace observed with known Railway operations in the capture audit.
-    // All other namespaces remain unattributed; never guess by splitting underscores.
-    let plugin = (namespace == Some("mcp__codex_apps__railway")).then(|| "railway".to_owned());
+    // This is a source namespace label, not a manifest ID or display-name guess.
+    // Preserve the entire suffix (including underscores) and accept new providers.
+    let plugin = namespace
+        .and_then(|ns| ns.strip_prefix("mcp__codex_apps__"))
+        .filter(|name| !name.is_empty())
+        .map(str::to_owned);
     let tool = namespace.map_or_else(|| name.to_owned(), |ns| format!("{ns}.{name}"));
     let execution = text(attrs.get("conversation.id"));
     let outcome = match attrs.get("success") {
@@ -364,6 +367,30 @@ mod tests {
         let d = decode(&batch(&b), "epoch").unwrap();
         assert!(d.observations[0].plugin.is_none());
         assert!(d.observations[0].call_id.is_none());
+    }
+    #[test]
+    fn every_hosted_provider_is_discovered_without_a_catalog_or_allowlist() {
+        for provider in ["railway", "google_drive", "ding___test", "new_provider_42"] {
+            let raw = [
+                attr("event.name", "codex.tool_result"),
+                attr("tool_name", "lookup"),
+                attr("tool_namespace", &format!("mcp__codex_apps__{provider}")),
+            ]
+            .concat();
+            let result = decode(&batch(&raw), "epoch").unwrap();
+            assert_eq!(result.observations[0].plugin.as_deref(), Some(provider));
+        }
+        let raw = [
+            attr("event.name", "codex.tool_result"),
+            attr("tool_name", "lookup"),
+            attr("tool_namespace", "mcp__codex_apps__"),
+        ]
+        .concat();
+        assert!(
+            decode(&batch(&raw), "epoch").unwrap().observations[0]
+                .plugin
+                .is_none()
+        );
     }
     #[test]
     fn malformed_duplicate_and_budgeted_input_rejected() {

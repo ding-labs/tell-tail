@@ -25,7 +25,7 @@ test('tool calls flow through authenticated OTLP, freeze outcomes, filter, pagin
   assert.match(await page.locator('#trace-rows').textContent(),/railway/);assert.match(await page.locator('#trace-rows').textContent(),/Execution succeeded/);
   assert.equal(await page.locator('#traces-tab-count').textContent(),'1');
   await page.locator('#pause').click();
-  await post([record('PRIVATE_A','false'),record('PRIVATE_B','false','mcp__other')]);
+  await post([record('PRIVATE_A','false'),record('PRIVATE_B','false','mcp__codex_apps__google_drive')]);
   await page.waitForFunction(async()=> (await(await fetch('/api/traces/snapshot')).json()).snapshot.retained_calls===2);
   assert.equal(await page.locator('#trace-rows tr').count(),1);assert.match(await page.locator('#trace-rows').textContent(),/Execution succeeded/);
   await page.locator('#trace-rows button').first().click();await page.waitForFunction(()=>document.getElementById('trace-detail-note').textContent==='Execution succeeded');
@@ -33,7 +33,11 @@ test('tool calls flow through authenticated OTLP, freeze outcomes, filter, pagin
   await page.locator('#trace-q').fill('railway');await page.waitForTimeout(300);assert.equal(await page.locator('#trace-rows tr').count(),1);
   await page.locator('#trace-clear').click();assert.equal(await page.locator('#pause').getAttribute('aria-pressed'),'true');
   await page.locator('#pause').click();await page.waitForFunction(()=>document.querySelectorAll('#trace-rows tr').length===2);assert.match(await page.locator('#trace-rows').textContent(),/conflict/);
-  await page.locator('#trace-outcome').selectOption('failed');await page.waitForFunction(()=>document.querySelectorAll('#trace-rows tr').length===1);assert.match(await page.locator('#trace-rows').textContent(),/Unidentified plugin/);
+  await page.locator('#trace-outcome').selectOption('failed');await page.waitForFunction(()=>document.querySelectorAll('#trace-rows tr').length===1);assert.match(await page.locator('#trace-rows').textContent(),/google_drive/);
+  assert.deepEqual(await page.locator('#trace-plugin-options option').evaluateAll(nodes=>nodes.map(n=>n.value)), ['google_drive','railway']);
+  await page.locator('#trace-plugin').fill('google_drive');
+  await page.waitForTimeout(300);
+  assert.equal(await page.locator('#trace-rows tr').count(),1);
   await page.locator('#trace-clear').click();
   await post(Array.from({length:130},(_,i)=>record(`PRIVATE_${i}`)));
   await page.waitForFunction(()=>document.querySelectorAll('#trace-rows tr').length===100);

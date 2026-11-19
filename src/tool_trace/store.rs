@@ -128,6 +128,16 @@ impl Default for Store {
     }
 }
 impl Store {
+    /// Suggestions are derived from bounded retained evidence, never plugin-cache guesses.
+    pub fn observed_plugins(&self) -> Vec<String> {
+        self.calls
+            .values()
+            .filter_map(|t| t.call.plugin.clone())
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .take(128)
+            .collect()
+    }
     pub fn snapshot(&self) -> Snapshot {
         Snapshot {
             schema_version: SCHEMA_VERSION,
