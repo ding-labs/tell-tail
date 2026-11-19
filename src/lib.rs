@@ -39,3 +39,5 @@ pub mod webhook;
 pub mod webhook_delivery;
 
 pub mod mcp;
+
+pub mod tool_trace;
