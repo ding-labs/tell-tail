@@ -59,6 +59,21 @@ class DecodeTests(unittest.TestCase):
         self.assertNotIn("duration_ms", value)
         self.assertNotIn("execution_success", value)
 
+    def test_unknown_tool_fingerprints_and_string_duration(self):
+        a, b, c = decode(batch(attr("tool_name", "PRIVATE_A"),
+                               attr("tool_name", "PRIVATE_A"),
+                               attr("tool_name", "PRIVATE_B")), b"key")
+        self.assertEqual(a["tool_name_local"], b["tool_name_local"])
+        self.assertNotEqual(a["tool_name_local"], c["tool_name_local"])
+        self.assertNotIn("PRIVATE", json.dumps([a, b, c]))
+        for value, expected in [("123", 123), ("0", 0), ("86400000", 86400000),
+                                ("86400001", None), ("-1", None), ("1.5", None),
+                                ("9" * 200, None), ("１２", None)]:
+            result = decode(batch(attr("duration_ms", value)), b"key")[0]
+            self.assertEqual(result.get("duration_ms"), expected)
+        self.assertEqual(decode(batch(attr("tool_name", "exec_command")), b"key")[0]["tool"],
+                         "exec_command")
+
     def test_event_body_and_attribute_name(self):
         for r in [message(5, message(1, b"codex.tool_result")), attr("event.name", "codex.tool_result")]:
             self.assertEqual(decode(batch(r), b"key")[0]["event"], "codex.tool_result")

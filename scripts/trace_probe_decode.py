@@ -17,8 +17,12 @@ ATTRIBUTES = frozenset(("event.name", "tool_name", "call_id", "conversation.id",
                         "parent_call_id", "turn_id"))
 # Exact probe operations only. A namespace prefix is not proof of attribution.
 TOOLS = {"mcp__codex_apps__railway_search_docs": "railway.search_docs",
-         "mcp__codex_apps__railway__search_docs": "railway.search_docs",
-         "functions.exec": "functions.exec"}
+         "functions.exec": "functions.exec",
+         "exec": "exec",
+         "exec_command": "exec_command",
+         "write_stdin": "write_stdin",
+         "apply_patch": "apply_patch",
+         "js": "js"}
 
 
 class InvalidBatch(ValueError):
@@ -129,12 +133,15 @@ def record(data, key):
     result = {"event": next(iter(known_names), "other"),
               "fields_present": sorted(attrs), "has_timestamp": bool(has_time),
               "tool": TOOLS.get(attrs.get("tool_name"), "unidentified")}
-    for name in ("call_id", "conversation.id", "parent_call_id", "turn_id"):
+    for name in ("tool_name", "call_id", "conversation.id", "parent_call_id", "turn_id"):
         value = attrs.get(name)
         if isinstance(value, str) and value:
             result[name + "_local"] = hashlib.blake2b(
                 name.encode() + b"\0" + value.encode(), key=key, digest_size=16).hexdigest()
     duration = attrs.get("duration_ms")
+    # tracing exporters can encode numeric fields as decimal strings.
+    if isinstance(duration, str) and duration.isascii() and duration.isdecimal() and len(duration) <= 8:
+        duration = int(duration)
     if isinstance(duration, int) and not isinstance(duration, bool) and 0 <= duration <= 86400000:
         result["duration_ms"] = duration
     success = attrs.get("success")
