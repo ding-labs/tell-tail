@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark"><title>Tell-Tail · Desktop activity</title>
+  <link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/activity.css">
+  <script type="module" src="/activity.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#feed">Skip to activity</a>
+  <header class="app-header">
+    <a class="brand" href="/" aria-label="Tell-Tail home"><img src="/logo.svg" width="30" height="30" alt=""><span>tell-tail</span></a>
+    <span class="product-label">For ChatGPT <span>&amp; Codex</span></span>
+    <span id="connection" class="connection" role="status" data-state="connecting">Connecting…</span>
+    <div class="header-actions">
+      <button id="theme" class="quiet" aria-label="Appearance: system">System theme</button>
+      <button id="density" class="quiet" aria-pressed="false">Compact</button>
+      <button id="pause" aria-pressed="false">Pause display</button>
+    </div>
+  </header>
+  <div class="app-shell">
+    <nav class="sidebar" aria-label="Workspace">
+      <div class="nav-links">
+        <button data-view="activity" aria-current="page"><span class="nav-icon" aria-hidden="true">≋</span>Activity</button>
+        <button data-view="tools"><span class="nav-icon" aria-hidden="true">⌘</span>Tools &amp; MCP</button>
+        <button data-view="problems"><span class="nav-icon" aria-hidden="true">!</span>Problems</button>
+        <button data-view="sources"><span class="nav-icon" aria-hidden="true">◎</span>Sources</button>
+      </div>
+      <div class="sidebar-status"><span class="eyebrow">Capture</span><p id="source-status">Looking for sources</p><p id="trace-status">Checking telemetry</p><span class="sidebar-note">Local metadata<br>Bounded history</span><a href="/mcp">MCP diagnostics ↗</a></div>
+    </nav>
+    <main id="main" class="main">
+      <div class="titlebar"><h1 id="view-title">Activity</h1><span id="view-count" class="muted">Waiting for observations</span><button id="pending" class="accent" hidden>Updates available · Return to live</button></div>
+      <section id="query-controls" aria-label="Filter activity">
+        <form id="filters" class="toolbar" role="search">
+          <label class="search"><span aria-hidden="true">⌕</span><span class="sr-only">Search retained activity</span><input id="search" type="search" maxlength="200" placeholder="Search activity, tools, components…" autocomplete="off"></label>
+          <label class="range"><span class="sr-only">Time range</span><select id="time-range"><option value="all">All retained</option><option value="900000">Last 15 minutes</option><option value="3600000">Last hour</option><option value="custom" hidden>Selected interval</option></select></label>
+          <details id="more-filters" class="filter-popover"><summary>More filters <span id="filter-count"></span></summary><div class="filter-fields">
+            <label>Client<select id="client"><option value="">All clients</option><option value="chatgpt_codex_desktop">ChatGPT / Codex desktop logs</option><option value="codex_exporter">Codex exporter</option><option value="claude_desktop">Claude Desktop MCP</option></select></label>
+            <label>Source<select id="source"><option value="">All sources</option><option value="desktop_logs">Desktop logs</option><option value="mcp_logs">MCP logs</option><option value="tool_telemetry">Tool telemetry</option></select></label>
+            <label>Plugin namespace<select id="plugin"><option value="">All observed plugins</option></select></label>
+            <label>MCP server<select id="server"><option value="">All observed servers</option></select></label>
+            <label>Outcome<select id="outcome"><option value="">All outcomes</option><option value="failure_reported">Failure reported</option><option value="execution_failed">Execution failed</option><option value="tool_error">Tool reported error</option><option value="execution_succeeded">Execution succeeded</option><option value="completed">Completed</option><option value="ready_observed">Ready observed</option><option value="incomplete">Incomplete</option><option value="conflicting_evidence">Conflicting evidence</option><option value="denied">Denied</option><option value="cancelled">Cancelled</option></select></label>
+            <label>Origin<select id="historical"><option value="">History and live</option><option value="true">Imported history</option><option value="false">Received after startup</option></select></label>
+          </div></details>
+          <button id="clear" type="button" class="quiet">Reset</button>
+        </form>
+        <section id="time-navigator" class="time-navigator" aria-label="Activity over time"><div id="lanes"></div><div class="time-axis"><span id="time-start"></span><span id="time-middle"></span><span id="time-end"></span></div></section>
+        <div class="category-bar">
+          <div class="categories" role="group" aria-label="Event categories"><button data-category="" aria-pressed="true">All activity</button><button data-category="tools" aria-pressed="false">Tools</button><button data-category="mcp" aria-pressed="false">MCP</button><button data-category="connections" aria-pressed="false">Connections</button><button data-category="desktop" aria-pressed="false">Desktop</button></div>
+          <label class="diagnostics"><input id="diagnostics" type="checkbox">Show diagnostics <span id="diagnostic-count"></span></label>
+          <button id="exact-times" class="quiet">Exact times</button>
+        </div>
+      </section>
+      <p id="display-note" class="display-note" role="status">Reading supported desktop observations…</p>
+      <div id="workspace" class="workspace">
+        <section id="feed" class="feed" aria-label="Activity evidence" tabindex="0">
+          <div id="list-heading" class="list-heading"><span>Recorded time</span><span>Observation</span><span>Outcome / duration</span></div>
+          <div id="rows" role="list"></div>
+          <div id="empty" class="empty" hidden><div class="empty-symbol" aria-hidden="true">≋</div><h2 id="empty-title">Waiting for activity</h2><p id="empty-note"></p><button id="empty-reset" hidden>Clear filters</button></div>
+          <section id="sources-view" hidden aria-label="Capture sources"></section>
+          <div id="pagination" class="pagination"><button id="latest">Latest activity</button><button id="older" disabled>Older activity</button><span id="page-note" class="muted"></span></div>
+        </section>
+        <dialog id="inspector" class="inspector" aria-labelledby="detail-title">
+          <header class="inspector-header"><span class="eyebrow">Event evidence</span><button id="close-detail" class="quiet" aria-label="Close event evidence">✕</button></header>
+          <div id="detail-content"></div>
+          <footer class="inspector-footer"><button id="copy">Copy diagnostic summary</button><span id="copy-status" role="status"></span></footer>
+        </dialog>
+      </div>
+      <footer class="workspace-footer"><span id="retention">Bounded local history</span><span id="timezone"></span></footer>
+    </main>
+  </div>
+  <dialog id="times-dialog" class="times-dialog" aria-labelledby="times-title"><header><h2 id="times-title">Exact event counts</h2><button id="close-times" aria-label="Close exact event counts">Close</button></header><p class="muted">Counts use the same filters and frozen view as the feed.</p><div id="times-values"></div></dialog>
+</body>
+</html>
