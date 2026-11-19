@@ -15,6 +15,7 @@ activity freshness require **0.3.0 or later**. Their guides use the installed
 
 | Guide | What it answers |
 | --- | --- |
+| [Desktop activity (unreleased)](DESKTOP-ACTIVITY.md) | Unified ChatGPT/Codex observations, tools and MCP; time navigator, inspector, source coverage and migration |
 | [MCP diagnostics](MCP.md) | Existing desktop MCP logs, grouped failures, live timeline, safe evidence, source coverage, demo, and API |
 | [Log format recognition](LOG-FORMATS.md) | Automatic styles, one-flag profiles, nested keys, container wrappers, parser hints, and precise limits |
 | [Understanding a live log stream](MONITORING.md) | What coverage, histories, ratios, and activity ages mean; worked examples, parser conventions, time scopes, and controls |

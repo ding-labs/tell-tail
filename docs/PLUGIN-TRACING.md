@@ -4,7 +4,11 @@ Available in this checkout; not a claim about published packages. Build with the
 default `web` feature to receive **Codex OTLP HTTP/protobuf tool results**. The
 passive `tell-tail mcp --open` command still requires no client configuration.
 
-The Tool calls tab shows a bounded table with tool identity, outcome, duration,
+The [Activity workspace](DESKTOP-ACTIVITY.md) is the default for new managed
+collectors. Its Tools & MCP destination combines results with server diagnostics.
+The existing MCP dashboard remains at `/mcp`.
+
+The MCP dashboard’s Tool calls tab shows a bounded table with tool identity, outcome, duration,
 execution label, filters, pagination, and an inspector. Pause freezes the displayed
 call revisions, including details and filtered queries, while intake continues.
 Expired snapshots require an explicit refresh. Copy includes diagnostic metadata,
@@ -101,7 +105,9 @@ Run the **new** executable's `tracing upgrade` command after obtaining a newer
 build. A plugin update alone does not replace the separately installed collector.
 For a source checkout, use `cargo run --locked -- tracing upgrade`. The command
 preserves the credential, ports, exporter and unrelated settings, retains one
-previous executable, restarts an enabled collector, and checks receiver health.
+previous executable and launch command, migrates owned MCP services to the
+Activity workspace, restarts an enabled collector, and checks receiver and activity
+health. Edited service definitions are preserved and refused.
 A disabled installation stays disabled. Failed activation attempts restore the
 previous executable and service automatically; failures of that recovery are
 reported explicitly. Collector restarts clear in-memory history; Codex does not

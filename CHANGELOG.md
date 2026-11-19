@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Add `desktop` mode: an allowlisted general desktop event adapter and a unified
+  Activity workspace for ChatGPT and Codex, alongside Tools & MCP, Problems and
+  Sources. Include a time navigator, frozen evidence inspector, retained-history
+  filters, themes, responsive layout and isolated synthetic demo.
+- Add bounded activity projections, revision/source history, metadata-only API
+  and watermark SSE; preserve the existing MCP command and APIs.
+- New managed collectors open Activity. Upgrade migrates owned MCP launch
+  definitions; rollback and failed activation restore the executable and command.
+  No beta packaging or release changes accompany this source implementation.
+
 - Add managed collector upgrade, rollback, and uninstall commands. Preserve
   credentials and client settings during replacement, recover failed activation,
   and retain user-added files during removal.

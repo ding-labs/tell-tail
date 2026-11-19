@@ -74,6 +74,22 @@ See [MCP diagnostics](docs/MCP.md) for sources, headless output, and coverage li
 Read the [hosted MCP guide](https://docs.ding.ing/tell-tail/mcp/) for installation
 and usage. MCP diagnostics require 0.4.0 or later; no source build is needed.
 
+### Tell-Tail for ChatGPT and Codex (unreleased)
+
+The new desktop workspace brings general desktop events, connections, plugin
+results and MCP diagnostics into one Activity timeline. Compact rows, a time
+navigator and an evidence inspector keep activity visible immediately.
+
+```sh
+cargo run --locked -- desktop --demo --open
+cargo run --locked -- desktop --open
+```
+
+Use Activity, Tools & MCP, Problems and Sources to inspect supported local
+observations. Pause freezes the evidence; filters search all retained history.
+See [Desktop activity](docs/DESKTOP-ACTIVITY.md) for coverage, controls and API.
+This feature is available in the source checkout, not published 0.4.0 builds.
+
 ### Tool-call tracing (unreleased)
 
 Capture exported Codex tool results across hosted plugin namespaces, with a
