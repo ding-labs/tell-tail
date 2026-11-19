@@ -7,6 +7,7 @@
   "homepage": "https://github.com/ding-labs/tell-tail",
   "extensions": {
     "com.openai": {
+      "requires_local_executor": true,
       "onboardingSkill": "./skills/tell-tail/SKILL.md",
       "interface": {
         "displayName": "Tell-Tail",
