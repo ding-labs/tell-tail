@@ -2,7 +2,7 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "tell-tail",
   "version": "0.2.0",
-  "description": "Local tool-call observability for Codex Desktop on macOS.",
+  "description": "Local desktop activity, MCP diagnostics and tool-call observability for ChatGPT and Codex on macOS.",
   "license": "MIT",
   "homepage": "https://github.com/ding-labs/tell-tail",
   "extensions": {
@@ -11,11 +11,14 @@
       "onboardingSkill": "./skills/tell-tail/SKILL.md",
       "interface": {
         "displayName": "Tell-Tail",
-        "shortDescription": "See tool calls across your Codex plugins",
-        "longDescription": "Set up persistent local tracing, inspect observed plugin calls, and diagnose capture health. Requires macOS and a one-time Codex restart. Captures exported result metadata; history is in memory.",
+        "shortDescription": "Desktop activity for ChatGPT and Codex",
+        "longDescription": "Explore supported desktop events, connections, MCP diagnostics and plugin tool results in one local Activity timeline. Persistent tool capture requires setup and a one-time Codex restart. Metadata only; bounded in-memory history. Complete cloud activity is not observed.",
         "developerName": "Ding Labs",
         "category": "Productivity",
-        "defaultPrompt": ["Set up Tell-Tail tracing for my Codex plugins.", "Check Tell-Tail capture health and open the dashboard."]
+        "defaultPrompt": [
+          "Set up Tell-Tail for ChatGPT and Codex.",
+          "Check Tell-Tail capture health and open Activity."
+        ]
       }
     }
   }
