@@ -85,7 +85,12 @@ async fn serve(
     let mut tick = tokio::time::interval(Duration::from_millis(200));
     tick.set_missed_tick_behavior(MissedTickBehavior::Skip);
     crate::writer::diagnostic(&format!(
-        "tell-tail: MCP web http://{host}/ (Ctrl+C to stop)\n"
+        "tell-tail: {} web http://{host}/ (Ctrl+C to stop)\n",
+        if running.activity.is_some() {
+            "Desktop"
+        } else {
+            "MCP"
+        }
     ));
     let mut browser = if open {
         match browser::Browser::open(&format!("http://{host}/")) {
@@ -356,6 +361,16 @@ fn router(app: App) -> Router {
     let routes = Router::new()
         .route(
             "/",
+            get(|State(app): State<App>| async move {
+                Html(if app.activity.is_some() {
+                    include_str!("../../web/activity.html")
+                } else {
+                    include_str!("../../web/mcp.html")
+                })
+            }),
+        )
+        .route(
+            "/mcp",
             get(|| async { Html(include_str!("../../web/mcp.html")) }),
         )
         .route(

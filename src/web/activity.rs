@@ -200,6 +200,9 @@ fn read(app: &App, req: &Request, kind: Query) -> Response {
             Ok(mut groups) => {
                 let matched = groups.len();
                 groups.truncate(100);
+                while serde_json::to_vec(&groups).is_ok_and(|v| v.len() > 48 * 1024) {
+                    groups.pop();
+                }
                 json(
                     &serde_json::json!({"as_of":at.to_string(),"matched":matched,"omitted":matched.saturating_sub(groups.len()),"groups":groups}),
                     64 * 1024,
@@ -288,6 +291,60 @@ async fn events(State(app): State<App>, req: Request) -> Response {
 }
 pub(super) fn router(shared: Shared) -> Router {
     Router::new()
+        .route(
+            "/activity.css",
+            get(|| async {
+                (
+                    [(header::CONTENT_TYPE, "text/css")],
+                    include_str!("../../web/activity.css"),
+                )
+            }),
+        )
+        .route(
+            "/activity.mjs",
+            get(|| async {
+                (
+                    [(header::CONTENT_TYPE, "text/javascript")],
+                    include_str!("../../web/activity.mjs"),
+                )
+            }),
+        )
+        .route(
+            "/activity-format.mjs",
+            get(|| async {
+                (
+                    [(header::CONTENT_TYPE, "text/javascript")],
+                    include_str!("../../web/activity-format.mjs"),
+                )
+            }),
+        )
+        .route(
+            "/activity-feed.mjs",
+            get(|| async {
+                (
+                    [(header::CONTENT_TYPE, "text/javascript")],
+                    include_str!("../../web/activity-feed.mjs"),
+                )
+            }),
+        )
+        .route(
+            "/activity-detail.mjs",
+            get(|| async {
+                (
+                    [(header::CONTENT_TYPE, "text/javascript")],
+                    include_str!("../../web/activity-detail.mjs"),
+                )
+            }),
+        )
+        .route(
+            "/activity-sources.mjs",
+            get(|| async {
+                (
+                    [(header::CONTENT_TYPE, "text/javascript")],
+                    include_str!("../../web/activity-sources.mjs"),
+                )
+            }),
+        )
         .route("/api/activity/snapshot", get(snapshot))
         .route("/api/activity/items", get(items))
         .route("/api/activity/bins", get(bins))

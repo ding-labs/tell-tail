@@ -14,6 +14,9 @@ export async function monitor(args = []) {
 export async function monitorMcp(args = []) {
   return start(['mcp', '--output', 'web', ...args]);
 }
+export async function monitorDesktop(args = []) {
+  return start(['desktop', '--output', 'web', ...args]);
+}
 async function start(args) {
   const child = spawn(resolve(root, process.env.TELL_TAIL_BIN || 'target/debug/tell-tail'), args, { cwd: root, stdio: ['pipe', 'pipe', 'pipe'] });
   let diagnostic = '';
@@ -26,7 +29,7 @@ async function start(args) {
     child.once('exit', code => { clearTimeout(timer); reject(new Error(`Server exited ${code}: ${diagnostic}`)); });
     child.stderr.on('data', data => {
       diagnostic = (diagnostic + data).slice(-16384);
-      const match = args[0] === 'mcp' ? diagnostic.match(/MCP web (http:\/\/127\.0\.0\.1:\d+\/)/) : diagnostic.match(/(http:\/\/127\.0\.0\.1:\d+\/)/);
+      const match = args[0] === 'mcp' ? diagnostic.match(/MCP web (http:\/\/127\.0\.0\.1:\d+\/)/) : args[0] === 'desktop' ? diagnostic.match(/Desktop web (http:\/\/127\.0\.0\.1:\d+\/)/) : diagnostic.match(/(http:\/\/127\.0\.0\.1:\d+\/)/);
       if (match) { clearTimeout(timer); accept(match[1]); }
     });
   });

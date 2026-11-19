@@ -150,6 +150,7 @@ pub struct Lane {
 }
 #[derive(Serialize)]
 pub struct Problem {
+    pub item: Row,
     pub id: String,
     #[serde(serialize_with = "crate::tool_trace::model::decimal")]
     pub item_id: u64,
@@ -329,6 +330,7 @@ impl Store {
                 groups.insert(
                     key.clone(),
                     Problem {
+                        item: Row::from(item),
                         id: key,
                         item_id: item.id,
                         summary: item.summary.clone(),

@@ -23,4 +23,4 @@ export function renderSources(container,sources,now,snapshot) {
   retention.append(el('p','','Chat correlation is unverified. App-wide observations and unlinked executions remain separate; no conversation databases are read.'));
   container.append(retention);
 }
-export function sourceSummary(sources,now){const trace=sources.trace||{};return {logs:sources.running?`${sources.files?.length||0} log sources followed`:'Collector stopped',trace:traceNames[trace.status]||'Telemetry unknown',freshness:trace.last_received_ms?`Last telemetry ${age(trace.last_received_ms,now)}`:''};}
+export function sourceSummary(sources,now){const trace=sources.trace||{};return {logs:sources.running?`${sources.files?.length||0} log source${sources.files?.length===1?'':'s'} followed`:'Collector stopped',trace:`Tools: ${traceNames[trace.status]||'status unknown'}`,freshness:trace.last_received_ms?`Last telemetry ${age(trace.last_received_ms,now)}`:''};}

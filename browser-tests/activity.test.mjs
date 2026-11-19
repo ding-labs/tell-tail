@@ -1,0 +1,85 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,writeFile,readFile,appendFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {chromium,monitorDesktop,root} from './helpers.mjs';
+
+test('desktop timeline freezes evidence, filters all retained data, and supports inspection and themes',async t=>{
+  const dir=await mkdtemp(join(tmpdir(),'tell-tail-activity-'));t.after(()=>rm(dir,{recursive:true,force:true}));
+  const file=join(dir,'desktop.log');await writeFile(file,await readFile(join(root,'tests/fixtures/desktop-activity.log')));
+  const server=await monitorDesktop(['--source','codex-desktop','--log-dir',dir]);t.after(()=>server.close());
+  const browser=await chromium.launch();t.after(()=>browser.close());
+  const page=await browser.newPage({viewport:{width:1280,height:800},colorScheme:'dark'});
+  await page.context().grantPermissions(['clipboard-read','clipboard-write'],{origin:server.url});
+  const errors=[],external=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(!r.url().startsWith(server.url))external.push(r.url());});
+  await page.goto(server.url);await page.waitForFunction(()=>document.querySelectorAll('#rows .event-row').length===12);
+  assert.equal(await page.locator('[data-view="activity"]').getAttribute('aria-current'),'page');
+  assert.doesNotMatch(await page.locator('body').textContent(),/PRIVATE_/);
+  await page.locator('#pause').click();const count=await page.locator('#view-count').textContent(),axis=await page.locator('#lanes').innerHTML();
+  await appendFile(file,`${new Date().toISOString()} info [electron-message-handler] chatgpt_pubsub_transport_opened\n`);
+  await page.waitForFunction(async()=> (await(await fetch('/api/activity/snapshot')).json()).retained_items===15);
+  assert.equal(await page.locator('#view-count').textContent(),count);assert.equal(await page.locator('#lanes').innerHTML(),axis);
+  await page.locator('button[data-category="connections"]').click();await page.waitForFunction(()=>document.querySelectorAll('#rows .event-row').length===3);
+  const closed=page.locator('#rows .event-row').filter({hasText:'ChatGPT transport closed'});await closed.click();
+  await page.waitForFunction(()=>document.getElementById('detail-content').textContent.includes('not proof of failure'));
+  assert.match(await page.locator('#detail-content').textContent(),/Closed observed/);
+  await page.locator('#copy').click();const copy=await page.evaluate(()=>navigator.clipboard.readText());assert.doesNotMatch(copy,/PRIVATE_/);assert.match(copy,/Metadata only/);
+  await page.keyboard.press('Escape');assert.equal(await page.locator('#inspector').evaluate(d=>d.open),false);assert.equal(await closed.evaluate(n=>n===document.activeElement),true);
+  await page.locator('#pause').click();await page.waitForFunction(()=>document.querySelectorAll('#rows .event-row').length===4);
+  await page.locator('[data-view="problems"]').click();await page.waitForFunction(()=>document.querySelectorAll('#rows .event-row').length===1);
+  assert.match(await page.locator('#rows').textContent(),/Recovery observed/);
+  await page.locator('#rows .event-row').click();await page.waitForFunction(()=>document.getElementById('detail-content').textContent.includes('Failure group'));
+  assert.match(await page.locator('#detail-content').textContent(),/Sign in/);await page.keyboard.press('Escape');
+  await page.locator('[data-view="sources"]').click();await page.waitForFunction(()=>document.getElementById('sources-view').textContent.includes('Unrecognized records'));
+  assert.match(await page.locator('#sources-view').textContent(),/Chat correlation is unverified/);
+  await page.locator('[data-view="activity"]').click();await page.locator('#clear').click();await page.locator('#pending').click();
+  await page.waitForFunction(()=>document.querySelectorAll('#rows .event-row').length===13);
+  await page.locator('#rows .event-row').filter({hasText:'Browser runtime reported ready'}).click();await page.waitForFunction(()=>document.getElementById('detail-title').textContent.includes('Browser runtime'));
+  for(const width of [1440,1280,1024,768,390,320]){
+    await page.setViewportSize({width,height:900});
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`overflow at ${width}`);
+  }
+  await page.setViewportSize({width:1280,height:800});
+  const geometry=await page.locator('.event-row').evaluateAll(rows=>({first:rows[0].getBoundingClientRect().top,visible:rows.filter(r=>r.getBoundingClientRect().bottom<=780).length}));
+  assert.ok(geometry.first<=300,`first row at ${geometry.first}`);assert.ok(geometry.visible>=7);
+  await page.screenshot({path:join(tmpdir(),'tell-tail-activity-production-dark.png')});
+  await page.keyboard.press('Escape');
+  await page.locator('#theme').click();await page.locator('#theme').click();
+  await page.screenshot({path:join(tmpdir(),'tell-tail-activity-production-light.png')});
+  await page.locator('#density').click();assert.equal(await page.locator('html').getAttribute('data-density'),'compact');
+  assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
+});
+
+const vi=n=>{const out=[];while(n>127){out.push((n&127)|128);n=Math.floor(n/128);}out.push(n);return Buffer.from(out);};
+const msg=(n,b)=>Buffer.concat([vi(n*8+2),vi(b.length),b]);
+const attr=(k,v)=>msg(6,Buffer.concat([msg(1,Buffer.from(k)),msg(2,msg(1,Buffer.from(v)))]));
+const record=(id,success='true',ns='mcp__codex_apps__railway')=>Buffer.concat(Object.entries({'event.name':'codex.tool_result',tool_name:'_search_docs',tool_namespace:ns,mcp_server:'codex_apps','conversation.id':'PRIVATE_CHAT',call_id:id,duration_ms:'123',success,arguments:'PRIVATE_ARGUMENTS',output:'PRIVATE_BALANCE'}).map(([k,v])=>attr(k,v)));
+const batch=records=>msg(1,msg(2,Buffer.concat(records.map(r=>msg(2,r)))));
+
+test('unified tool activity freezes revisions, pages dense data and searches beyond the first page',async t=>{
+  const dir=await mkdtemp(join(tmpdir(),'tell-tail-activity-tools-'));t.after(()=>rm(dir,{recursive:true,force:true}));
+  const config=join(dir,'otel.toml'),key=join(dir,'key');
+  const server=await monitorDesktop(['--source','codex-desktop','--log-dir',dir,'--trace-port','0','--trace-token-file',key,'--trace-config-out',config]);t.after(()=>server.close());
+  const fragment=await readFile(config,'utf8'),endpoint=fragment.match(/endpoint = "([^"]+)"/)[1],credential=(await readFile(key,'utf8')).trim();
+  const post=async records=>{const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/x-protobuf','x-tell-tail-probe-key':credential},body:batch(records)});assert.equal(response.status,200);};
+  const browser=await chromium.launch();t.after(()=>browser.close());const page=await browser.newPage({viewport:{width:1280,height:800}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(server.url);await post([record('PRIVATE_A')]);
+  await page.waitForFunction(()=>document.querySelectorAll('#rows .event-row').length===1);
+  assert.match(await page.locator('#rows').textContent(),/railway.*Execution succeeded/s);
+  await page.locator('#pause').click();
+  await post([record('PRIVATE_A','false'),record('PRIVATE_B','false','mcp__codex_apps__google_drive')]);
+  await page.waitForFunction(async()=> (await(await fetch('/api/activity/snapshot')).json()).retained_items===2);
+  assert.equal(await page.locator('#rows .event-row').count(),1);assert.match(await page.locator('#rows').textContent(),/Execution succeeded/);
+  await page.locator('#rows .event-row').click();await page.waitForFunction(()=>document.getElementById('detail-title').textContent.includes('railway'));
+  assert.match(await page.locator('#detail-content').textContent(),/Reported success/);assert.doesNotMatch(await page.locator('body').textContent(),/PRIVATE_/);
+  await page.keyboard.press('Escape');await page.locator('#pause').click();
+  await page.waitForFunction(()=>document.querySelectorAll('#rows .event-row').length===2);
+  assert.match(await page.locator('#rows').textContent(),/Conflicting evidence/);
+  await post(Array.from({length:200},(_,i)=>record(`PRIVATE_${i}`,'true','mcp__codex_apps__sample')));
+  await page.waitForFunction(()=>document.getElementById('view-count').textContent==='202 items');
+  assert.ok(await page.locator('#rows .event-row').count()<=100);
+  await page.locator('#older').click();await page.waitForFunction(()=>document.getElementById('page-note').textContent.includes('202 matches'));
+  await page.locator('#search').fill('railway');await page.waitForFunction(()=>document.querySelectorAll('#rows .event-row').length===1&&document.getElementById('rows').textContent.includes('railway'));
+  assert.match(await page.locator('#rows').textContent(),/Conflicting evidence/);assert.deepEqual(errors,[]);
+});
