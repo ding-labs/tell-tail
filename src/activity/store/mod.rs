@@ -4,6 +4,7 @@ use crate::tool_trace::identity::Identity;
 use serde::Serialize;
 use std::collections::{BTreeMap, VecDeque};
 
+pub mod query;
 pub mod sources;
 pub use sources::{Sources, TraceSource};
 
