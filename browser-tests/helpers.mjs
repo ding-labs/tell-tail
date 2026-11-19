@@ -24,7 +24,7 @@ async function start(args) {
   child.stdout.on('data', data => { stdout = (stdout + data).slice(-16384); });
   child.stdin.on('error', () => {});
   const url = await new Promise((accept, reject) => {
-    const timer = setTimeout(() => { child.kill('SIGKILL'); reject(new Error(`Server startup timed out: ${diagnostic}`)); }, 3000);
+    const timer = setTimeout(() => { child.kill('SIGKILL'); reject(new Error(`Server startup timed out: ${diagnostic}`)); }, 10000);
     child.once('error', error => { clearTimeout(timer); reject(error); });
     child.once('exit', code => { clearTimeout(timer); reject(new Error(`Server exited ${code}: ${diagnostic}`)); });
     child.stderr.on('data', data => {

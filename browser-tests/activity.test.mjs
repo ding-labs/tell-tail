@@ -132,3 +132,37 @@ test('empty, expired and restarted views stay explicit; exact times and narrow i
   assert.equal(await page.locator('#connection').textContent(),'Connected locally');
   assert.deepEqual(errors,[]);
 });
+
+
+test('tablet grids keep the feed beside navigation and touch controls remain usable',async t=>{
+  const server=await monitorDesktop(['--demo']);t.after(()=>server.close());
+  const browser=await chromium.launch();t.after(()=>browser.close());
+  const page=await browser.newPage({viewport:{width:1280,height:800}});
+  await page.goto(server.url);await page.waitForFunction(()=>document.querySelectorAll('.event-row').length>=10);
+  await page.locator('#pause').click();
+  for(const width of [1440,1280,1200,1100,1024]){
+    await page.setViewportSize({width,height:800});
+    const box=await page.evaluate(()=>({main:document.querySelector('.main').getBoundingClientRect().toJSON(),nav:document.querySelector('.sidebar').getBoundingClientRect().toJSON(),first:document.querySelector('.event-row').getBoundingClientRect().toJSON()}));
+    assert.ok(box.main.left>=box.nav.right,`feed beside sidebar at ${width}`);
+    assert.ok(box.main.top<80,`feed starts at top at ${width}`);
+    assert.ok(box.main.width>width*.7,`feed has remaining width at ${width}`);
+    assert.ok(box.first.top<350,`evidence visible at ${width}`);
+    assert.equal(await page.locator('#exact-times').isVisible(),true);
+  }
+  for(const theme of ['dark','light']){
+    const minimum=await page.evaluate(theme=>{
+      document.documentElement.dataset.theme=theme;
+      const style=getComputedStyle(document.documentElement),c=n=>style.getPropertyValue('--'+n).trim();
+      const lum=color=>{let s=color.slice(1);if(s.length===3)s=[...s].map(c=>c+c).join('');const a=s.match(/../g).map(v=>parseInt(v,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return .2126*a[0]+.7152*a[1]+.0722*a[2];};
+      const ratio=(a,b)=>{a=lum(c(a));b=lum(c(b));return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);};
+      return {text:Math.min(...['text','muted','accent','info','warning','error'].flatMap(a=>['canvas','surface','subtle','selection'].map(b=>ratio(a,b)))),control:Math.min(...['canvas','surface'].map(b=>ratio('control-border',b)))};
+    },theme);
+    assert.ok(minimum.text>=4.5,`${theme} text contrast ${minimum.text}`);
+    assert.ok(minimum.control>=3,`${theme} control contrast ${minimum.control}`);
+  }
+  const touch=await browser.newPage({viewport:{width:320,height:640},hasTouch:true,isMobile:true});
+  await touch.goto(server.url);await touch.waitForFunction(()=>document.querySelectorAll('.event-row').length>=10);
+  assert.equal(await touch.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  const heights=await touch.locator('.nav-links button,.categories button,.header-actions button,#exact-times').evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().height));
+  assert.ok(heights.every(h=>h>=44),`touch target heights ${heights}`);
+});
