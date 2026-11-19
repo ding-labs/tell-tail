@@ -15,7 +15,8 @@ EVENTS = frozenset(("codex.tool_result", "codex.tool_decision",
                     "codex.conversation_starts", "codex.api_request"))
 ATTRIBUTES = frozenset(("event.name", "tool_name", "call_id", "conversation.id",
                         "duration_ms", "success", "plugin_id", "connector_id",
-                        "parent_call_id", "turn_id"))
+                        "parent_call_id", "turn_id", "tool_namespace", "mcp_server",
+                        "mcp_server_origin", "tool_result_seq"))
 # Exact probe operations only. A namespace prefix is not proof of attribution.
 TOOLS = {"mcp__codex_apps__railway_search_docs": "railway.search_docs",
          "functions.exec": "functions.exec",
@@ -134,10 +135,11 @@ def record(data, key, inspect_tool_names=False):
     result = {"event": next(iter(known_names), "other"),
               "fields_present": sorted(attrs), "has_timestamp": bool(has_time),
               "tool": TOOLS.get(attrs.get("tool_name"), "unidentified")}
-    tool_name = attrs.get("tool_name")
-    if (inspect_tool_names and isinstance(tool_name, str)
-            and re.fullmatch(r"[A-Za-z0-9_./:-]{1,128}", tool_name)):
-        result["observed_tool_name"] = tool_name
+    if inspect_tool_names:
+        for name in ("tool_name", "tool_namespace", "mcp_server", "mcp_server_origin"):
+            value = attrs.get(name)
+            if isinstance(value, str) and re.fullmatch(r"[A-Za-z0-9_./:-]{1,128}", value):
+                result["observed_" + name] = value
     for name in ("tool_name", "call_id", "conversation.id", "parent_call_id", "turn_id"):
         value = attrs.get(name)
         if isinstance(value, str) and value:

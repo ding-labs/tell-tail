@@ -85,6 +85,16 @@ class DecodeTests(unittest.TestCase):
             result = decode(batch(attr("tool_name", tool)), b"key", inspect_tool_names=True)[0]
             self.assertNotIn("observed_tool_name", result)
 
+    def test_namespaced_tool_metadata(self):
+        b = batch(attr("tool_name", "_lookup") + attr("tool_namespace", "mcp__example")
+                  + attr("mcp_server", "codex_apps") + attr("mcp_server_origin", "plugin")
+                  + attr("arguments", "PRIVATE_ARGS"))
+        result = decode(b, b"key", inspect_tool_names=True)[0]
+        self.assertEqual(result["observed_tool_namespace"], "mcp__example")
+        self.assertEqual(result["observed_mcp_server"], "codex_apps")
+        self.assertNotIn("PRIVATE", json.dumps(result))
+        self.assertNotIn("observed_tool_namespace", decode(b, b"key")[0])
+
     def test_event_body_and_attribute_name(self):
         for r in [message(5, message(1, b"codex.tool_result")), attr("event.name", "codex.tool_result")]:
             self.assertEqual(decode(batch(r), b"key")[0]["event"], "codex.tool_result")
