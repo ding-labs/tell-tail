@@ -1,5 +1,10 @@
 # Visual foundation
 
+The proposed ChatGPT and Codex workspace is specified in the
+[desktop activity implementation plan](PLAN-DESKTOP-ACTIVITY.md), including its
+[interactive concept](design/desktop-activity-concept.html). That plan extends
+this foundation; it does not describe an already-shipped dashboard replacement.
+
 Tell-Tail uses the upright-hook cat-tail mark: three log lines, with the middle
 continuing smoothly upward into an inward curl with a fuller, rounded tip. `web/logo.svg` is the clean, transparent
 vector source in original Ding green (`#7EE787`). `web/favicon.svg` places the
