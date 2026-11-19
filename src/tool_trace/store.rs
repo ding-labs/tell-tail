@@ -14,12 +14,19 @@ const MAX_CHARGED_BYTES: usize = 16 * 1024 * 1024;
 
 #[derive(Default, Clone, Debug, Serialize)]
 pub struct Counts {
+    #[serde(serialize_with = "decimal")]
     pub accepted_observations: u64,
+    #[serde(serialize_with = "decimal")]
     pub distinct_calls: u64,
+    #[serde(serialize_with = "decimal")]
     pub duplicate_observations: u64,
+    #[serde(serialize_with = "decimal")]
     pub rejected_observations: u64,
+    #[serde(serialize_with = "decimal")]
     pub evicted_calls: u64,
+    #[serde(serialize_with = "decimal")]
     pub evicted_revisions: u64,
+    #[serde(serialize_with = "decimal")]
     pub incomplete_calls: u64,
 }
 
@@ -343,6 +350,20 @@ impl Store {
         as_of: Option<u64>,
         cursor: Option<&str>,
     ) -> Result<Page, &'static str> {
+        if [
+            &filter.plugin,
+            &filter.tool,
+            &filter.execution,
+            &filter.search,
+        ]
+        .into_iter()
+        .any(|v| v.as_ref().is_some_and(|s| s.len() > 200))
+            || filter
+                .since_ms
+                .is_some_and(|v| !(0..=253_402_300_799_999).contains(&v))
+        {
+            return Err("Invalid trace filter");
+        }
         let fingerprint = self.identity.label("filter", filter);
         let (watermark, before) = if let Some(cursor) = cursor {
             if cursor.len() > 160 {
@@ -445,6 +466,25 @@ mod tests {
             !serde_json::to_string(&s.page(&Filter::default(), None, None).unwrap())
                 .unwrap()
                 .contains("PRIVATE")
+        );
+    }
+    #[test]
+    fn large_counters_are_exact_and_query_work_is_bounded() {
+        let counts = Counts {
+            distinct_calls: u64::MAX,
+            ..Counts::default()
+        };
+        assert_eq!(
+            serde_json::to_value(counts).unwrap()["distinct_calls"],
+            u64::MAX.to_string()
+        );
+        let filter = Filter {
+            search: Some("x".repeat(201)),
+            ..Filter::default()
+        };
+        assert_eq!(
+            Store::default().page(&filter, None, None).err(),
+            Some("Invalid trace filter")
         );
     }
     #[test]

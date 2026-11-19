@@ -35,8 +35,8 @@ fn replay_is_finite_private_and_does_not_read_client_logs() {
     assert_eq!(rows[2]["call"]["duration_ms"], 20);
     assert_eq!(rows[3]["call"]["status"], "failed");
     assert_eq!(rows[0]["call"]["id"], rows[3]["call"]["id"]);
-    assert_eq!(rows[4]["snapshot"]["counts"]["distinct_calls"], 2);
-    assert_eq!(rows[4]["snapshot"]["counts"]["duplicate_observations"], 1);
+    assert_eq!(rows[4]["snapshot"]["counts"]["distinct_calls"], "2");
+    assert_eq!(rows[4]["snapshot"]["counts"]["duplicate_observations"], "1");
     assert_eq!(rows[4]["live_capture_verified"], false);
     assert_eq!(rows[0]["call"]["historical"], true);
 }
