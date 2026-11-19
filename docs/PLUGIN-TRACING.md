@@ -26,7 +26,8 @@ Other tools retain their qualified name and transport server and remain searchab
 New hosted providers need no Tell-Tail configuration.
 
 A cached bundle is not evidence of an enabled plugin. The installed-plugin CLI
-also timed out during this audit, so capture does not depend on catalog polling.
+initially timed out when querying all marketplaces; a later scoped query for
+`tell-tail-local` succeeded. Capture does not depend on catalog polling.
 Installed-but-unused plugins and skills without tool calls do not produce rows.
 This is automatic discovery of observed activity, not an installed-plugin inventory.
 
@@ -108,8 +109,12 @@ build provenance. Users of the built bundle do not need Python, Node or Rust.
 Extract the ZIP and add its directory as a local marketplace in Codex (or
 `codex plugin marketplace add /absolute/path/to/extracted-marketplace`), install
 Tell-Tail, then run its setup. The source directory alone lacks the executable;
-install the generated bundle. This preview has not been published to the public
-directory or validated through a fresh desktop plugin-install flow.
+install the generated bundle. A fresh macOS arm64 desktop install, onboarding
+from the cached plugin, clean collector setup, app restart, and live GitHub and
+Railway capture were [verified](validation/plugin-trace-desktop-install-2026-11-19.json).
+Desktop install/setup clicks were user-assisted because Codex blocks automated
+control of its own window; catalog, files, service, calls and dashboard were
+independently checked. This preview has not been published to the public directory.
 
 The [supported onboarding mechanism](https://developers.openai.com/plugins/build/plugins#add-an-onboarding-skill)
 is a skill invoked when users run setup after installation. This package has no

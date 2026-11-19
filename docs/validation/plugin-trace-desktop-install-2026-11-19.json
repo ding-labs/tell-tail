@@ -1,0 +1,71 @@
+{
+  "audit_version": 1,
+  "date": "2026-11-19",
+  "decision": "fresh desktop plugin installation and tracing verified",
+  "platform": "macos-arm64",
+  "plugin_id": "tell-tail@tell-tail-local",
+  "plugin_version": "0.2.0",
+  "preview": true,
+  "tested_source_commit": "5f715a10a5372e8d3c31ff15065d338ff4db1d28",
+  "install": {
+    "desktop_clicks": "performed by user; Codex self-window automation is blocked",
+    "initial_catalog_state": "available, not installed",
+    "final_catalog_state": "installed and enabled",
+    "fresh_archive_extracted": true,
+    "cached_binary_executable": true,
+    "cached_binary_matches_packaged_checksum": true,
+    "onboarding_skill_dispatched_by_desktop": true
+  },
+  "setup": {
+    "first_run": "idempotent enable against previous installation succeeded",
+    "clean_test_preconditions": [
+      "previous managed installation backed up and moved aside",
+      "owned exporter removed",
+      "LaunchAgent unloaded and removed",
+      "managed status reported installed=false and service_loaded=false"
+    ],
+    "fresh_run": "onboarding chat invoked installed cached executable; completed successfully",
+    "packaged_binary_copied_to_managed_install": true,
+    "fresh_credential_created": true,
+    "unrelated_codex_settings_preserved": true,
+    "run_at_load": true,
+    "keep_alive": true,
+    "before_restart": "collector waiting; old client credential rejected; zero accepted batches"
+  },
+  "restart": {
+    "desktop_relaunched_after_fresh_setup": true,
+    "same_collector_epoch_after_app_restart": true,
+    "new_exporter_credential_accepted": true
+  },
+  "live_calls": [
+    {
+      "plugin": "railway",
+      "tool": "mcp__codex_apps__railway._search_docs",
+      "duration_ms": 1260,
+      "execution_success": true
+    },
+    {
+      "plugin": "github",
+      "tool": "mcp__codex_apps__github._get_user_login",
+      "duration_ms": 534,
+      "execution_success": true
+    }
+  ],
+  "dashboard": {
+    "automatic_tool_calls_tab": "passed",
+    "github_and_railway_filters": "passed",
+    "both_call_inspectors": "passed",
+    "live_provenance_and_execution_outcomes": "passed",
+    "page_errors": 0,
+    "visual_inspection": "passed"
+  },
+  "left_enabled": true,
+  "previous_install_backup_retained_privately": true,
+  "public_distribution": "not published",
+  "limits": [
+    "result-only telemetry on tested client execution path",
+    "other providers and execution paths not individually certified",
+    "in-memory history",
+    "desktop clicks user-assisted; remaining verification automated"
+  ]
+}

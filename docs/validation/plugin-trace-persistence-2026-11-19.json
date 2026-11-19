@@ -63,5 +63,6 @@
     "new provider names do not establish every execution path",
     "collector restarts reset in-memory history"
   ],
-  "soak_tests": "not run; optional and nonblocking"
+  "soak_tests": "not run; optional and nonblocking",
+  "follow_up_validation": "plugin-trace-desktop-install-2026-11-19.json"
 }

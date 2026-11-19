@@ -155,8 +155,40 @@ providers on the tested execution path, not every installed plugin or subagent.
 The native macOS arm64 plugin preview includes its executable and an onboarding
 skill. Verified packaged paths, executable permissions, checksum, dependency
 notices, exclusion of local credentials, and standalone `tracing status` from an
-extracted binary. Desktop marketplace installation itself remains untested; the
-installed-plugin CLI timed out. No plugin catalog is required for capture.
+extracted binary. At that stage desktop marketplace installation was untested;
+the later test below closes that gap. The broad installed-plugin CLI query timed
+out, while a later marketplace-scoped query succeeded. No catalog is required
+for capture.
 
 See the [persistence validation record](validation/plugin-trace-persistence-2026-11-19.json)
 for the follow-up checks and remaining limits.
+
+## Fresh desktop installation and restart
+
+The user installed `tell-tail@tell-tail-local` in Codex Desktop from a fresh
+extraction of the native preview archive. The scoped catalog independently
+confirmed the transition from available/uninstalled to installed/enabled. The
+cached executable retained its execute permission and matched the bundle checksum.
+Desktop's Setup action opened the Tell-Tail onboarding skill and invoked that
+cached executable. The first run validated idempotent enable before the clean
+state was prepared; it was not counted as the fresh setup result.
+
+After privately backing up and moving the previous installation aside, verified
+that no managed installation, LaunchAgent, or exporter table remained. A second
+run through the onboarding chat then created the service, copied the packaged
+binary, generated a new credential, and configured the exporter while preserving
+all unrelated Codex settings. Before restart, the receiver correctly rejected
+the running client's old credential and accepted no batches.
+
+Codex Desktop subsequently relaunched after setup. The collector epoch remained
+unchanged across the app restart and new telemetry was accepted. Fresh parallel
+GitHub `get_user_login` and Railway `search_docs` calls appeared as separate live
+rows reporting execution success, with durations of 534 ms and 1,260 ms. Automated
+browser checks verified the default tool-call view, both provider filters, both
+inspectors, live provenance, and no page errors; the rendered page was inspected.
+
+Tracing is left enabled. The previous managed installation and pre-test config
+remain in a private backup. No public publishing occurred. The desktop clicks
+were performed by the user because computer-use access to Codex's own window
+was refused; filesystem, catalog, service, restart and capture evidence were
+checked independently. See the [desktop-install record](validation/plugin-trace-desktop-install-2026-11-19.json).
