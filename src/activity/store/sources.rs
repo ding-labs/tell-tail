@@ -6,8 +6,14 @@ pub struct Sources {
     pub running: bool,
     pub demo: bool,
     pub roots: Vec<RootView>,
-    pub files: Vec<SourceView>,
+    pub files: Vec<LogFile>,
     pub discovery_limited: bool,
+    #[serde(serialize_with = "crate::tool_trace::model::decimal")]
+    pub rejected_files: u64,
+    #[serde(serialize_with = "crate::tool_trace::model::decimal")]
+    pub open_failures: u64,
+    #[serde(serialize_with = "crate::tool_trace::model::decimal")]
+    pub retired_sources: u64,
     #[serde(serialize_with = "crate::tool_trace::model::decimal")]
     pub unsupported_records: u64,
     #[serde(serialize_with = "crate::tool_trace::model::decimal")]
@@ -64,5 +70,56 @@ impl TraceSource {
             ignored_records: s.ignored_records,
             result_only: !s.replay,
         }
+    }
+}
+
+// Keep the legacy MCP wire format unchanged. Activity identifiers and cumulative
+// counters use decimal strings, including values above JavaScript's safe integer.
+#[derive(Clone, PartialEq, Eq, Serialize)]
+pub struct LogFile(#[serde(with = "ActivityFile")] pub SourceView);
+#[derive(Serialize)]
+#[serde(remote = "SourceView")]
+struct ActivityFile {
+    #[serde(serialize_with = "crate::tool_trace::model::decimal")]
+    id: u64,
+    host: crate::mcp::model::Host,
+    name: String,
+    #[serde(serialize_with = "crate::tool_trace::model::decimal")]
+    generation: u64,
+    modified_ms: i64,
+    status: &'static str,
+    #[serde(serialize_with = "crate::tool_trace::model::decimal")]
+    backlog_bytes: u64,
+    #[serde(serialize_with = "crate::tool_trace::model::decimal")]
+    records: u64,
+    #[serde(serialize_with = "crate::tool_trace::model::decimal")]
+    oversized: u64,
+    #[serde(serialize_with = "crate::tool_trace::model::decimal")]
+    history_omitted_bytes: u64,
+    #[serde(serialize_with = "crate::tool_trace::model::decimal")]
+    boundaries: u64,
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn file_counters_preserve_full_precision_without_changing_mcp() {
+        let source = SourceView {
+            id: u64::MAX,
+            host: crate::mcp::model::Host::CodexDesktop,
+            name: "redacted.log".into(),
+            generation: 1,
+            modified_ms: 1,
+            status: "following",
+            backlog_bytes: 0,
+            records: u64::MAX,
+            oversized: 0,
+            history_omitted_bytes: 0,
+            boundaries: 0,
+        };
+        assert!(serde_json::to_value(&source).unwrap()["id"].is_number());
+        let activity = serde_json::to_value(LogFile(source)).unwrap();
+        assert_eq!(activity["id"], u64::MAX.to_string());
+        assert_eq!(activity["records"], u64::MAX.to_string());
     }
 }

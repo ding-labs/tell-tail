@@ -102,8 +102,16 @@ impl Bridge {
             running,
             demo,
             roots: collector.map(|c| c.root_views.clone()).unwrap_or_default(),
-            files: collector.map(Collector::views).unwrap_or_default(),
+            files: collector
+                .map(Collector::views)
+                .unwrap_or_default()
+                .into_iter()
+                .map(super::store::sources::LogFile)
+                .collect(),
             discovery_limited: collector.is_some_and(|c| c.limited),
+            rejected_files: collector.map_or(0, |c| c.rejected as u64),
+            open_failures: collector.map_or(0, |c| c.open_failures),
+            retired_sources: collector.map_or(0, |c| c.retired),
             unsupported_records: self.unsupported,
             ignored_records: self.ignored,
             projection_gaps: self.gaps,

@@ -326,7 +326,7 @@ impl Store {
                 group.observations += 1;
                 group.first_ms = group.first_ms.into_iter().chain(item.occurred_ms).min();
                 group.last_ms = group.last_ms.into_iter().chain(item.occurred_ms).max();
-            } else if groups.len() < 1024 {
+            } else {
                 groups.insert(
                     key.clone(),
                     Problem {
@@ -413,6 +413,24 @@ mod tests {
         assert!(
             s.page(&f, frozen - 1, first.next_cursor.as_deref())
                 .is_err()
+        );
+    }
+    #[test]
+    fn failure_groups_count_all_retained_evidence_before_response_truncation() {
+        let mut s = Store::default();
+        for n in 0..1100 {
+            let category = if n % 2 == 0 {
+                Category::Tools
+            } else {
+                Category::Mcp
+            };
+            let mut item = Item::observation(category, "failure", "Failed");
+            item.severity = Severity::Error;
+            s.accept(n.to_string(), item).unwrap();
+        }
+        assert_eq!(
+            s.problems(&Filter::default(), s.sequence).unwrap().len(),
+            1100
         );
     }
     #[test]
