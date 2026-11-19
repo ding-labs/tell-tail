@@ -16,10 +16,15 @@ fn envelope(output: &mut impl Write, mode: Output, value: serde_json::Value) -> 
     } else if let Some(call) = value.get("call") {
         writeln!(
             output,
-            "{} / {} · {} · imported replay",
+            "{} / {} · {} · {}",
             call["plugin"].as_str().unwrap_or("unidentified plugin"),
             call["tool"].as_str().unwrap_or("unknown tool"),
-            call["status"].as_str().unwrap_or("unknown")
+            call["status"].as_str().unwrap_or("unknown"),
+            if call["historical"] == true {
+                "imported replay"
+            } else {
+                "observed result"
+            }
         )
     } else {
         writeln!(
@@ -30,7 +35,7 @@ fn envelope(output: &mut impl Write, mode: Output, value: serde_json::Value) -> 
     }
 }
 
-fn updates(
+pub(crate) fn updates(
     store: &Store,
     sequence: &mut u64,
     output: &mut impl Write,

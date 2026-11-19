@@ -6,4 +6,7 @@ pub mod model;
 pub mod replay;
 pub mod store;
 
+pub mod live;
 pub mod otlp;
+#[cfg(feature = "web")]
+pub mod receiver;

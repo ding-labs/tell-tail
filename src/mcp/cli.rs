@@ -38,6 +38,15 @@ pub struct Args {
     /// Replay a finite normalized tool-trace fixture (text/JSON only; no client logs).
     #[arg(long, conflicts_with_all = ["source", "log_dir", "demo"])]
     pub trace_replay: Option<PathBuf>,
+    /// Receive Codex OTLP results on a separate loopback port (0 chooses a free port).
+    #[arg(long, conflicts_with_all = ["once", "demo", "trace_replay"], requires = "trace_token_file")]
+    pub trace_port: Option<u16>,
+    /// Private local credential file; created if absent. Never pass the credential itself.
+    #[arg(long, requires = "trace_port")]
+    pub trace_token_file: Option<PathBuf>,
+    /// Write a new private exporter fragment for manual client setup; never edits client settings.
+    #[arg(long, requires = "trace_port")]
+    pub trace_config_out: Option<PathBuf>,
 }
 impl Args {
     pub fn mode(&self) -> Output {
@@ -45,6 +54,9 @@ impl Args {
             .unwrap_or(if self.open { Output::Web } else { Output::Text })
     }
     pub fn validate(&self) -> Result<(), &'static str> {
+        if self.trace_port.is_some() && !cfg!(feature = "web") {
+            return Err("Live trace capture requires the web feature; replay remains available");
+        }
         if self.trace_replay.is_some() && self.mode() == Output::Web {
             return Err(
                 "Trace replay currently supports --output text or json; live capture is not yet verified",

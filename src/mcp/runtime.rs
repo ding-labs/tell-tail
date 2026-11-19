@@ -19,11 +19,30 @@ use std::{
 pub type Shared = Arc<Mutex<Store>>;
 pub struct Running {
     pub shared: Shared,
+    pub traces: crate::tool_trace::live::Shared,
+    #[cfg(feature = "web")]
+    trace_receiver: Option<crate::tool_trace::receiver::Running>,
     stop: Arc<AtomicUsize>,
     worker: Option<JoinHandle<()>>,
 }
 impl Running {
     pub fn start(args: &Args, stop: Arc<AtomicUsize>) -> io::Result<Self> {
+        let traces = Arc::new(Mutex::new(crate::tool_trace::live::State::default()));
+        #[cfg(feature = "web")]
+        let trace_receiver = args
+            .trace_port
+            .map(|port| {
+                crate::tool_trace::receiver::Running::start(
+                    port,
+                    args.trace_token_file
+                        .as_deref()
+                        .expect("clap requires credential file"),
+                    args.trace_config_out.as_deref(),
+                    traces.clone(),
+                    stop.clone(),
+                )
+            })
+            .transpose()?;
         let mut demo = args.demo.then(Demo::new).transpose()?;
         let roots = match &demo {
             Some(d) => d.roots(),
@@ -78,6 +97,9 @@ impl Running {
             })?;
         Ok(Self {
             shared,
+            traces,
+            #[cfg(feature = "web")]
+            trace_receiver,
             stop,
             worker: Some(worker),
         })
@@ -97,6 +119,11 @@ impl Running {
             .compare_exchange(0, 1, Ordering::Relaxed, Ordering::Relaxed);
     }
     pub fn join(&mut self) -> io::Result<()> {
+        self.stop();
+        #[cfg(feature = "web")]
+        if let Some(receiver) = &mut self.trace_receiver {
+            receiver.join()?;
+        }
         self.worker.take().map_or(Ok(()), |w| {
             w.join()
                 .map_err(|_| io::Error::other("MCP collector panicked"))
@@ -122,6 +149,7 @@ pub fn run(args: &Args) -> io::Result<i32> {
     let mut running = Running::start(args, signals.requested.clone())?;
     let mut output = crate::platform::StdoutWriter::new(signals.requested.clone())?;
     let mut last_id = 0;
+    let mut trace_sequence = 0;
     let mut status_at = Instant::now() - Duration::from_secs(1);
     loop {
         let snap = running.snapshot()?;
@@ -167,6 +195,30 @@ pub fn run(args: &Args) -> io::Result<i32> {
                     event.summary,
                     if event.historical { " [history]" } else { "" }
                 )?,
+            }
+        }
+        if args.trace_port.is_some() {
+            let traces = running
+                .traces
+                .lock()
+                .map_err(|_| io::Error::other("Trace collector failed"))?;
+            crate::tool_trace::replay::updates(
+                &traces.store,
+                &mut trace_sequence,
+                &mut output,
+                args.mode(),
+            )?;
+            if status_at.elapsed() >= Duration::from_secs(1) || !snap.running {
+                if args.mode() == Output::Json {
+                    writeln!(output, "{}", traces.snapshot())?;
+                } else {
+                    writeln!(
+                        output,
+                        "Tool tracing: {} · result-only · {} retained calls",
+                        traces.snapshot()["status"].as_str().unwrap_or("unknown"),
+                        traces.store.snapshot().retained_calls
+                    )?;
+                }
             }
         }
         if status_at.elapsed() >= Duration::from_secs(1) || !snap.running {
