@@ -2,3 +2,4 @@
 pub mod model;
 pub mod parse;
 pub mod project;
+pub mod store;

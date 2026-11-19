@@ -117,7 +117,6 @@ pub fn call(call: &Call) -> Item {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::tool_trace::{model::Observation, store::Store};
     #[test]
     fn call_projection_preserves_unknown_outcomes_and_does_not_guess_chat_links() {
