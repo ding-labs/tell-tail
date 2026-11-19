@@ -15,6 +15,8 @@ pub enum Output {
 #[derive(Debug, Parser)]
 #[command(name = "tell-tail mcp", version)]
 pub struct Args {
+    #[arg(skip)]
+    pub desktop: bool,
     /// Open the local dashboard (implies --output web).
     #[arg(long)]
     pub open: bool,

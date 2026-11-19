@@ -111,9 +111,13 @@ impl Default for Store {
 }
 impl Store {
     pub fn accept(&mut self, r: Record<'_>) {
+        let _ = self.accept_delta(r);
+    }
+    /// Return the sanitized accepted revision, including a mirror evidence update.
+    pub fn accept_delta(&mut self, r: Record<'_>) -> Option<Event> {
         let Some(p) = parse::record(r.host, r.bytes) else {
             self.counts.ignored += 1;
-            return;
+            return None;
         };
         let evidence = Evidence {
             source_id: r.source_id,
@@ -141,7 +145,7 @@ impl Store {
                 }
                 self.counts.mirrors += 1;
                 self.sequence += 1;
-                return;
+                return Some(e.clone());
             }
         }
         let id = self.next_id;
@@ -205,7 +209,7 @@ impl Store {
             aggregate: p.aggregate,
         };
         self.update_state(&event);
-        self.events.push_back(event);
+        self.events.push_back(event.clone());
         self.counts.observations += 1;
         self.counts.unknown += u64::from(p.kind == Kind::Unknown);
         if self.events.len() > MAX_EVENTS {
@@ -213,6 +217,7 @@ impl Store {
             self.counts.evicted_events += 1;
         }
         self.sequence += 1;
+        Some(event)
     }
     fn update_state(&mut self, e: &Event) {
         let at = e.timestamp_ms.unwrap_or(e.observed_ms);

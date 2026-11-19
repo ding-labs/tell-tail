@@ -144,7 +144,6 @@ fn replay(
 }
 
 /// Populate a web replay without discovering logs or opening an intake listener.
-#[cfg(feature = "web")]
 pub fn load_web(
     file: std::fs::File,
     shared: &super::live::Shared,

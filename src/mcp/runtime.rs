@@ -19,6 +19,7 @@ use std::{
 pub type Shared = Arc<Mutex<Store>>;
 pub struct Running {
     pub shared: Shared,
+    pub activity: Option<crate::activity::runtime::Shared>,
     pub traces: crate::tool_trace::live::Shared,
     #[cfg(feature = "web")]
     trace_receiver: Option<crate::tool_trace::receiver::Running>,
@@ -27,6 +28,9 @@ pub struct Running {
 }
 impl Running {
     pub fn start(args: &Args, stop: Arc<AtomicUsize>) -> io::Result<Self> {
+        let activity = args
+            .desktop
+            .then(|| Arc::new(Mutex::new(crate::activity::store::Store::default())));
         let traces = Arc::new(Mutex::new(crate::tool_trace::live::State::default()));
         #[cfg(feature = "web")]
         let trace_receiver = args
@@ -43,7 +47,6 @@ impl Running {
                 )
             })
             .transpose()?;
-        #[cfg(feature = "web")]
         if let Some(path) = &args.trace_replay {
             let file = crate::platform::open_regular(path)?;
             let shared = Arc::new(Mutex::new(Store::default()));
@@ -57,16 +60,28 @@ impl Running {
             let trace_slot = traces.clone();
             let slot = shared.clone();
             let cancel = stop.clone();
+            let projection = activity.clone();
+            let once = args.once;
             let worker = thread::Builder::new()
                 .name("tell-tail-trace-replay".into())
                 .spawn(move || {
+                    let mut bridge = projection.map(crate::activity::runtime::Bridge::new);
                     if crate::tool_trace::replay::load_web(file, &trace_slot, &cancel).is_err() {
                         let mut t = trace_slot.lock().unwrap();
                         t.rejected_records += 1;
                         t.running = false;
                     }
                     while cancel.load(Ordering::Relaxed) == 0 {
+                        if let Some(b) = &mut bridge {
+                            b.sync(None, &trace_slot, !once, true);
+                        }
+                        if once {
+                            break;
+                        }
                         thread::sleep(Duration::from_millis(100));
+                    }
+                    if let Some(b) = &mut bridge {
+                        b.sync(None, &trace_slot, false, true);
                     }
                     let mut s = slot.lock().unwrap();
                     s.running = false;
@@ -74,7 +89,9 @@ impl Running {
                 })?;
             return Ok(Self {
                 shared,
+                activity,
                 traces,
+                #[cfg(feature = "web")]
                 trace_receiver,
                 stop,
                 worker: Some(worker),
@@ -89,16 +106,29 @@ impl Running {
         let shared = Arc::new(Mutex::new(Store::default()));
         shared.lock().unwrap().demo = args.demo;
         let slot = shared.clone();
+        let projection = activity.clone();
+        let trace_slot = traces.clone();
+        let demo_mode = args.demo;
         let cancel = stop.clone();
         let worker = thread::Builder::new()
             .name("tell-tail-mcp".into())
             .spawn(move || {
+                let mut bridge = projection.map(crate::activity::runtime::Bridge::new);
                 let mut collector = Collector::new(roots);
                 loop {
                     if let Some(demo) = &mut demo {
                         demo.tick().expect("synthetic replay failed");
                     }
-                    collector.poll(|r| slot.lock().unwrap().accept(r));
+                    collector.poll(|r| {
+                        if let Some(b) = &mut bridge {
+                            b.record(r, &slot);
+                        } else {
+                            slot.lock().unwrap().accept(r);
+                        }
+                    });
+                    if let Some(b) = &mut bridge {
+                        b.sync(Some(&collector), &trace_slot, true, demo_mode);
+                    }
                     let backlog = collector.views().iter().any(|s| s.backlog_bytes > 0);
                     {
                         let mut s = slot.lock().unwrap();
@@ -131,9 +161,14 @@ impl Running {
                 let mut s = slot.lock().unwrap();
                 s.running = false;
                 s.sequence += 1;
+                drop(s);
+                if let Some(b) = &mut bridge {
+                    b.sync(Some(&collector), &trace_slot, false, demo_mode);
+                }
             })?;
         Ok(Self {
             shared,
+            activity,
             traces,
             #[cfg(feature = "web")]
             trace_receiver,
@@ -179,6 +214,9 @@ pub fn run(args: &Args) -> io::Result<i32> {
     #[cfg(feature = "web")]
     if args.mode() == Output::Web {
         return crate::web::mcp::run(args, &signals);
+    }
+    if args.desktop {
+        return crate::activity::runtime::run(args, &signals);
     }
     if let Some(path) = &args.trace_replay {
         return crate::tool_trace::replay::run(path, args.mode(), &signals);

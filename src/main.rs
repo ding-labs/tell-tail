@@ -1,4 +1,4 @@
-use clap::{CommandFactory, Parser};
+use clap::{CommandFactory, FromArgMatches, Parser};
 use std::{
     io::{self, IsTerminal, Write},
     sync::atomic::Ordering,
@@ -125,11 +125,30 @@ fn main() {
     if tell_tail::writer::is_helper() {
         std::process::exit(tell_tail::writer::run_helper());
     }
-    if std::env::args_os().nth(1).is_some_and(|arg| arg == "mcp") {
-        let args = tell_tail::mcp::cli::Args::parse_from(
-            std::iter::once(std::ffi::OsString::from("tell-tail mcp"))
-                .chain(std::env::args_os().skip(2)),
+    if std::env::args_os()
+        .nth(1)
+        .is_some_and(|arg| arg == "mcp" || arg == "desktop")
+    {
+        let desktop = std::env::args_os()
+            .nth(1)
+            .is_some_and(|arg| arg == "desktop");
+        let command = tell_tail::mcp::cli::Args::command();
+        let command = if desktop {
+            command.name("tell-tail desktop").about("Observe local ChatGPT and Codex desktop activity, MCP diagnostics and opt-in tool telemetry.")
+        } else {
+            command
+        };
+        let matches = command.get_matches_from(
+            std::iter::once(std::ffi::OsString::from(if desktop {
+                "tell-tail desktop"
+            } else {
+                "tell-tail mcp"
+            }))
+            .chain(std::env::args_os().skip(2)),
         );
+        let mut args =
+            tell_tail::mcp::cli::Args::from_arg_matches(&matches).unwrap_or_else(|e| e.exit());
+        args.desktop = desktop;
         if let Err(message) = args.validate() {
             eprintln!("tell-tail: {message}");
             std::process::exit(2);
