@@ -37,9 +37,11 @@ async function json(path,signal){
   if(!response.ok){const error=new Error(response.status===410?'This view is no longer retained. Return to live to load current evidence.':`Could not read activity (${response.status}).`);error.expired=response.status===410;throw error;}
   return response.json();
 }
+function newer(){return state.latest!==null&&(state.latestEpoch!==state.epoch||state.at===null||BigInt(state.latest)>BigInt(state.at));}
+function hold(){if(!frozen())cancelView();state.held=true;updateStatus();}
 function updateStatus(){
   $('pause').disabled=!state.snapshot;
-  const pending=state.latest!==null&&(state.latest!==state.at||state.latestEpoch!==state.epoch);
+  const pending=newer();
   $('pause').textContent=state.paused?'Resume display':'Pause display';$('pause').setAttribute('aria-pressed',String(state.paused));
   $('pending').hidden=!(state.held||state.cursor||pending&&frozen()||state.error);
   $('pending').textContent=pending?'Updates available · Return to live':'Return to live';
@@ -125,7 +127,7 @@ async function load({live=false}={}){
     }
     updateStatus();
   }catch(error){if(error.name==='AbortError'||generation!==state.generation)return;state.error=error.message;state.held=true;updateStatus();}
-  finally{if(generation===state.generation){state.loading=false;if(!frozen()&&state.latest&&state.latest!==state.at)schedule();}}
+  finally{if(generation===state.generation){state.loading=false;if(!frozen()&&newer())schedule();}}
 }
 function schedule(){
   clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>{if(!state.loading&&!frozen())load({live:true});},200);
@@ -178,7 +180,7 @@ function connect(){
   stream.onerror=()=>{state.connected=false;updateStatus();};
   stream.addEventListener('activity',event=>{
     let value;try{value=JSON.parse(event.data);}catch{return;}
-    if(typeof value.watermark!=='string'||typeof value.collector_epoch!=='string')return;
+    if(typeof value.watermark!=='string'||!/^\d+$/.test(value.watermark)||typeof value.collector_epoch!=='string')return;
     state.latest=value.watermark;state.latestEpoch=value.collector_epoch;
     if(state.epoch&&state.epoch!==value.collector_epoch){
       state.error='Collector restarted. Previous in-memory history is gone; return to live.';
@@ -202,15 +204,15 @@ for(const id of ['clear','empty-reset'])$(id).onclick=()=>{state.filters[state.v
 $('pause').onclick=()=>{if(state.paused){returnLive();return;}cancelView();state.paused=true;updateStatus();};
 $('pending').onclick=returnLive;$('latest').onclick=returnLive;
 $('older').onclick=()=>{if(!state.next)return;closeInspector(false);state.held=true;state.cursor=state.next;$('feed').scrollTop=0;load();};
-$('feed').addEventListener('scroll',()=>{if($('feed').scrollTop>8){state.held=true;updateStatus();}},{passive:true});
-window.addEventListener('scroll',()=>{if(matchMedia('(max-width:759px)').matches&&window.scrollY>64){state.held=true;updateStatus();}},{passive:true});
-$('rows').addEventListener('focusin',()=>{state.held=true;updateStatus();});
-$('lanes').addEventListener('focusin',()=>{state.held=true;updateStatus();});
+$('feed').addEventListener('scroll',()=>{if($('feed').scrollTop>8)hold();},{passive:true});
+window.addEventListener('scroll',()=>{if(matchMedia('(max-width:759px)').matches&&window.scrollY>64)hold();},{passive:true});
+$('rows').addEventListener('focusin',hold);
+$('lanes').addEventListener('focusin',hold);
 $('close-detail').onclick=()=>closeInspector();
 $('inspector').addEventListener('cancel',event=>{event.preventDefault();closeInspector();});
 narrow.addEventListener('change',()=>{if($('inspector').open){$('inspector').close();showInspector();}});
 $('copy').onclick=async()=>{if(!state.item)return;try{await navigator.clipboard.writeText(`Tell-Tail diagnostic summary · Metadata only\n${JSON.stringify({event:state.item,group:state.group||undefined},null,2)}`);$('copy-status').textContent='Copied sanitized metadata.';}catch{$('copy-status').textContent='Clipboard unavailable in this browser.';}};
-$('exact-times').onclick=()=>{if(!state.bins)return;state.held=true;renderExactTimes($('times-values'),state.bins,selectRange);$('times-dialog').showModal();updateStatus();};
+$('exact-times').onclick=()=>{if(!state.bins)return;hold();renderExactTimes($('times-values'),state.bins,selectRange);$('times-dialog').showModal();updateStatus();};
 $('close-times').onclick=()=>$('times-dialog').close();
 $('theme').onclick=()=>{const themes=['system','dark','light'];preferences.theme=themes[(themes.indexOf(preferences.theme||'system')+1)%themes.length];applyPreferences();persist();};
 $('density').onclick=()=>{preferences.compact=!preferences.compact;applyPreferences();persist();};

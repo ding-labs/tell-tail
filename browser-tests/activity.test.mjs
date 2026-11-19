@@ -4,6 +4,7 @@ import {mkdtemp,writeFile,readFile,appendFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {chromium,monitorDesktop,root} from './helpers.mjs';
+async function until(check){const end=Date.now()+10000;while(!await check()){assert.ok(Date.now()<end,'Timed out waiting for collector');await new Promise(r=>setTimeout(r,25));}}
 
 test('desktop timeline freezes evidence, filters all retained data, and supports inspection and themes',async t=>{
   const dir=await mkdtemp(join(tmpdir(),'tell-tail-activity-'));t.after(()=>rm(dir,{recursive:true,force:true}));
@@ -18,7 +19,7 @@ test('desktop timeline freezes evidence, filters all retained data, and supports
   assert.doesNotMatch(await page.locator('body').textContent(),/PRIVATE_/);
   await page.locator('#pause').click();const count=await page.locator('#view-count').textContent(),axis=await page.locator('#lanes').innerHTML();
   await appendFile(file,`${new Date().toISOString()} info [electron-message-handler] chatgpt_pubsub_transport_opened\n`);
-  await page.waitForFunction(async()=> (await(await fetch('/api/activity/snapshot')).json()).retained_items===15);
+  await until(async()=> (await(await fetch(server.url+'api/activity/snapshot')).json()).retained_items===15);
   assert.equal(await page.locator('#view-count').textContent(),count);assert.equal(await page.locator('#lanes').innerHTML(),axis);
   await page.locator('button[data-category="connections"]').click();await page.waitForFunction(()=>document.querySelectorAll('#rows .event-row').length===3);
   const closed=page.locator('#rows .event-row').filter({hasText:'ChatGPT transport closed'});await closed.click();
@@ -69,7 +70,7 @@ test('unified tool activity freezes revisions, pages dense data and searches bey
   assert.match(await page.locator('#rows').textContent(),/railway.*Execution succeeded/s);
   await page.locator('#pause').click();
   await post([record('PRIVATE_A','false'),record('PRIVATE_B','false','mcp__codex_apps__google_drive')]);
-  await page.waitForFunction(async()=> (await(await fetch('/api/activity/snapshot')).json()).retained_items===2);
+  await until(async()=> (await(await fetch(server.url+'api/activity/snapshot')).json()).retained_items===2);
   assert.equal(await page.locator('#rows .event-row').count(),1);assert.match(await page.locator('#rows').textContent(),/Execution succeeded/);
   await page.locator('#rows .event-row').click();await page.waitForFunction(()=>document.getElementById('detail-title').textContent.includes('railway'));
   assert.match(await page.locator('#detail-content').textContent(),/Reported success/);assert.doesNotMatch(await page.locator('body').textContent(),/PRIVATE_/);
@@ -82,4 +83,52 @@ test('unified tool activity freezes revisions, pages dense data and searches bey
   await page.locator('#older').click();await page.waitForFunction(()=>document.getElementById('page-note').textContent.includes('202 matches'));
   await page.locator('#search').fill('railway');await page.waitForFunction(()=>document.querySelectorAll('#rows .event-row').length===1&&document.getElementById('rows').textContent.includes('railway'));
   assert.match(await page.locator('#rows').textContent(),/Conflicting evidence/);assert.deepEqual(errors,[]);
+});
+
+test('empty, expired and restarted views stay explicit; exact times and narrow inspection are accessible',async t=>{
+  const dir=await mkdtemp(join(tmpdir(),'tell-tail-activity-states-'));t.after(()=>rm(dir,{recursive:true,force:true}));
+  const file=join(dir,'desktop.log');await writeFile(file,'');
+  let server=await monitorDesktop(['--source','codex-desktop','--log-dir',dir]);t.after(()=>server.close());
+  const browser=await chromium.launch();t.after(()=>browser.close());
+  const page=await browser.newPage({viewport:{width:1280,height:800},reducedMotion:'reduce'});
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(server.url);await page.waitForFunction(()=>!document.getElementById('pause').disabled);
+  assert.match(await page.locator('#empty').textContent(),/Waiting for recognized activity/);
+  await appendFile(file,await readFile(join(root,'tests/fixtures/desktop-activity.log'),'utf8'));
+  await page.waitForFunction(()=>document.querySelectorAll('#rows .event-row').length===12);
+  await page.locator('#exact-times').click();assert.equal(await page.locator('#times-dialog').evaluate(d=>d.open),true);
+  await page.locator('#times-values button').first().click();
+  await page.waitForFunction(()=>document.getElementById('time-range').value==='custom');
+  assert.ok(await page.locator('#rows .event-row').count()>0);
+  await page.locator('#clear').click();await page.locator('#pending').click();
+  await page.locator('#feed').evaluate(n=>n.scrollTop=120);
+  await page.waitForFunction(()=>document.getElementById('display-note').textContent.includes('fixed view'));
+  const anchor=await page.locator('#rows .event-row').first().getAttribute('data-id');
+  const stamp=new Date().toISOString();
+  await appendFile(file,Array.from({length:300},()=>`${stamp} info [AppServerConnection] response_routed method=thread/read durationMs=12\n`).join(''));
+  await until(async()=>Number((await(await fetch(server.url+'api/activity/snapshot')).json()).evicted_items)>0);
+  assert.equal(await page.locator('#rows .event-row').first().getAttribute('data-id'),anchor);
+  await page.locator('#rows .event-row').first().click();
+  await page.waitForFunction(()=>!document.getElementById('detail-content').textContent.includes('Loading evidence'));
+  assert.match(await page.locator('#detail-content').textContent(),/no longer retained/);
+  await page.keyboard.press('Escape');await page.locator('#pending').click();
+  await page.waitForFunction(()=>!document.getElementById('display-note').textContent.includes('no longer retained'));
+  // A 640px CSS viewport models the reflow required at 200% on a 1280px display.
+  await page.setViewportSize({width:640,height:400});await page.locator('#rows .event-row').first().click();
+  await page.waitForFunction(()=>!document.getElementById('copy').disabled);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  assert.equal(await page.locator('#inspector').evaluate(n=>n.matches(':modal')),true);
+  assert.equal(await page.locator('#inspector').evaluate(n=>getComputedStyle(n).animationName),'none');
+  await page.locator('#copy').focus();await page.keyboard.press('Shift+Tab');
+  assert.equal(await page.evaluate(()=>document.getElementById('inspector').contains(document.activeElement)),true);
+  await page.keyboard.press('Escape');
+  const port=new URL(server.url).port;await server.close();
+  await page.waitForFunction(()=>document.getElementById('connection').textContent==='Disconnected');
+  await writeFile(file,'');
+  server=await monitorDesktop(['--source','codex-desktop','--log-dir',dir,'--web-port',port]);
+  await page.waitForFunction(()=>document.getElementById('display-note').textContent.includes('Collector restarted'));
+  assert.equal(await page.locator('#rows .event-row').count(),12);
+  await page.locator('#pending').click();await page.waitForFunction(()=>document.querySelectorAll('#rows .event-row').length===0);
+  assert.equal(await page.locator('#connection').textContent(),'Connected locally');
+  assert.deepEqual(errors,[]);
 });
