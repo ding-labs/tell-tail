@@ -24,7 +24,10 @@ fn json(value: &impl serde::Serialize) -> Response {
         _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
-fn query(req: &Request, allowed: &[&str]) -> Result<BTreeMap<String, String>, StatusCode> {
+pub(super) fn query(
+    req: &Request,
+    allowed: &[&str],
+) -> Result<BTreeMap<String, String>, StatusCode> {
     let q = req.uri().query().unwrap_or("");
     if q.len() > 2048 {
         return Err(StatusCode::BAD_REQUEST);

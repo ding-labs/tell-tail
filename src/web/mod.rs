@@ -1,4 +1,5 @@
 //! Loopback web output, enabled by the `web` Cargo feature.
+mod activity;
 mod assets;
 mod browser;
 pub mod mcp;

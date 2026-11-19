@@ -39,6 +39,7 @@ use tokio::{
 #[derive(Clone)]
 struct App {
     shared: Shared,
+    activity: Option<crate::activity::runtime::Shared>,
     traces: crate::tool_trace::live::Shared,
     frames: watch::Receiver<Bytes>,
     streams: Arc<Semaphore>,
@@ -73,6 +74,7 @@ async fn serve(
     let (tx, frames) = watch::channel(Bytes::from(initial.json()?));
     let app = router(App {
         shared: running.shared.clone(),
+        activity: running.activity.clone(),
         traces: running.traces.clone(),
         frames,
         streams: Arc::new(Semaphore::new(STREAMS)),
@@ -351,7 +353,7 @@ async fn history(State(app): State<App>, request: Request) -> Response {
     )
 }
 fn router(app: App) -> Router {
-    Router::new()
+    let routes = Router::new()
         .route(
             "/",
             get(|| async { Html(include_str!("../../web/mcp.html")) }),
@@ -415,8 +417,13 @@ fn router(app: App) -> Router {
         .route("/api/mcp/event/{id}", get(detail))
         .route("/api/mcp/history", get(history))
         .with_state(app.clone())
-        .merge(super::trace::router(app.traces.clone()))
-        .layer(middleware::from_fn_with_state(app, local))
+        .merge(super::trace::router(app.traces.clone()));
+    let routes = if let Some(activity) = &app.activity {
+        routes.merge(super::activity::router(activity.clone()))
+    } else {
+        routes
+    };
+    routes.layer(middleware::from_fn_with_state(app, local))
 }
 
 #[cfg(test)]
