@@ -40,6 +40,14 @@ and unexpected disconnect. Claude's aggregate/server mirrors appear as one
 observation. Its temporary files reset every 16 seconds and are deleted on normal
 shutdown. The dashboard prominently labels the demo.
 
+## Opt-in tool-call tracing
+
+For completed tool calls, see [Tool-call tracing](PLUGIN-TRACING.md). This separate
+mode uses an explicitly configured client exporter and a Tool calls tab. Ordinary
+passive MCP logs do not provide complete per-plugin call coverage. The verified
+initial adapter is result-only Codex OTLP capture, with Railway nested/parallel
+lookups tested on the installed desktop version.
+
 ## What developers can investigate
 
 The first view shows reported failures, their server and execution scope, a live
