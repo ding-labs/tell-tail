@@ -1,0 +1,168 @@
+<div id="tt-desktop-concept" aria-label="Tell-Tail desktop activity design concept">
+  <style>
+    #tt-desktop-concept{--tt-bg:light-dark(#f7f6f2,#171c19);--tt-panel:light-dark(#ffffff,#202722);--tt-soft:light-dark(#eeeee7,#29312b);--tt-text:light-dark(#222b25,#f0f1e9);--tt-muted:light-dark(#62695f,#acb6ab);--tt-line:light-dark(#d9ddd2,#3b473c);--tt-green:light-dark(#246239,#7ee787);--tt-greenwash:light-dark(#e3f3df,#2a3c2c);--tt-purple:light-dark(#68538b,#c2addf);--tt-amber:light-dark(#80530f,#ebbc74);--tt-red:light-dark(#a33c33,#f0a398);--tt-row:54px;--tt-row-pad:8px;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--tt-text);width:100%;color-scheme:light dark}
+    #tt-desktop-concept *{box-sizing:border-box}
+    #tt-desktop-concept button,#tt-desktop-concept input{font:inherit;color:inherit}
+    #tt-desktop-concept button{cursor:pointer}
+    #tt-desktop-concept button:focus-visible,#tt-desktop-concept input:focus-visible{outline:2px solid var(--tt-green);outline-offset:3px}
+    #tt-desktop-concept [hidden]{display:none!important}
+    #tt-desktop-concept .tt-window{background:var(--tt-bg);border:1px solid var(--tt-line);border-radius:12px;overflow:hidden}
+    #tt-desktop-concept .tt-header{display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid var(--tt-line);min-height:56px}
+    #tt-desktop-concept .tt-wordmark{font-size:20px;font-weight:650;letter-spacing:-.7px;white-space:nowrap}
+    #tt-desktop-concept .tt-brand-icon{display:flex;align-items:center;justify-content:center;background:#202722;color:var(--tt-green);width:30px;height:30px;border-radius:8px}
+    #tt-desktop-concept .tt-descriptor{color:var(--tt-muted);font-size:12px;line-height:1.4}
+    #tt-desktop-concept .tt-preview{margin-left:auto;margin-right:72px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--tt-muted)}
+    #tt-desktop-concept .tt-shell{display:grid;grid-template-columns:142px minmax(0,1fr)}
+    #tt-desktop-concept .tt-nav{padding:22px 10px;border-right:1px solid var(--tt-line);display:flex;flex-direction:column;gap:5px}
+    #tt-desktop-concept .tt-nav button{display:flex;align-items:center;gap:8px;width:100%;padding:10px 9px;border:0;background:transparent;text-align:left;border-radius:6px;font-size:12px;white-space:nowrap}
+    #tt-desktop-concept .tt-nav button[aria-pressed=true]{color:var(--tt-green);background:var(--tt-greenwash);font-weight:600}
+    #tt-desktop-concept .tt-nav-foot{margin-top:auto;padding:36px 8px 12px;font-size:11px;color:var(--tt-muted)}
+    #tt-desktop-concept .tt-nav-foot strong{display:block;color:var(--tt-text);font-weight:500;margin-bottom:6px}
+    #tt-desktop-concept .tt-main{min-width:0}
+    #tt-desktop-concept .tt-heading{padding:8px 22px 6px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+    #tt-desktop-concept h2{font-size:25px;line-height:1.2;letter-spacing:-.7px;margin:0;font-weight:600}
+    #tt-desktop-concept h3{font-size:15px;margin:0;font-weight:600;line-height:1.5}
+    #tt-desktop-concept p{margin:0}
+    #tt-desktop-concept .tt-kicker{font-size:11px;color:var(--tt-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px}
+    #tt-desktop-concept .tt-count{font-size:12px;color:var(--tt-muted);white-space:nowrap}
+    #tt-desktop-concept .tt-toolbar{padding:0 22px 4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    #tt-desktop-concept .tt-search{flex:1 1 180px;min-width:0;display:flex;align-items:center;gap:8px;border:1px solid var(--tt-line);border-radius:6px;background:var(--tt-panel);padding:7px 10px;color:var(--tt-muted)}
+    #tt-desktop-concept .tt-search input{background:transparent;border:0;min-width:0;width:100%;font-size:12px;outline-offset:6px}
+    #tt-desktop-concept .tt-range{font-size:12px;color:var(--tt-muted);padding:7px 0;white-space:nowrap}
+    #tt-desktop-concept .tt-time{padding:0 22px 4px;border-bottom:1px solid var(--tt-line)}
+    #tt-desktop-concept .tt-lane{display:grid;grid-template-columns:77px minmax(0,1fr);gap:10px;align-items:center;font-size:11px;color:var(--tt-muted);height:18px}
+    #tt-desktop-concept .tt-track{position:relative;height:18px;background:repeating-linear-gradient(to right,transparent 0,transparent calc(25% - 1px),var(--tt-line) calc(25% - 1px),var(--tt-line) 25%)}
+    #tt-desktop-concept .tt-track:before{content:"";position:absolute;top:8px;left:0;right:0;height:1px;background:var(--tt-line)}
+    #tt-desktop-concept .tt-mark{position:absolute;top:0;transform:translateX(-50%);height:18px;width:20px;border:0;background:transparent;padding:0;color:var(--tt-muted)}
+    #tt-desktop-concept .tt-mark:after{content:"";position:absolute;left:7px;top:5px;width:6px;height:8px;background:currentColor;border-radius:2px}
+    #tt-desktop-concept .tt-mark[data-tone=warning]{color:var(--tt-amber)}
+    #tt-desktop-concept .tt-mark[data-tone=error]{color:var(--tt-red)}
+    #tt-desktop-concept .tt-mark[data-tone=success]{color:var(--tt-green)}
+    #tt-desktop-concept .tt-mark[aria-pressed=true]:after{box-shadow:0 0 0 3px var(--tt-bg),0 0 0 4px currentColor}
+    #tt-desktop-concept .tt-ticks{margin-left:87px;display:flex;justify-content:space-between;color:var(--tt-muted);font:11px/1.5 ui-monospace,SFMono-Regular,monospace;margin-top:3px}
+    #tt-desktop-concept .tt-chips{display:flex;gap:4px;flex-wrap:wrap;padding:2px 22px}
+    #tt-desktop-concept .tt-chips button{border:1px solid transparent;border-radius:5px;padding:4px 9px;background:transparent;color:var(--tt-muted);font-size:12px}
+    #tt-desktop-concept .tt-chips button[aria-pressed=true]{background:var(--tt-panel);border-color:var(--tt-line);color:var(--tt-text)}
+    #tt-desktop-concept .tt-workspace{display:grid;grid-template-columns:minmax(0,1fr) 258px;border-top:1px solid var(--tt-line)}
+    #tt-desktop-concept .tt-feed{min-width:0;background:var(--tt-panel)}
+    #tt-desktop-concept .tt-list-heading{padding:5px 18px;display:flex;justify-content:space-between;color:var(--tt-muted);font-size:11px;border-bottom:1px solid var(--tt-line)}
+    #tt-desktop-concept .tt-row{width:100%;min-height:var(--tt-row);display:grid;grid-template-columns:58px 17px minmax(0,1fr);gap:10px;align-items:center;text-align:left;padding:var(--tt-row-pad) 15px;border:0;border-bottom:1px solid var(--tt-line);border-left:3px solid transparent;background:transparent}
+    #tt-desktop-concept .tt-row:hover{background:var(--tt-soft)}
+    #tt-desktop-concept .tt-row[aria-pressed=true]{background:var(--tt-greenwash);border-left-color:var(--tt-green)}
+    #tt-desktop-concept .tt-row time{font:11px/1.5 ui-monospace,SFMono-Regular,monospace;color:var(--tt-muted);font-variant-numeric:tabular-nums}
+    #tt-desktop-concept .tt-row-icon{color:var(--tt-muted);display:flex}
+    #tt-desktop-concept .tt-row[data-tone=error] .tt-row-icon{color:var(--tt-red)}
+    #tt-desktop-concept .tt-row[data-tone=warning] .tt-row-icon{color:var(--tt-amber)}
+    #tt-desktop-concept .tt-row[data-tone=success] .tt-row-icon{color:var(--tt-green)}
+    #tt-desktop-concept .tt-row-title{font-size:13px;display:block;overflow-wrap:anywhere;font-weight:500}
+    #tt-desktop-concept .tt-row-meta{font-size:11px;color:var(--tt-muted);display:block;margin-top:1px}
+    #tt-desktop-concept .tt-inspector{border-left:1px solid var(--tt-line);padding:18px;background:var(--tt-bg);min-width:0}
+    #tt-desktop-concept .tt-inspector .tt-kicker{display:flex;align-items:center;gap:7px;margin-bottom:12px}
+    #tt-desktop-concept .tt-detail-status{display:inline-block;font-size:11px;padding:3px 7px;background:var(--tt-soft);border-radius:4px;margin-top:10px;color:var(--tt-muted)}
+    #tt-desktop-concept .tt-detail-status[data-tone=warning]{color:var(--tt-amber)}
+    #tt-desktop-concept .tt-detail-status[data-tone=error]{color:var(--tt-red)}
+    #tt-desktop-concept .tt-detail-status[data-tone=success]{color:var(--tt-green)}
+    #tt-desktop-concept .tt-detail-note{font-size:12px;color:var(--tt-muted);margin:15px 0;line-height:1.6}
+    #tt-desktop-concept dl{margin:18px 0;font-size:11px;display:grid;grid-template-columns:70px minmax(0,1fr);gap:10px 8px}
+    #tt-desktop-concept dt{color:var(--tt-muted)}
+    #tt-desktop-concept dd{margin:0;overflow-wrap:anywhere}
+    #tt-desktop-concept .tt-evidence{margin-top:20px;border-top:1px solid var(--tt-line);padding-top:15px}
+    #tt-desktop-concept .tt-evidence p{font-size:11px;color:var(--tt-muted);margin-top:9px;line-height:1.7}
+    #tt-desktop-concept .tt-footnote{padding:10px 22px;display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--tt-muted);border-top:1px solid var(--tt-line);flex-wrap:wrap}
+    #tt-desktop-concept .tt-empty{padding:35px 20px;color:var(--tt-muted);font-size:12px}
+    #tt-desktop-concept .tt-source-row{padding:17px 20px;border-bottom:1px solid var(--tt-line)}
+    #tt-desktop-concept .tt-source-row p{font-size:12px;color:var(--tt-muted);margin-top:6px}
+    #tt-desktop-concept svg{width:16px;height:16px;flex-shrink:0}
+    @media(max-width:880px){#tt-desktop-concept .tt-shell{grid-template-columns:1fr}#tt-desktop-concept .tt-nav{flex-direction:row;padding:8px 14px;border-right:0;border-bottom:1px solid var(--tt-line);flex-wrap:wrap}#tt-desktop-concept .tt-nav button{width:auto}#tt-desktop-concept .tt-nav-foot{display:none}#tt-desktop-concept .tt-preview{margin-right:68px}}
+    @media(max-width:620px){#tt-desktop-concept .tt-workspace{grid-template-columns:1fr}#tt-desktop-concept .tt-inspector{border-left:0;border-top:1px solid var(--tt-line)}#tt-desktop-concept .tt-header{flex-wrap:wrap;padding:14px}#tt-desktop-concept .tt-preview{margin-left:0;margin-right:0;width:100%}#tt-desktop-concept .tt-heading{padding:18px 14px 10px}#tt-desktop-concept .tt-toolbar,#tt-desktop-concept .tt-chips{padding-left:14px;padding-right:14px}#tt-desktop-concept .tt-time{padding-left:14px;padding-right:14px}#tt-desktop-concept .tt-row{grid-template-columns:54px 16px minmax(0,1fr);gap:7px}#tt-desktop-concept .tt-descriptor{max-width:140px}#tt-desktop-concept .tt-count{white-space:normal;text-align:right}}
+    @media(pointer:coarse){#tt-desktop-concept .tt-chips button,#tt-desktop-concept .tt-nav button{min-height:44px}#tt-desktop-concept .tt-search input{font-size:16px}#tt-desktop-concept .tt-mark{pointer-events:none}}
+  </style>
+  <div class="tt-window">
+    <header class="tt-header">
+      <span class="tt-brand-icon"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MCAzMiIgZmlsbD0ibm9uZSI+CiAgPHRpdGxlPlRlbGwtVGFpbCDigJQgdXByaWdodCBob29rPC90aXRsZT4KICA8cGF0aCBmaWxsPSIjN2VlNzg3IiBkPSJNMyAzLjVoMTV2NUgzek0zIDI0aDIydjVIM3pNMyAxNC41aDIxYzYgMCA5LjUtMi41IDkuNS02IDAtMy4xLTEuOC00LTMuNS0zLjQtMSAuNC0xLjIgMS41LTEgMi41LjQgMy00LjcgMy45LTUuNC44QzIyLjUgMy42IDI2IC42IDMwLjIuNiAzNS41LjYgMzggNCAzOCA4LjVjMCA2LjUtNS41IDExLTE0IDExSDN6Ii8+Cjwvc3ZnPgo=" alt="" width="24" height="24"></span>
+      <span class="tt-wordmark">tell-tail</span>
+      <span class="tt-descriptor">For ChatGPT<br>and Codex</span>
+      <span class="tt-preview">Design preview · synthetic events</span>
+    </header>
+    <div class="tt-shell">
+      <nav class="tt-nav" aria-label="Workspace">
+        <button type="button" data-view="activity" aria-pressed="true"><i data-lucide="activity" aria-hidden="true"></i>Activity</button>
+        <button type="button" data-view="tools" aria-pressed="false"><i data-lucide="blocks" aria-hidden="true"></i>Tools &amp; MCP</button>
+        <button type="button" data-view="problems" aria-pressed="false"><i data-lucide="circle-alert" aria-hidden="true"></i>Problems</button>
+        <button type="button" data-view="sources" aria-pressed="false"><i data-lucide="radio" aria-hidden="true"></i>Sources</button>
+        <div class="tt-nav-foot"><strong>Local by design</strong>Diagnostic metadata<br>Bounded history<br>No prompt capture</div>
+      </nav>
+      <main class="tt-main">
+        <div class="tt-heading"><div><h2 data-heading>Activity</h2></div><span class="tt-count" data-count></span></div>
+        <div class="tt-toolbar"><label class="tt-search"><i data-lucide="search" aria-hidden="true"></i><input type="search" aria-label="Search sample activity" placeholder="Search activity, tools, components…"></label><span class="tt-range">14:31–14:33 · local time</span></div>
+        <section class="tt-time" aria-label="Observed event times by category. Select an event to inspect it.">
+          <div data-lanes></div><div class="tt-ticks"><span>14:31:00</span><span>14:32:00</span><span>14:33:00</span></div>
+        </section>
+        <div class="tt-chips" aria-label="Activity categories">
+          <button type="button" data-category="all" aria-pressed="true">All activity</button>
+          <button type="button" data-category="tools" aria-pressed="false">Tools</button>
+          <button type="button" data-category="mcp" aria-pressed="false">MCP</button>
+          <button type="button" data-category="connections" aria-pressed="false">Connections</button>
+          <button type="button" data-category="desktop" aria-pressed="false">Desktop</button>
+        </div>
+        <div class="tt-workspace">
+          <section class="tt-feed" aria-label="Sample activity"><div class="tt-list-heading"><span data-list-title>Latest observations</span><span>Newest first</span></div><div data-feed></div></section>
+          <aside class="tt-inspector" aria-label="Selected event details" aria-live="polite"><p class="tt-kicker"><i data-lucide="scan-line" aria-hidden="true"></i>Event evidence</p><div data-detail></div></aside>
+        </div>
+        <footer class="tt-footnote"><span>Metadata only · Illustrative coverage</span><span>Select a row to inspect its evidence</span></footer>
+      </main>
+    </div>
+  </div>
+  <script>
+    (()=>{
+      const root=document.getElementById('tt-desktop-concept');
+      const events=[
+        {id:'browser-ready',sec:104,cat:'desktop',icon:'panel-top',title:'Browser runtime reported ready',meta:'Browser runtime · App-wide',tone:'success',outcome:'Ready observed',source:'Desktop log',scope:'App-wide',duration:'Not reported',note:'The desktop client reported that its browser runtime is ready. This does not establish the outcome of a browser task.',kind:'browser_use_iab_backend_startup_ready'},
+        {id:'github-call',sec:94,cat:'tools',icon:'blocks',title:'GitHub · get_user_login',meta:'Tool result · 534 ms reported',tone:'success',outcome:'Execution succeeded',source:'Tool telemetry',scope:'Unlinked execution',duration:'534 ms · source reported',note:'The exporter reported a successful execution result. No start event or verified chat link was supplied. Tool output is omitted.',kind:'codex.tool_result'},
+        {id:'connection-open',sec:83,cat:'connections',icon:'radio',title:'ChatGPT transport opened',meta:'Connection observation · App-wide',tone:'info',outcome:'Opened observed',source:'Desktop log',scope:'App-wide',duration:'Not reported',note:'An open transport was observed. It is nearby in time to a reconnect record; this sample supplies no verified shared connection identity.',kind:'chatgpt_pubsub_transport_opened'},
+        {id:'reconnect',sec:68,cat:'connections',icon:'rotate-cw',title:'ChatGPT reconnect scheduled',meta:'Connection observation · Attempt 2',tone:'info',outcome:'Retry scheduled',source:'Desktop log',scope:'App-wide',duration:'Not reported',note:'The desktop client scheduled another connection attempt. This record does not establish whether a chat stopped or whether the reconnect succeeded.',kind:'chatgpt_pubsub_reconnect_scheduled'},
+        {id:'mcp-auth',sec:58,cat:'mcp',icon:'circle-alert',title:'Example MCP server needs sign-in',meta:'Startup failed · Authentication required',tone:'error',outcome:'Failure reported',source:'MCP diagnostics',scope:'Known server execution',duration:'Not reported',note:'The host reported an authentication failure during startup. Check this server’s sign-in state in the host application. Other servers are unaffected by this evidence.',kind:'mcp_server_startup_status_updated'},
+        {id:'railway-call',sec:47,cat:'tools',icon:'blocks',title:'Railway · search_docs',meta:'Tool result · 1.26 s reported',tone:'success',outcome:'Execution succeeded',source:'Tool telemetry',scope:'Unlinked execution',duration:'1.26 s · source reported',note:'An individual Railway tool result was observed. The reported duration is available, but a start timestamp and parent relationship are not.',kind:'codex.tool_result'},
+        {id:'plugin-sync',sec:33,cat:'desktop',icon:'puzzle',title:'Plugin marketplace sync completed',meta:'Plugin lifecycle · App-wide',tone:'info',outcome:'Completion observed',source:'Desktop log',scope:'App-wide',duration:'Not reported',note:'Marketplace synchronization completed. This does not prove that every installed plugin is connected or that its tools are available.',kind:'plugin_marketplace_sync_completed'},
+        {id:'mcp-ready',sec:21,cat:'mcp',icon:'plug',title:'Documentation MCP server reported ready',meta:'Server lifecycle · Ready observed',tone:'success',outcome:'Ready observed',source:'MCP diagnostics',scope:'Known server execution',duration:'Not reported',note:'The host reported readiness for this server execution. Readiness is a last observation, not a continuous health check.',kind:'mcp_server_startup_status_updated'},
+        {id:'browser-start',sec:8,cat:'desktop',icon:'panel-top',title:'Browser runtime startup began',meta:'Browser runtime · App-wide',tone:'info',outcome:'Start observed',source:'Desktop log',scope:'App-wide',duration:'Not reported',note:'A runtime startup event was observed. The sample does not prove that a later ready event belongs to the same startup attempt.',kind:'browser_use_iab_backend_startup_started'}
+      ];
+      const labels={activity:'Activity',tools:'Tools & MCP',problems:'Problems',sources:'Sources'};
+      const categories={tools:'Tool calls',mcp:'MCP',connections:'Connections',desktop:'Desktop'};
+      const state={view:'activity',category:'all',search:'',selected:'reconnect',compact:false,navigator:true};
+      const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      const time=s=>'14:'+String(31+Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+      function filtered(){return events.filter(e=>(state.view!=='tools'||['tools','mcp'].includes(e.cat))&&(state.view!=='problems'||['error','warning'].includes(e.tone))&&(state.category==='all'||e.cat===state.category)&&(!state.search||[e.title,e.meta,e.source,e.kind].join(' ').toLowerCase().includes(state.search.toLowerCase())));}
+      function persist(){if(window.openai?.setWidgetState)window.openai.setWidgetState({modelContent:{concept:'Tell-Tail desktop activity',view:state.view,category:state.category,selected:state.selected},privateContent:{compact:state.compact,navigator:state.navigator}}).catch(()=>{});}
+      function render(){
+        root.style.setProperty('--tt-row',state.compact?'42px':'54px');
+        root.style.setProperty('--tt-row-pad',state.compact?'2px':'8px');
+        root.querySelector('[data-heading]').textContent=labels[state.view];
+        root.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===state.view)));
+        root.querySelectorAll('[data-category]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.category===state.category)));
+        const sources=state.view==='sources';
+        root.querySelector('.tt-time').hidden=sources||!state.navigator;
+        root.querySelector('.tt-chips').hidden=sources;
+        root.querySelector('.tt-toolbar').hidden=sources;
+        const list=filtered();
+        root.querySelector('[data-count]').textContent=sources?'3 illustrative sources':`${list.length} sample observations`;
+        root.querySelector('[data-list-title]').textContent=sources?'Capture coverage':state.view==='problems'?'Reported failures':'Latest observations';
+        const feed=root.querySelector('[data-feed]');
+        if(sources){feed.innerHTML='<div class="tt-source-row"><h3>Desktop logs</h3><p>Connection, plugin, and runtime observations. Adapter proposed; samples are synthetic.</p></div><div class="tt-source-row"><h3>MCP diagnostics</h3><p>Startup and connection evidence. Server readiness is a last observation.</p></div><div class="tt-source-row"><h3>Tool telemetry</h3><p>Result-only capture. Starts, chat correlation, and complete cloud coverage are not established.</p></div>';}else{
+          if(!list.some(e=>e.id===state.selected))state.selected=list[0]?.id||null;
+          feed.innerHTML=list.length?list.map(e=>`<button type="button" class="tt-row" data-event="${e.id}" data-tone="${e.tone}" aria-pressed="${state.selected===e.id}"><time>${time(e.sec)}</time><span class="tt-row-icon"><i data-lucide="${e.icon}" aria-hidden="true"></i></span><span><span class="tt-row-title">${esc(e.title)}</span><span class="tt-row-meta">${esc(e.meta)}</span></span></button>`).join(''):'<p class="tt-empty">No sample events match these filters.</p>';
+        }
+        root.querySelector('[data-lanes]').innerHTML=Object.entries(categories).map(([cat,label])=>`<div class="tt-lane"><span>${label}</span><div class="tt-track">${list.filter(e=>e.cat===cat).map(e=>`<button type="button" class="tt-mark" data-event="${e.id}" data-tone="${e.tone}" aria-label="${esc(time(e.sec)+' '+e.title)}" aria-pressed="${e.id===state.selected}" style="left:${e.sec/120*100}%"></button>`).join('')}</div></div>`).join('');
+        const selected=events.find(e=>e.id===state.selected);
+        root.querySelector('[data-detail]').innerHTML=sources?'<h3>Coverage is explicit</h3><p class="tt-detail-note">This concept shows how sources and their limits fit into the workspace. No live data is connected.</p><div class="tt-evidence"><h3>Capture boundaries</h3><p>No prompts or tool outputs. No automatic cloud-history access. Event history is bounded.</p></div>':selected?`<h3>${esc(selected.title)}</h3><span class="tt-detail-status" data-tone="${selected.tone}">${esc(selected.outcome)}</span><p class="tt-detail-note">${esc(selected.note)}</p><dl><dt>Observed</dt><dd>${time(selected.sec)} · local time</dd><dt>Source</dt><dd>${esc(selected.source)}</dd><dt>Scope</dt><dd>${esc(selected.scope)}</dd><dt>Duration</dt><dd>${esc(selected.duration)}</dd></dl><div class="tt-evidence"><h3>Evidence</h3><p>${esc(selected.kind)}</p><p>Synthetic metadata · no raw payload</p></div>`:'<p class="tt-detail-note">Select a sample event to inspect it.</p>';
+        if(globalThis.lucide)lucide.createIcons({attrs:{width:16,height:16}});
+      }
+      function applySaved(saved){const m=saved?.modelContent,p=saved?.privateContent;if(m?.concept==='Tell-Tail desktop activity'){if(labels[m.view])state.view=m.view;if(m.category==='all'||categories[m.category])state.category=m.category;if(events.some(e=>e.id===m.selected))state.selected=m.selected;}if(typeof p?.compact==='boolean')state.compact=p.compact;if(typeof p?.navigator==='boolean')state.navigator=p.navigator;}
+      applySaved(window.openai?.widgetState);render();
+      root.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.view){state.view=b.dataset.view;state.category='all';state.search='';root.querySelector('input').value='';}else if(b.dataset.category){state.category=b.dataset.category;}else if(b.dataset.event){state.selected=b.dataset.event;}else return;const eventButton=b.dataset.event;const inLane=b.classList.contains('tt-mark');render();if(eventButton){const target=root.querySelector(`${inLane?'.tt-mark':'.tt-row'}[data-event="${eventButton}"]`);target?.focus({preventScroll:true});}persist();});
+      root.querySelector('input').addEventListener('input',e=>{state.search=e.target.value;render();});
+      window.addEventListener('openai:set_globals',e=>{if(e.detail?.globals?.widgetState){applySaved(e.detail.globals.widgetState);render();}});
+      if(globalThis.Tweak){const tweak=new Tweak({container:root,onChange:()=>{render();persist();}});tweak.addToggle(state,'compact',{label:'Compact rows'});tweak.addToggle(state,'navigator',{label:'Time navigator'});}
+    })();
+  </script>
+</div>
