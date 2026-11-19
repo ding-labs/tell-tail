@@ -112,6 +112,9 @@ impl Drop for Running {
 
 pub fn run(args: &Args) -> io::Result<i32> {
     let signals = Signals::install()?;
+    if let Some(path) = &args.trace_replay {
+        return crate::tool_trace::replay::run(path, args.mode(), &signals);
+    }
     #[cfg(feature = "web")]
     if args.mode() == Output::Web {
         return crate::web::mcp::run(args, &signals);

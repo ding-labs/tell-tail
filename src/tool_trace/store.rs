@@ -133,6 +133,18 @@ impl Store {
             counts: self.counts.clone(),
         }
     }
+    /// Current call updates in revision order; callers must expose retention
+    /// gaps using oldest_watermark rather than treating this as a durable log.
+    pub fn updates_after(&self, sequence: u64) -> Vec<Call> {
+        let mut values: Vec<_> = self
+            .calls
+            .values()
+            .filter(|t| t.call.revision > sequence)
+            .map(|t| t.call.clone())
+            .collect();
+        values.sort_by_key(|c| c.revision);
+        values
+    }
     fn charged_bytes(&self) -> usize {
         (self.calls.len() + self.revisions.len()) * ENTRY_CHARGE
             + self.deliveries.len() * 256

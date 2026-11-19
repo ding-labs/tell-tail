@@ -35,6 +35,9 @@ pub struct Args {
     /// Replay synthetic logs in temporary files; do not read client logs.
     #[arg(long, conflicts_with_all = ["source", "log_dir"])]
     pub demo: bool,
+    /// Replay a finite normalized tool-trace fixture (text/JSON only; no client logs).
+    #[arg(long, conflicts_with_all = ["source", "log_dir", "demo"])]
+    pub trace_replay: Option<PathBuf>,
 }
 impl Args {
     pub fn mode(&self) -> Output {
@@ -42,6 +45,11 @@ impl Args {
             .unwrap_or(if self.open { Output::Web } else { Output::Text })
     }
     pub fn validate(&self) -> Result<(), &'static str> {
+        if self.trace_replay.is_some() && self.mode() == Output::Web {
+            return Err(
+                "Trace replay currently supports --output text or json; live capture is not yet verified",
+            );
+        }
         if self.open && self.mode() != Output::Web {
             return Err("--open requires web output; omit --output or use --output web");
         }
