@@ -74,6 +74,17 @@ class DecodeTests(unittest.TestCase):
         self.assertEqual(decode(batch(attr("tool_name", "exec_command")), b"key")[0]["tool"],
                          "exec_command")
 
+    def test_tool_name_inspection_is_explicit_and_bounded(self):
+        for tool in ["mcp__example__lookup", "example.lookup", "exec_command"]:
+            b = batch(attr("tool_name", tool) + attr("arguments", "PRIVATE_ARGS"))
+            self.assertNotIn("observed_tool_name", decode(b, b"key")[0])
+            result = decode(b, b"key", inspect_tool_names=True)[0]
+            self.assertEqual(result["observed_tool_name"], tool)
+            self.assertNotIn("PRIVATE_ARGS", json.dumps(result))
+        for tool in ["", "x" * 129, "line\nfeed", "embedded secret", "<script>", "λ"]:
+            result = decode(batch(attr("tool_name", tool)), b"key", inspect_tool_names=True)[0]
+            self.assertNotIn("observed_tool_name", result)
+
     def test_event_body_and_attribute_name(self):
         for r in [message(5, message(1, b"codex.tool_result")), attr("event.name", "codex.tool_result")]:
             self.assertEqual(decode(batch(r), b"key")[0]["event"], "codex.tool_result")

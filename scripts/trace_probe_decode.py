@@ -6,6 +6,7 @@ only a fixed vocabulary and per-run keyed identifier digests leave the decoder.
 """
 
 import hashlib
+import re
 
 MAX_BODY = 1024 * 1024
 MAX_RECORDS = 1024
@@ -107,7 +108,7 @@ def attribute(data):
     return key, scalar(value) if value is not None else None
 
 
-def record(data, key):
+def record(data, key, inspect_tool_names=False):
     attrs = {}
     names = []
     has_time = False
@@ -133,6 +134,10 @@ def record(data, key):
     result = {"event": next(iter(known_names), "other"),
               "fields_present": sorted(attrs), "has_timestamp": bool(has_time),
               "tool": TOOLS.get(attrs.get("tool_name"), "unidentified")}
+    tool_name = attrs.get("tool_name")
+    if (inspect_tool_names and isinstance(tool_name, str)
+            and re.fullmatch(r"[A-Za-z0-9_./:-]{1,128}", tool_name)):
+        result["observed_tool_name"] = tool_name
     for name in ("tool_name", "call_id", "conversation.id", "parent_call_id", "turn_id"):
         value = attrs.get(name)
         if isinstance(value, str) and value:
@@ -152,7 +157,7 @@ def record(data, key):
     return result
 
 
-def decode(body, key):
+def decode(body, key, inspect_tool_names=False):
     """Return only sanitized record summaries, rejecting over-budget batches."""
     if len(body) > MAX_BODY:
         raise InvalidBatch("body limit")
@@ -168,5 +173,5 @@ def decode(body, key):
                     continue
                 if len(records) >= MAX_RECORDS:
                     raise InvalidBatch("record limit")
-                records.append(record(raw, key))
+                records.append(record(raw, key, inspect_tool_names))
     return records

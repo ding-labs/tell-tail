@@ -48,8 +48,11 @@ duration/request limits. It rejects browser origins, incorrect Host/credentials,
 unsupported encodings, oversize inputs, malformed protobuf, and ambiguous
 duplicate attributes. It is single-request-at-a-time, not a production collector.
 
-Only a fixed event/tool vocabulary, field-presence indicators, validated numeric
-duration/boolean outcome, and per-run keyed ID digests are retained. Resource
+By default, only a fixed event/tool vocabulary, field-presence indicators, validated
+numeric duration/boolean outcome, and per-run keyed ID/tool-name digests are retained.
+The explicit `--inspect-tool-names` audit option also retains the source tool
+identifier, restricted to 128 ASCII label characters, to establish exact attribution.
+It does not infer a plugin from a name or retain arguments/results. Resource
 attributes, arbitrary bodies, outputs, prompts, credentials, and raw identifiers
 are not copied into reports. "Unidentified" is intentional: probe classification
 must not guess arbitrary plugin names. Execution success is not a verified

@@ -22,12 +22,13 @@ from trace_probe_decode import InvalidBatch, MAX_BODY, decode
 class Probe(HTTPServer):
     request_queue_size = 4
 
-    def __init__(self, port=0, max_events=4096):
+    def __init__(self, port=0, max_events=4096, inspect_tool_names=False):
         super().__init__(("127.0.0.1", port), Handler)
         self.token = secrets.token_hex(32)
         self.key = secrets.token_bytes(32)
         self.records = []
         self.max_events = max_events
+        self.inspect_tool_names = inspect_tool_names
         self.requests = self.accepted = self.rejected = 0
         self.timeout = 0.2
 
@@ -106,7 +107,7 @@ class Handler(BaseHTTPRequestHandler):
         if len(body) != length:
             return self.respond(400)
         try:
-            records = decode(body, self.server.key)
+            records = decode(body, self.server.key, self.server.inspect_tool_names)
         except InvalidBatch:
             return self.respond(400)
         if len(self.server.records) + len(records) > self.server.max_events:
@@ -134,13 +135,15 @@ def main():
     parser.add_argument("--max-requests", type=int, default=256)
     parser.add_argument("--config-out", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--inspect-tool-names", action="store_true",
+                        help="Retain bounded tool identifiers for capture attribution; never payloads")
     args = parser.parse_args()
     if not 1 <= args.seconds <= 3600 or not 1 <= args.max_requests <= 4096:
         parser.error("duration or request budget out of range")
     if not 0 <= args.port <= 65535:
         parser.error("port out of range")
     # Reserve output before creating a receiver or fragment; neither file is overwritten.
-    with args.output.open("x") as output, Probe(args.port) as probe:
+    with args.output.open("x") as output, Probe(args.port, inspect_tool_names=args.inspect_tool_names) as probe:
         private_fragment(args.config_out, probe)
         print(json.dumps({"endpoint": f"http://{probe.authority}/v1/logs",
                           "configuration_fragment": str(args.config_out),
