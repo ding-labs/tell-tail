@@ -1,6 +1,10 @@
 # Per-plugin tool-call tracing implementation plan
 
-Status: proposed; implementation has not started. Written November 18, 2026.
+Status: partially implemented November 18, 2026. The bounded probe, normalized
+contract, identity/correlation core, revision store, and finite text/JSON replay
+are implemented. Live capture selection remains pending a configured client
+restart and evidence check; the production adapter, receiver, API, and dashboard
+integration are not implemented. See the [capture audit](PLUGIN-TRACE-CAPTURE-AUDIT.md).
 The capture mechanism must pass the feasibility checkpoint below before we
 promise coverage for the installed Codex desktop app.
 
@@ -246,7 +250,8 @@ tell-tail mcp --trace-replay ./synthetic-trace.ndjson --output json --once
 `--trace-port` is appropriate only for an export-based adapter. A different chosen
 adapter gets an explicit source option rather than an unused listener. A network
 receiver cannot combine with `--once`; a finite replay can. Demo and replay modes
-must not also read real client telemetry. No tracer command exists yet.
+must not also read real client telemetry. Only finite text/JSON `--trace-replay`
+is implemented so far; the receiver and dashboard commands remain proposed.
 
 For a receiver, use a separate loopback listener from the read-only dashboard.
 It accepts only the selected protocol, method, route, and bounded encoding. Reject

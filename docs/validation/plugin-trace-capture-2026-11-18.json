@@ -1,0 +1,42 @@
+{
+  "audit_version": 1,
+  "date": "2026-11-18",
+  "decision": "pending_live_capture",
+  "desktop_version": "26.1111.21308",
+  "desktop_build": "27194",
+  "engine_version": "0.169.0-alpha.11.1",
+  "observed_app_server_transport": "stdio",
+  "attachable_control_socket_found": false,
+  "user_otel_section_present": false,
+  "effective_managed_policy": "unverified",
+  "isolated_strict_configuration_check_passed": true,
+  "client_configuration_modified": false,
+  "client_restarted": false,
+  "railway_documentation_call_succeeded": true,
+  "passive_tail": {
+    "appended_bytes": 1827,
+    "physical_lines": 6,
+    "railway_mentions": 0,
+    "tool_result_mentions": 0,
+    "call_id_fields": 0,
+    "mcp_tool_call_mentions": 0
+  },
+  "active_exporter_capture_tested": false,
+  "direct_call_coverage": "unverified",
+  "nested_call_coverage": "unverified",
+  "subagent_call_coverage": "unverified",
+  "payloads_retained": false,
+  "production_adapter_selected": false,
+  "validation": {
+    "probe_tests_passed": 8,
+    "trace_core_tests_passed": 14,
+    "trace_cli_tests_passed": 3,
+    "full_rust_test_matrix": "passed",
+    "all_target_clippy_matrix": "passed",
+    "feature_matrix": ["default", "no-default-features", "snapshot-notifications-only"],
+    "default_binary_rebuilt": true,
+    "live_capture": "pending",
+    "trace_browser_ui": "not_implemented",
+    "extended_soaks": "not_run_optional_nonblocking"
+  }
+}
