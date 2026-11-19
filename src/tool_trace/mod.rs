@@ -3,3 +3,4 @@
 mod correlate;
 mod identity;
 pub mod model;
+pub mod store;

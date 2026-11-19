@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 pub const SCHEMA_VERSION: u32 = 1;
 pub const MAX_RECORD_BYTES: usize = 16 * 1024;
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum Phase {
     Started,
@@ -94,7 +94,7 @@ impl Observation {
     }
 }
 
-#[derive(Clone, Copy, Debug, Serialize, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Serialize, Eq, PartialEq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum Status {
     Running,
