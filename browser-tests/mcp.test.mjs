@@ -73,7 +73,7 @@ test('many failure groups keep the timeline visible and support keyboard inspect
   const before = await page.locator('#timeline tr').first().boundingBox();
   assert.ok(before.y + before.height < 800, 'timeline evidence is visible without scrolling past failures');
   await appendFile(file, record('new-failure', 'failed'));
-  await page.waitForFunction(() => document.getElementById('event-count').textContent === '81');
+  await page.waitForFunction(() => document.getElementById('event-count').textContent === '81' && document.querySelectorAll('#timeline tr').length === 81);
   assert.equal((await page.locator('#timeline tr').first().boundingBox()).y, before.y, 'new groups cannot push the timeline down');
 
   await page.locator('#timeline-tab').focus();

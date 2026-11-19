@@ -23,6 +23,7 @@ function renderSources(snapshot) {
 function render(snapshot) {
   document.querySelector('.local-label').textContent = snapshot.demo ? 'SYNTHETIC DEMO · NO CLIENT LOGS READ' : 'LOCAL · READ ONLY';
   displayed = snapshot; options(snapshot);
+  if (snapshot.demo && !paused) $('display-note').textContent = 'Synthetic replay. No client logs or live telemetry are read.';
   $('event-count').textContent = number(snapshot.counts.observations); $('issue-count').textContent = number(snapshot.retained_issues); $('mirror-count').textContent = number(snapshot.counts.mirrors); $('source-count').textContent = number(snapshot.sources.length);
   renderIssues(snapshot);
   $('server-states').replaceChildren(...snapshot.servers.map(s => node('li', `${hosts[s.host]} / ${s.server} · ${s.kind.replaceAll('_', ' ')} · ${date(s.timestamp_ms)} · execution ${s.scope.slice(0, 6)}${s.historical ? ' · history' : ''}`)));
@@ -122,7 +123,7 @@ $('clear-filters').addEventListener('click', () => { clearTimeout(searchTimer); 
 function receive(snapshot) {
   if (snapshot.schema_version !== 1 || !Array.isArray(snapshot.events) || !Array.isArray(snapshot.sources)) { connection('Unsupported watcher data; refresh after updating.', 'error'); return; }
   latest = snapshot; retryDelay = 1000; $('retry').hidden = true;
-  connection(snapshot.running ? 'Watcher connected · reading local logs' : 'Watcher stopped · retaining observations', snapshot.running ? 'live' : 'warning');
+  connection(snapshot.demo ? 'Synthetic replay · no client logs read' : snapshot.running ? 'Watcher connected · reading local logs' : 'Watcher stopped · retaining observations', snapshot.running ? 'live' : 'warning');
   const key = JSON.stringify([snapshot.sequence, snapshot.sources, snapshot.roots]);
   if (!paused && key !== renderKey) { renderKey = key; render(snapshot); history(); }
 }

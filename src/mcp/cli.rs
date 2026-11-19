@@ -35,7 +35,7 @@ pub struct Args {
     /// Replay synthetic logs in temporary files; do not read client logs.
     #[arg(long, conflicts_with_all = ["source", "log_dir"])]
     pub demo: bool,
-    /// Replay a finite normalized tool-trace fixture (text/JSON only; no client logs).
+    /// Replay a finite normalized tool-trace fixture without reading client logs.
     #[arg(long, conflicts_with_all = ["source", "log_dir", "demo"])]
     pub trace_replay: Option<PathBuf>,
     /// Receive Codex OTLP results on a separate loopback port (0 chooses a free port).
@@ -56,11 +56,6 @@ impl Args {
     pub fn validate(&self) -> Result<(), &'static str> {
         if self.trace_port.is_some() && !cfg!(feature = "web") {
             return Err("Live trace capture requires the web feature; replay remains available");
-        }
-        if self.trace_replay.is_some() && self.mode() == Output::Web {
-            return Err(
-                "Trace replay supports --output text or json; use --trace-port for live web capture",
-            );
         }
         if self.open && self.mode() != Output::Web {
             return Err("--open requires web output; omit --output or use --output web");

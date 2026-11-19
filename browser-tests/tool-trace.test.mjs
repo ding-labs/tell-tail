@@ -44,3 +44,15 @@ test('tool calls flow through authenticated OTLP, freeze outcomes, filter, pagin
   assert.doesNotMatch(await page.locator('body').textContent(),/PRIVATE_/);
   assert.deepEqual(errors,[]);
 });
+
+test('offline trace replay opens the tool workspace without a live receiver or client logs', async t => {
+  const server=await monitorMcp(['--trace-replay','tests/fixtures/tool-trace/lifecycle.ndjson']);t.after(()=>server.close());
+  const browser=await chromium.launch();t.after(()=>browser.close());const page=await browser.newPage();
+  await page.goto(server.url);await page.waitForFunction(()=>document.querySelectorAll('#trace-rows tr').length===2);
+  assert.match(await page.locator('.local-label').textContent(),/SYNTHETIC/);
+  assert.match(await page.locator('#trace-status').textContent(),/Synthetic replay complete/);
+  assert.match(await page.locator('#trace-rows').textContent(),/Imported replay/);
+  assert.doesNotMatch(await page.locator('body').textContent(),/PRIVATE_/);
+  const mcp=await(await fetch(server.url+'api/mcp/snapshot')).json();assert.equal(mcp.sources.length,0);
+  const trace=await(await fetch(server.url+'api/traces/snapshot')).json();assert.equal(trace.mode,'synthetic_replay');assert.equal(trace.accepted_batches,'0');
+});

@@ -73,7 +73,7 @@ fn malformed_oversized_and_unterminated_records_do_not_leak_or_claim_timeouts() 
 }
 
 #[test]
-fn replay_rejects_live_modes_and_non_regular_inputs() {
+fn replay_rejects_conflicting_demo_and_missing_or_non_regular_inputs() {
     let dir = tempfile::tempdir().unwrap();
     assert!(!replay(dir.path()).status.success());
     for flag in ["--open", "--demo"] {

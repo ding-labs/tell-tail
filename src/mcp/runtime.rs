@@ -43,6 +43,43 @@ impl Running {
                 )
             })
             .transpose()?;
+        #[cfg(feature = "web")]
+        if let Some(path) = &args.trace_replay {
+            let file = crate::platform::open_regular(path)?;
+            let shared = Arc::new(Mutex::new(Store::default()));
+            shared.lock().unwrap().demo = true;
+            {
+                let mut t = traces.lock().unwrap();
+                t.enabled = true;
+                t.replay = true;
+                t.running = true;
+            }
+            let trace_slot = traces.clone();
+            let slot = shared.clone();
+            let cancel = stop.clone();
+            let worker = thread::Builder::new()
+                .name("tell-tail-trace-replay".into())
+                .spawn(move || {
+                    if crate::tool_trace::replay::load_web(file, &trace_slot, &cancel).is_err() {
+                        let mut t = trace_slot.lock().unwrap();
+                        t.rejected_records += 1;
+                        t.running = false;
+                    }
+                    while cancel.load(Ordering::Relaxed) == 0 {
+                        thread::sleep(Duration::from_millis(100));
+                    }
+                    let mut s = slot.lock().unwrap();
+                    s.running = false;
+                    s.sequence += 1;
+                })?;
+            return Ok(Self {
+                shared,
+                traces,
+                trace_receiver,
+                stop,
+                worker: Some(worker),
+            });
+        }
         let mut demo = args.demo.then(Demo::new).transpose()?;
         let roots = match &demo {
             Some(d) => d.roots(),
@@ -139,12 +176,12 @@ impl Drop for Running {
 
 pub fn run(args: &Args) -> io::Result<i32> {
     let signals = Signals::install()?;
-    if let Some(path) = &args.trace_replay {
-        return crate::tool_trace::replay::run(path, args.mode(), &signals);
-    }
     #[cfg(feature = "web")]
     if args.mode() == Output::Web {
         return crate::web::mcp::run(args, &signals);
+    }
+    if let Some(path) = &args.trace_replay {
+        return crate::tool_trace::replay::run(path, args.mode(), &signals);
     }
     let mut running = Running::start(args, signals.requested.clone())?;
     let mut output = crate::platform::StdoutWriter::new(signals.requested.clone())?;

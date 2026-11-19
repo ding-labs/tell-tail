@@ -8,9 +8,9 @@ export function initTraces({ chooseDefault, pause }) {
   const now = () => frozen?.time ?? Date.now();
   const context = () => frozen || (page ? { asOf: page.as_of, epoch: page.collector_epoch } : null);
   function coverage(s) {
-    const states = { disabled: 'Capture disabled', waiting_for_exporter: 'Waiting for exporter', receiving: 'Receiving tool results', quiet: 'No recent telemetry · connection unknown', stopped: 'Receiver stopped' };
+    const states = { disabled: 'Capture disabled', waiting_for_exporter: 'Waiting for exporter', receiving: 'Receiving tool results', quiet: 'No recent telemetry · connection unknown', stopped: 'Receiver stopped', loading_replay: 'Loading synthetic replay', replay_complete: 'Synthetic replay complete' };
     $('trace-status').textContent = states[s.status] || 'Unknown capture state';
-    $('trace-coverage').textContent = s.enabled
+    $('trace-coverage').textContent = s.mode === 'synthetic_replay' ? 'Synthetic fixture only. No client logs, network intake, or live plugin coverage. Imported call revisions are retained for inspection.' : s.enabled
       ? 'Result-only capture. Railway nested and parallel calls verified. Starts, cancellation, subagents and provider-level errors are unverified. Other plugin namespaces remain unattributed.'
       : 'Enable capture with --trace-port and --trace-token-file, configure the generated exporter, then restart the client. Passive logs do not contain complete tool-call traces.';
     if (!frozen) $('traces-tab-count').textContent = exact(s.snapshot.counts.distinct_calls);

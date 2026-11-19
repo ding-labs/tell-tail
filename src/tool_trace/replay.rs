@@ -142,3 +142,48 @@ fn replay(
         "invalid_records":invalid.to_string(),"oversized_records":oversized.to_string(),"snapshot":store.snapshot()}),
     )
 }
+
+/// Populate a web replay without discovering logs or opening an intake listener.
+#[cfg(feature = "web")]
+pub fn load_web(
+    file: std::fs::File,
+    shared: &super::live::Shared,
+    stop: &std::sync::atomic::AtomicUsize,
+) -> io::Result<()> {
+    let size = file.metadata()?.len();
+    let mut input = file.take(size);
+    let mut framer = Framer::new(MAX_RECORD_BYTES);
+    let mut buffer = [0; 16 * 1024];
+    let mut emit = |bytes: &[u8], large: bool| {
+        if let Ok(mut state) = shared.lock() {
+            let observation = if large {
+                Err("Oversized replay record")
+            } else {
+                Observation::parse(bytes)
+            };
+            match observation.and_then(|o| state.store.accept(o, crate::mcp::time::now_ms(), true))
+            {
+                Ok(_) => (),
+                Err(_) => {
+                    state.rejected_records += 1;
+                    let _ = state.store.mark_incomplete();
+                }
+            }
+        }
+    };
+    while stop.load(Ordering::Relaxed) == 0 {
+        let n = input.read(&mut buffer)?;
+        if n == 0 {
+            break;
+        }
+        framer.feed(&buffer[..n], &mut emit);
+    }
+    if stop.load(Ordering::Relaxed) == 0 {
+        framer.finish(&mut emit);
+    }
+    if let Ok(mut state) = shared.lock() {
+        state.store.mark_incomplete().map_err(io::Error::other)?;
+        state.running = false;
+    }
+    Ok(())
+}
