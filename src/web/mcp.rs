@@ -39,6 +39,7 @@ use tokio::{
 #[derive(Clone)]
 struct App {
     shared: Shared,
+    traces: crate::tool_trace::live::Shared,
     frames: watch::Receiver<Bytes>,
     streams: Arc<Semaphore>,
     host: String,
@@ -72,6 +73,7 @@ async fn serve(
     let (tx, frames) = watch::channel(Bytes::from(initial.json()?));
     let app = router(App {
         shared: running.shared.clone(),
+        traces: running.traces.clone(),
         frames,
         streams: Arc::new(Semaphore::new(STREAMS)),
         host: host.clone(),
@@ -216,7 +218,7 @@ fn json_response(value: &impl serde::Serialize, limit: usize) -> Response {
         _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
-fn decode(s: &str) -> Option<String> {
+pub(super) fn decode(s: &str) -> Option<String> {
     let mut out = Vec::new();
     let mut bytes = s.bytes();
     while let Some(b) = bytes.next() {
@@ -403,8 +405,9 @@ fn router(app: App) -> Router {
         .route("/api/mcp/events", get(events))
         .route("/api/mcp/event/{id}", get(detail))
         .route("/api/mcp/history", get(history))
-        .layer(middleware::from_fn_with_state(app.clone(), local))
-        .with_state(app)
+        .with_state(app.clone())
+        .merge(super::trace::router(app.traces.clone()))
+        .layer(middleware::from_fn_with_state(app, local))
 }
 
 #[cfg(test)]

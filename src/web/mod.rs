@@ -3,6 +3,7 @@ mod assets;
 mod browser;
 pub mod mcp;
 mod socket;
+mod trace;
 
 use crate::{
     snapshots::{PublishedSnapshot, SnapshotReader},

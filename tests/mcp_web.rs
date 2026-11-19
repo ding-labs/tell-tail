@@ -192,3 +192,39 @@ fn idle_publication_coalesces_and_stream_capacity_is_bounded() {
     );
     drop(streams);
 }
+
+#[test]
+fn trace_queries_share_browser_security_and_validate_queries() {
+    let t = tempfile::tempdir().unwrap();
+    let m = Monitor::start(t.path());
+    let snapshot = m.json("/api/traces/snapshot");
+    assert_eq!(snapshot["status"], "disabled");
+    assert_eq!(m.json("/api/traces/calls")["calls"], serde_json::json!([]));
+    for path in [
+        "/api/traces/snapshot",
+        "/api/traces/calls",
+        "/api/traces/call/1",
+        "/api/traces/events",
+    ] {
+        assert!(
+            m.request(path, "Origin: https://attacker.invalid\r\n")
+                .starts_with("HTTP/1.1 403")
+        );
+    }
+    for path in [
+        "/api/traces/calls?status=bogus",
+        "/api/traces/calls?as_of=nope",
+        "/api/traces/calls?q=x&q=y",
+        "/api/traces/calls?unknown=x",
+    ] {
+        assert!(m.request(path, "").starts_with("HTTP/1.1 400"));
+    }
+    assert!(
+        m.request("/api/traces/calls?epoch=old", "")
+            .starts_with("HTTP/1.1 410")
+    );
+    assert!(
+        m.request("/api/traces/call/1", "")
+            .starts_with("HTTP/1.1 410")
+    );
+}
