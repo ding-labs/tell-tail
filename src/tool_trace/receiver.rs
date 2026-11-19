@@ -236,6 +236,9 @@ fn request_status(req: &Request, app: &App) -> Option<StatusCode> {
 async fn intake(State(app): State<App>, req: Request) -> Response {
     let result = async {
         if let Some(status) = request_status(&req, &app) {
+            if let Ok(mut s) = app.shared.lock() {
+                s.last_rejection = Some("request_headers");
+            }
             return status;
         }
         let body =
@@ -245,7 +248,12 @@ async fn intake(State(app): State<App>, req: Request) -> Response {
             };
         let batch = match otlp::decode(&body, &app.epoch) {
             Ok(b) => b,
-            Err(_) => return StatusCode::BAD_REQUEST,
+            Err(e) => {
+                if let Ok(mut s) = app.shared.lock() {
+                    s.last_rejection = Some(e.0);
+                }
+                return StatusCode::BAD_REQUEST;
+            }
         };
         if app.queue.try_send(batch).is_err() {
             return StatusCode::SERVICE_UNAVAILABLE;

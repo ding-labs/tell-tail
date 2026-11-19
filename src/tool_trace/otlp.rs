@@ -7,7 +7,7 @@ pub const MAX_BODY: usize = 1024 * 1024;
 const MAX_RECORDS: usize = 1024;
 const MAX_FIELDS: usize = 32_768;
 #[derive(Debug)]
-pub struct Invalid;
+pub struct Invalid(pub &'static str);
 #[derive(Clone, Copy)]
 enum Value<'a> {
     Int(u64),
@@ -23,49 +23,62 @@ impl<'a> Wire<'a> {
     fn varint(&mut self) -> Result<u64, Invalid> {
         let mut n = 0;
         for shift in (0..70).step_by(7) {
-            let (&b, rest) = self.input.split_first().ok_or(Invalid)?;
+            let (&b, rest) = self
+                .input
+                .split_first()
+                .ok_or(Invalid("malformed_protobuf"))?;
             self.input = rest;
             if shift == 63 && b > 1 {
-                return Err(Invalid);
+                return Err(Invalid("malformed_protobuf"));
             }
             n |= u64::from(b & 127) << shift;
             if b < 128 {
                 return Ok(n);
             }
         }
-        Err(Invalid)
+        Err(Invalid("malformed_protobuf"))
     }
     fn next(&mut self) -> Result<Option<(u32, Value<'a>)>, Invalid> {
         if self.input.is_empty() {
             return Ok(None);
         }
-        self.budget = self.budget.checked_sub(1).ok_or(Invalid)?;
+        self.budget = self
+            .budget
+            .checked_sub(1)
+            .ok_or(Invalid("malformed_protobuf"))?;
         let tag = self.varint()?;
         if tag >> 3 == 0 || tag >> 3 >= 1 << 29 {
-            return Err(Invalid);
+            return Err(Invalid("malformed_protobuf"));
         }
         let wire = tag & 7;
         let v = match wire {
             0 => Value::Int(self.varint()?),
             1 | 2 | 5 => {
                 let len = if wire == 2 {
-                    usize::try_from(self.varint()?).map_err(|_| Invalid)?
+                    usize::try_from(self.varint()?).map_err(|_| Invalid("malformed_protobuf"))?
                 } else if wire == 1 {
                     8
                 } else {
                     4
                 };
-                let (bytes, rest) = self.input.split_at_checked(len).ok_or(Invalid)?;
+                let (bytes, rest) = self
+                    .input
+                    .split_at_checked(len)
+                    .ok_or(Invalid("malformed_protobuf"))?;
                 self.input = rest;
                 if wire == 1 {
-                    Value::Fixed(u64::from_le_bytes(bytes.try_into().map_err(|_| Invalid)?))
+                    Value::Fixed(u64::from_le_bytes(
+                        bytes
+                            .try_into()
+                            .map_err(|_| Invalid("malformed_protobuf"))?,
+                    ))
                 } else if wire == 2 {
                     Value::Bytes(bytes)
                 } else {
                     Value::Other
                 }
             }
-            _ => return Err(Invalid),
+            _ => return Err(Invalid("malformed_protobuf")),
         };
         Ok(Some(((tag >> 3) as u32, v)))
     }
@@ -97,7 +110,7 @@ fn scalar<'a>(b: &'a [u8], budget: &mut usize) -> Result<Option<Scalar<'a>>, Inv
     walk(b, budget, |n, v, _| {
         count += 1;
         if count > 1 {
-            return Err(Invalid);
+            return Err(Invalid("malformed_protobuf"));
         }
         result = match (n, v) {
             (1, Value::Bytes(s)) if s.len() <= 256 => std::str::from_utf8(s).ok().map(Scalar::Text),
@@ -130,7 +143,7 @@ fn attribute<'a>(
         if n == 1 || n == 2 {
             let bit = 1 << n;
             if seen & bit != 0 {
-                return Err(Invalid);
+                return Err(Invalid("malformed_protobuf"));
             }
             seen |= bit;
         }
@@ -182,7 +195,7 @@ fn record(b: &[u8], budget: &mut usize, epoch: &str) -> Result<Option<Observatio
             (6, Value::Bytes(b)) => {
                 if let Some((k, v)) = attribute(b, budget)? {
                     if attrs.insert(k, v).is_some() {
-                        return Err(Invalid);
+                        return Err(Invalid("malformed_protobuf"));
                     }
                 }
             }
@@ -192,15 +205,14 @@ fn record(b: &[u8], budget: &mut usize, epoch: &str) -> Result<Option<Observatio
         Ok(())
     })?;
     let named = text(attrs.get("event.name"));
-    if event.is_some() && named.is_some() && event != named {
-        return Err(Invalid);
-    }
-    if event.or(named) != Some("codex.tool_result") {
+    // Codex's event.name attribute carries the semantic event type. OTLP's
+    // separate event_name may identify the tracing callsite instead.
+    if named.or(event) != Some("codex.tool_result") {
         return Ok(None);
     }
     let name = text(attrs.get("tool_name"))
         .filter(|s| label(s))
-        .ok_or(Invalid)?;
+        .ok_or(Invalid("malformed_protobuf"))?;
     let namespace = text(attrs.get("tool_namespace")).filter(|s| label(s));
     // Exact namespace observed with known Railway operations in the capture audit.
     // All other namespaces remain unattributed; never guess by splitting underscores.
@@ -233,7 +245,7 @@ fn record(b: &[u8], budget: &mut usize, epoch: &str) -> Result<Option<Observatio
         execution_success: outcome,
         tool_error: None,
     };
-    o.validate().map_err(|_| Invalid)?;
+    o.validate().map_err(|_| Invalid("invalid_observation"))?;
     Ok(Some(o))
 }
 pub struct Batch {
@@ -242,7 +254,7 @@ pub struct Batch {
 }
 pub fn decode(body: &[u8], epoch: &str) -> Result<Batch, Invalid> {
     if body.len() > MAX_BODY {
-        return Err(Invalid);
+        return Err(Invalid("malformed_protobuf"));
     }
     let mut result = Batch {
         observations: Vec::new(),
@@ -258,7 +270,7 @@ pub fn decode(body: &[u8], epoch: &str) -> Result<Batch, Invalid> {
                         if let (2, Value::Bytes(raw)) = (n, v) {
                             records += 1;
                             if records > MAX_RECORDS {
-                                return Err(Invalid);
+                                return Err(Invalid("malformed_protobuf"));
                             }
                             match record(raw, budget, epoch)? {
                                 Some(o) => result.observations.push(o),
@@ -335,6 +347,11 @@ mod tests {
         assert!(!page.calls[0].start_observed);
         assert_eq!(page.calls[0].execution_success, Some(true));
         assert!(!serde_json::to_string(&page).unwrap().contains("PRIVATE"));
+    }
+    #[test]
+    fn semantic_event_attribute_takes_precedence_over_otlp_callsite_name() {
+        let b = batch(&[fixture(), msg(12, b"event at a diagnostic callsite")].concat());
+        assert_eq!(decode(&b, "epoch").unwrap().observations.len(), 1);
     }
     #[test]
     fn unknown_plugin_is_not_guessed() {

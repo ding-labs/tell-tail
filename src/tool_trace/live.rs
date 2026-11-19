@@ -12,6 +12,7 @@ pub struct State {
     pub rejected_batches: u64,
     pub ignored_records: u64,
     pub rejected_records: u64,
+    pub last_rejection: Option<&'static str>,
 }
 impl State {
     pub fn snapshot(&self) -> serde_json::Value {
@@ -33,6 +34,6 @@ impl State {
             "capabilities":{"starts":false,"nested_calls":"verified_railway","parallel_calls":"verified_railway","subagents":"unverified","cancellation":"unverified","tool_errors":"unverified","parent_calls":false},
             "attribution":"Exact verified Railway namespace; other plugin namespaces remain unidentified",
             "last_received_ms":self.last_received_ms,"accepted_batches":self.accepted_batches.to_string(),"rejected_batches":self.rejected_batches.to_string(),
-            "ignored_records":self.ignored_records.to_string(),"rejected_records":self.rejected_records.to_string(),"durable":false,"snapshot":self.store.snapshot()})
+            "last_rejection":self.last_rejection,"ignored_records":self.ignored_records.to_string(),"rejected_records":self.rejected_records.to_string(),"durable":false,"snapshot":self.store.snapshot()})
     }
 }
