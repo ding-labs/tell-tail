@@ -3,9 +3,8 @@
 Implemented October 20, 2026. The dashboard uses the production
 [frame contract](WEB-FRAMES.md) and [loopback server](WEB-SERVER.md).
 
-**Current main, not yet released:** parsing coverage, severity histories and their
-30-second comparison, activity ages, and built-in demo are not in the published
-0.2.0 packages. Read [Understanding a live log stream](MONITORING.md) for formulas,
+Parsing coverage, severity histories and their 30-second comparison, activity
+ages, and the built-in demo require **0.3.0 or later**. Read [Understanding a live log stream](MONITORING.md) for formulas,
 examples, time scopes, and limitations, or start with the [demo walkthrough](DEMO.md).
 
 ```sh

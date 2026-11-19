@@ -1,0 +1,147 @@
+{
+  "source_commit": "09df02f7c233b819b94c08c6229b2ea0934ec206",
+  "run": "https://github.com/ding-labs/tell-tail/actions/runs/43307362571",
+  "log_sha256": "446769a31138eaa5b060827da87049e641a126cb728fa8698f94d687ea5ae8f8",
+  "checks": [
+    {
+      "job": "archive (macos-15, aarch64-apple-darwin)",
+      "step": "Build and exercise the native archive",
+      "report": {
+        "archive": "tell-tail-0.4.0-aarch64-apple-darwin.tar.gz",
+        "native_smoke": "passed",
+        "embedded_web_smoke": "passed",
+        "installed_mcp_and_opener_failure": "passed",
+        "build": {
+          "schema_version": 1,
+          "version": "0.4.0",
+          "source_commit": "09df02f7c233b819b94c08c6229b2ea0934ec206",
+          "dirty": false,
+          "target": "aarch64-apple-darwin",
+          "compiler": "rustc 1.88.0 (6b00bc388 2025-06-23)\nbinary: rustc\ncommit-hash: 6b00bc3880198600130e1cf62b8f8a93494488cc\ncommit-date: 2025-06-23\nhost: aarch64-apple-darwin\nrelease: 1.88.0\nLLVM version: 20.1.5",
+          "build_platform": "macOS-15.8.2-arm64-arm-64bit-Mach-O",
+          "linkage": "system"
+        }
+      }
+    },
+    {
+      "job": "archive (ubuntu-24.04-arm, aarch64-unknown-linux-musl)",
+      "step": "Build and exercise the native archive",
+      "report": {
+        "archive": "tell-tail-0.4.0-aarch64-unknown-linux-musl.tar.gz",
+        "native_smoke": "passed",
+        "embedded_web_smoke": "passed",
+        "installed_mcp_and_opener_failure": "passed",
+        "build": {
+          "schema_version": 1,
+          "version": "0.4.0",
+          "source_commit": "09df02f7c233b819b94c08c6229b2ea0934ec206",
+          "dirty": false,
+          "target": "aarch64-unknown-linux-musl",
+          "compiler": "rustc 1.88.0 (6b00bc388 2025-06-23)\nbinary: rustc\ncommit-hash: 6b00bc3880198600130e1cf62b8f8a93494488cc\ncommit-date: 2025-06-23\nhost: aarch64-unknown-linux-gnu\nrelease: 1.88.0\nLLVM version: 20.1.5",
+          "build_platform": "Linux-7.0.0-1017-azure-aarch64-with-glibc2.39",
+          "linkage": "static-musl"
+        }
+      }
+    },
+    {
+      "job": "archive (ubuntu-24.04-arm, aarch64-unknown-linux-musl)",
+      "step": "Exercise static archives on older glibc and Alpine userspaces",
+      "report": {
+        "archive": "tell-tail-0.4.0-aarch64-unknown-linux-musl.tar.gz",
+        "native_smoke": "passed",
+        "embedded_web_smoke": "passed",
+        "installed_mcp_and_opener_failure": "passed",
+        "build": {
+          "schema_version": 1,
+          "version": "0.4.0",
+          "source_commit": "09df02f7c233b819b94c08c6229b2ea0934ec206",
+          "dirty": false,
+          "target": "aarch64-unknown-linux-musl",
+          "compiler": "rustc 1.88.0 (6b00bc388 2025-06-23)\nbinary: rustc\ncommit-hash: 6b00bc3880198600130e1cf62b8f8a93494488cc\ncommit-date: 2025-06-23\nhost: aarch64-unknown-linux-gnu\nrelease: 1.88.0\nLLVM version: 20.1.5",
+          "build_platform": "Linux-7.0.0-1017-azure-aarch64-with-glibc2.39",
+          "linkage": "static-musl"
+        }
+      }
+    },
+    {
+      "job": "archive (ubuntu-24.04-arm, aarch64-unknown-linux-musl)",
+      "step": "Exercise static archives on older glibc and Alpine userspaces",
+      "report": {
+        "archive": "tell-tail-0.4.0-aarch64-unknown-linux-musl.tar.gz",
+        "native_smoke": "passed",
+        "embedded_web_smoke": "passed",
+        "installed_mcp_and_opener_failure": "passed",
+        "build": {
+          "schema_version": 1,
+          "version": "0.4.0",
+          "source_commit": "09df02f7c233b819b94c08c6229b2ea0934ec206",
+          "dirty": false,
+          "target": "aarch64-unknown-linux-musl",
+          "compiler": "rustc 1.88.0 (6b00bc388 2025-06-23)\nbinary: rustc\ncommit-hash: 6b00bc3880198600130e1cf62b8f8a93494488cc\ncommit-date: 2025-06-23\nhost: aarch64-unknown-linux-gnu\nrelease: 1.88.0\nLLVM version: 20.1.5",
+          "build_platform": "Linux-7.0.0-1017-azure-aarch64-with-glibc2.39",
+          "linkage": "static-musl"
+        }
+      }
+    },
+    {
+      "job": "archive (ubuntu-24.04, x86_64-unknown-linux-musl)",
+      "step": "Build and exercise the native archive",
+      "report": {
+        "archive": "tell-tail-0.4.0-x86_64-unknown-linux-musl.tar.gz",
+        "native_smoke": "passed",
+        "embedded_web_smoke": "passed",
+        "installed_mcp_and_opener_failure": "passed",
+        "build": {
+          "schema_version": 1,
+          "version": "0.4.0",
+          "source_commit": "09df02f7c233b819b94c08c6229b2ea0934ec206",
+          "dirty": false,
+          "target": "x86_64-unknown-linux-musl",
+          "compiler": "rustc 1.88.0 (6b00bc388 2025-06-23)\nbinary: rustc\ncommit-hash: 6b00bc3880198600130e1cf62b8f8a93494488cc\ncommit-date: 2025-06-23\nhost: x86_64-unknown-linux-gnu\nrelease: 1.88.0\nLLVM version: 20.1.5",
+          "build_platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
+          "linkage": "static-musl"
+        }
+      }
+    },
+    {
+      "job": "archive (ubuntu-24.04, x86_64-unknown-linux-musl)",
+      "step": "Exercise static archives on older glibc and Alpine userspaces",
+      "report": {
+        "archive": "tell-tail-0.4.0-x86_64-unknown-linux-musl.tar.gz",
+        "native_smoke": "passed",
+        "embedded_web_smoke": "passed",
+        "installed_mcp_and_opener_failure": "passed",
+        "build": {
+          "schema_version": 1,
+          "version": "0.4.0",
+          "source_commit": "09df02f7c233b819b94c08c6229b2ea0934ec206",
+          "dirty": false,
+          "target": "x86_64-unknown-linux-musl",
+          "compiler": "rustc 1.88.0 (6b00bc388 2025-06-23)\nbinary: rustc\ncommit-hash: 6b00bc3880198600130e1cf62b8f8a93494488cc\ncommit-date: 2025-06-23\nhost: x86_64-unknown-linux-gnu\nrelease: 1.88.0\nLLVM version: 20.1.5",
+          "build_platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
+          "linkage": "static-musl"
+        }
+      }
+    },
+    {
+      "job": "archive (ubuntu-24.04, x86_64-unknown-linux-musl)",
+      "step": "Exercise static archives on older glibc and Alpine userspaces",
+      "report": {
+        "archive": "tell-tail-0.4.0-x86_64-unknown-linux-musl.tar.gz",
+        "native_smoke": "passed",
+        "embedded_web_smoke": "passed",
+        "installed_mcp_and_opener_failure": "passed",
+        "build": {
+          "schema_version": 1,
+          "version": "0.4.0",
+          "source_commit": "09df02f7c233b819b94c08c6229b2ea0934ec206",
+          "dirty": false,
+          "target": "x86_64-unknown-linux-musl",
+          "compiler": "rustc 1.88.0 (6b00bc388 2025-06-23)\nbinary: rustc\ncommit-hash: 6b00bc3880198600130e1cf62b8f8a93494488cc\ncommit-date: 2025-06-23\nhost: x86_64-unknown-linux-gnu\nrelease: 1.88.0\nLLVM version: 20.1.5",
+          "build_platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
+          "linkage": "static-musl"
+        }
+      }
+    }
+  ]
+}

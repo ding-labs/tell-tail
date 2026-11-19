@@ -1,12 +1,18 @@
 # Distribution and publishing
 
-Tell-Tail 0.2.0 was published to crates.io from commit
-`02a6476f9921ba45c59a6ce98bd68b317bac79b6` on October 28, 2026.
-[GitHub Releases](https://github.com/ding-labs/tell-tail/releases/tag/v0.2.0)
-and Homebrew were published by the
-[unified release workflow](https://github.com/ding-labs/tell-tail/actions/runs/40798996154)
-on the same Pacific date. All three channels identify the same source. Passing
-package checks alone does not publish to any channel.
+Tell-Tail **0.4.0** was published on November 12, 2026 from commit
+`09df02f7c233b819b94c08c6229b2ea0934ec206`. It is available on
+[GitHub Releases](https://github.com/ding-labs/tell-tail/releases/tag/v0.4.0),
+[crates.io](https://crates.io/crates/tell-tail/0.4.0), and
+[Homebrew](https://github.com/ding-labs/homebrew-tap/blob/main/tell-tail.rb).
+Normal installations include `tell-tail mcp --open` and its embedded dashboard.
+The [completed publication workflow](https://github.com/ding-labs/tell-tail/actions/runs/43317916073)
+and [publication receipt](validation/0.4.0-release/publication.json) verify all
+three channels against the same frozen source. The
+[0.4 validation record](VALIDATION-0.4-RELEASE.md) records reviewed gates and the
+Mac runner-capacity retry. Passing package checks alone does not publish a release.
+Historical [0.3](VALIDATION-0.3-RELEASE.md) and
+[0.2](VALIDATION-0.2-RELEASE.md) release evidence remains separate.
 
 ## Hosted documentation
 
@@ -21,17 +27,18 @@ When publishing documentation changes:
 1. Make the Tell-Tail source commit available to the public docs build. In the
    Ding website repository, update `content/tell-tail.json`: `previewRef` for
    unreleased behavior, or `docsRef` for behavior in the released version. Both
-   are full commit SHAs. Do not move the stable pin to unreleased MCP behavior.
+   are full commit SHAs. Move the stable pin only after the corresponding package release is published.
 2. Register new hosted pages in `scripts/web/build_tell_tail_docs.py`. For MCP,
-   add `docs/MCP.md` to `PREVIEW_PAGES` as `('mcp.md', 'MCP diagnostics')`.
+   include `docs/MCP.md` in the stable `PAGES` map for 0.4.0 as
+   `('mcp.md', 'MCP diagnostics')`.
    Advancing the source pin alone does not publish a new page. Repository-only
    plans, audits and validation evidence can remain links to the pinned source.
 3. Run the website repository's complete docs build, strict link checks and
    publication checks, following its `workers/README.md`. Confirm the preview
    warning, navigation, rewritten links and `build-info.json` source revision.
 4. Publish the docs before advertising a new hosted page. Verify HTTP 200 and
-   the expected content at the new route; the intended MCP preview route is
-   `https://docs.ding.ing/tell-tail/next/mcp/`. Keep the source pin and page map
+   the expected content at the new route; the released MCP route is
+   `https://docs.ding.ing/tell-tail/mcp/`. Keep the source pin and page map
    together so the guide and its navigation links are published in the same build.
 
 A product release also updates the website's version, release reference, stable
@@ -197,9 +204,21 @@ nine actual release gates still needs reviewed evidence.
 ### Recover a partial publication
 
 Publication across services is sequential, not atomic. A later channel can fail
-after an earlier one is public. Fix the integration or service failure, then use
-GitHub Actions **Re-run failed jobs** on the same run to preserve its candidate
-and evidence. Do not bump the version just to retry Homebrew.
+after an earlier one is public. If recovery does not change this repository's
+orchestration code, fix the integration or service failure and use GitHub Actions
+**Re-run failed jobs** on the same run to preserve its candidate and evidence.
+
+If recovery changes a publishing script or workflow, merge that focused fix and
+dispatch from current `main` with the **same frozen `source_commit`** and reviewed
+validation record. [GitHub reruns retain the original workflow commit](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs),
+so rerunning an old job does not load a newly merged orchestration fix. The new
+run verifies and reuses matching public versions and archives; it does not
+replace them. Do not bump the version just to retry Homebrew.
+
+The Homebrew observer allows up to two minutes for the exact dispatched run ID
+to become visible. It never redispatches to work around a 404. Authentication or
+server failures, disappearance after observation, failed/cancelled runs, and the
+overall timeout remain failures with a link to inspect the downstream run.
 
 - A published GitHub release is reused only if its commit tag and checksummed
   artifacts identify the requested source/version. Existing tags and public

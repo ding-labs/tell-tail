@@ -1,0 +1,16 @@
+{
+  "version": "0.4.0",
+  "binary_sha256": "f55527f573d5a5600967bebddf432a24be4be013f77133b84dc45c2d0a447c88",
+  "command": "tell-tail mcp --open",
+  "demo": false,
+  "opener_url_verified": true,
+  "embedded_html": true,
+  "snapshot_schema": 1,
+  "snapshot_bounded": true,
+  "shutdown_seconds": 0.211109499912709,
+  "passed": true,
+  "privacy": "No snapshot content, labels, source paths or raw log data retained; opener intercepted.",
+  "source_commit": "09df02f7c233b819b94c08c6229b2ea0934ec206",
+  "downloaded_from": "https://github.com/ding-labs/tell-tail/releases/tag/v0.4.0",
+  "synthetic_demo_assets_and_opener_failure": "passed"
+}

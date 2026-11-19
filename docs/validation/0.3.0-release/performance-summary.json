@@ -1,0 +1,58 @@
+{
+  "commit": "05b3376e2ba1f809bf0a789faa477f3f17e1bcf2",
+  "harness_commit": "05b3376e2ba1f809bf0a789faa477f3f17e1bcf2",
+  "binary_sha256": "844cad034954f45d2448fe8ba09cb0efeaa9b316616910fecb865c4a61ecd462",
+  "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
+  "host": "runnervm7aw5e",
+  "cpu_model": "AMD EPYC 9V74 80-Core Processor",
+  "cpu_affinity": {
+    "available_cpus": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "consumer_cpu": 3,
+    "producer_cpu": 0
+  },
+  "configuration": {
+    "binary": "/home/runner/work/tell-tail/tell-tail/work/candidate/target/release/tell-tail",
+    "consumer_cpu": 3,
+    "disk_limit_mib": 512,
+    "pairs": 5,
+    "pin_cpus": true,
+    "profile": "mixed",
+    "records": 2000000,
+    "repeats": 5,
+    "report": "work/performance.json",
+    "seconds": 60.0,
+    "seed": 1,
+    "source_directory": "/home/runner/work/tell-tail/tell-tail/work/candidate",
+    "suite": "all"
+  },
+  "report_sha256": "7e51ed9b76cfe82976a13fd3f4708c46c4f93793af83bc9063e5d3175fca4552",
+  "run": "https://github.com/ding-labs/tell-tail/actions/runs/43286068503",
+  "median_tui_loss_fraction": 0.026704348008408152,
+  "throughput": {
+    "json": {
+      "max": 7394707,
+      "median": 7365811,
+      "min": 7343495,
+      "relative_range": 0.0069526627821430665
+    },
+    "tui": {
+      "max": 7191919,
+      "median": 7187105,
+      "min": 7167613,
+      "relative_range": 0.0033818902047486436
+    }
+  },
+  "text200": {
+    "max": 15702908.385126641,
+    "median": 15657422.24013374,
+    "min": 15626843.112894585,
+    "relative_range": 0.004858096758550847
+  },
+  "reviewed_reports": 15,
+  "largest_shutdown_seconds": 0.1687030580000055
+}

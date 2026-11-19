@@ -151,18 +151,50 @@ class GithubTests(unittest.TestCase):
 class TapTests(unittest.TestCase):
     def test_waits_for_the_dispatched_run_and_propagates_failure(self):
         for conclusion in ('success', 'failure', 'cancelled'):
-            with self.subTest(conclusion=conclusion), patch.object(publish, 'api', side_effect=[
-                    {'workflow_run_id': 123, 'html_url': 'https://github.com/run/123'},
-                    {'status': 'queued', 'conclusion': None},
-                    {'status': 'completed', 'conclusion': conclusion}]) as api, \
+            with self.subTest(conclusion=conclusion), patch.object(publish, 'api', return_value=
+                    {'workflow_run_id': 123, 'html_url': 'https://github.com/run/123'}) as dispatch, \
+                    patch.object(publish, 'optional_api', side_effect=[
+                        None, {'status': 'queued', 'conclusion': None},
+                        {'status': 'completed', 'conclusion': conclusion}]) as poll, \
                     patch.object(publish.time, 'sleep'):
                 if conclusion == 'success':
                     publish.publish_tap(VERSION)
                 else:
                     with self.assertRaises(RuntimeError):
                         publish.publish_tap(VERSION)
-                self.assertEqual(api.call_args.args[0], f'repos/{publish.TAP}/actions/runs/123')
-                self.assertEqual(api.call_args_list[0].args[1], {'ref': 'main', 'inputs': {'tag': 'v0.2.0'}})
+                dispatch.assert_called_once_with(f'repos/{publish.TAP}/actions/workflows/tell-tail.yml/dispatches',
+                                                 {'ref': 'main', 'inputs': {'tag': 'v0.2.0'}})
+                self.assertEqual(len(poll.call_args_list), 3)
+                self.assertTrue(all(call.args == (f'repos/{publish.TAP}/actions/runs/123',)
+                                    for call in poll.call_args_list))
+
+    def test_run_visibility_grace_is_bounded(self):
+        with patch.object(publish, 'api', return_value={
+                'workflow_run_id': 123, 'html_url': 'https://github.com/run/123'}) as dispatch, \
+                patch.object(publish, 'optional_api', return_value=None), \
+                patch.object(publish.time, 'monotonic', side_effect=[0, 0, 0, 120, 120]), \
+                patch.object(publish.time, 'sleep'), \
+                self.assertRaisesRegex(RuntimeError, 'https://github.com/run/123'):
+            publish.publish_tap(VERSION)
+        dispatch.assert_called_once()
+
+    def test_observed_run_disappearance_fails(self):
+        with patch.object(publish, 'api', return_value={
+                'workflow_run_id': 123, 'html_url': 'https://github.com/run/123'}), \
+                patch.object(publish, 'optional_api', side_effect=[
+                    {'status': 'in_progress', 'conclusion': None}, None]), \
+                patch.object(publish.time, 'sleep'), \
+                self.assertRaisesRegex(RuntimeError, 'https://github.com/run/123'):
+            publish.publish_tap(VERSION)
+
+    def test_poll_auth_or_server_failure_is_not_visibility_delay(self):
+        with patch.object(publish, 'api', return_value={
+                'workflow_run_id': 123, 'html_url': 'https://github.com/run/123'}), \
+                patch.object(publish, 'optional_api', side_effect=RuntimeError('API failed')), \
+                patch.object(publish.time, 'sleep') as sleep, \
+                self.assertRaisesRegex(RuntimeError, 'API failed'):
+            publish.publish_tap(VERSION)
+        sleep.assert_not_called()
 
     def test_pending_run_times_out_with_recovery_link(self):
         with patch.object(publish, 'api', return_value={

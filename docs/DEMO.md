@@ -1,7 +1,6 @@
 # Built-in demo walkthrough
 
-`--demo` is an **unreleased** feature of the current source checkout. The
-published 0.2.0 packages do not recognize it. The demo generates a small synthetic
+`--demo` requires Tell-Tail **0.3.0 or later**. The demo generates a small synthetic
 log stream inside Tell-Tail and sends it through the same framing, parsing,
 statistics, preview, and output paths used for real input.
 
@@ -9,44 +8,34 @@ It needs no application, saved log file, Python, Node, account, or external
 inference service. Web output serves its bundled dashboard on loopback. No
 webhook is contacted unless you explicitly configure one.
 
-## Build and start
+## Install and start
 
-From the repository root, with the pinned Rust toolchain installed:
-
-```sh
-cargo run --locked -- --demo --window 5 --output web --open
-```
-
-That one command builds the current checkout and opens the mixed-format demo.
-The first build needs the Rust dependencies; the running demo itself is offline.
-For repeated runs, build once and use the binary directly:
+Install or upgrade using the [installation guide](../README.md#install-and-try-it),
+then launch either dashboard:
 
 ```sh
-cargo build --locked
-
 # Terminal dashboard; stop with q or Ctrl+C
-./target/debug/tell-tail --demo --window 5
+tell-tail --demo --window 5
 
 # Browser dashboard; stop with Ctrl+C in the launching terminal
-./target/debug/tell-tail --demo --window 5 --output web --open
+tell-tail --demo --window 5 --output web --open
 ```
 
 Run one dashboard command at a time. The source label is
-`demo (synthetic · 40s cycle)`. The phase descriptions refer to generated example
-messages; they are not an assessment of your machine or any actual service.
+`demo (synthetic · 40s cycle)`. The phases describe generated examples, not an
+assessment of your machine or any actual service. The demo runs offline.
 
 `--open` is optional. Without it, visit the URL printed to stderr. Use
 `--web-port 8765` for a fixed port if it is free. Browser output requires the
-default web feature; a build with `--no-default-features` still supports the
-terminal and machine-output demo modes.
+default web feature; a CLI-only build still supports terminal and machine output.
 
-To install this source version, run `cargo install --path . --locked`. You can
-then use `tell-tail --demo --window 5` without the build-directory prefix. If
-that command still rejects `--demo`, check `command -v tell-tail` and
-`tell-tail --help`: an older binary may precede Cargo's bin directory on `PATH`.
-Use the explicit checkout binary while resolving that. The source package still
-reports version 0.2.0 until the next release version is assigned, so `--version`
-alone does not establish whether these unreleased changes are included.
+For development, the repository pins Rust 1.88.0. From its root, run
+`cargo run --locked -- --demo --window 5 --output web --open`, or build once with
+`cargo build --locked` and substitute `./target/debug/tell-tail` below. The first
+build may download dependencies. `cargo install --path . --locked` installs the
+checkout. If a flag is rejected, check `command -v tell-tail` and
+`tell-tail --version`: an older binary may precede the new installation on `PATH`.
+Published 0.2.0 lacks the demo and parser profiles.
 
 ## What happens during each cycle
 
@@ -133,11 +122,11 @@ See [the monitoring guide](MONITORING.md) for exact definitions and controls.
 Add an existing parser flag to select matching synthetic input:
 
 ```sh
-./target/debug/tell-tail --demo --profile pino --window 5 --output web --open
-./target/debug/tell-tail --demo --level-field priority --window 5 --output web --open
-./target/debug/tell-tail --demo --level-path /log/level --window 5 --output web --open
-./target/debug/tell-tail --demo --envelope docker --window 5 --output web --open
-./target/debug/tell-tail --demo --envelope cri --profile pino --window 5 --output web --open
+tell-tail --demo --profile pino --window 5 --output web --open
+tell-tail --demo --level-field priority --window 5 --output web --open
+tell-tail --demo --level-path /log/level --window 5 --output web --open
+tell-tail --demo --envelope docker --window 5 --output web --open
+tell-tail --demo --envelope cri --profile pino --window 5 --output web --open
 ```
 
 The other profiles work the same way:
@@ -174,17 +163,17 @@ statistics. Forty examples are prepared once and reused; no replay queue grows.
 ## Move from the demo to your logs
 
 Keep the parser flags you need and replace `--demo` with a file or pipe. Run
-these commands from the checkout, replacing the example app/file names:
+these commands with Tell-Tail 0.3.0 or later, replacing the example app/file names:
 
 ```sh
 # Live Pino output: the producer supplies the numeric JSON records.
-node app.js 2>&1 | ./target/debug/tell-tail --profile pino --output web --open
+node app.js 2>&1 | tell-tail --profile pino --output web --open
 
 # Read existing records, then follow new ones in a file with nested severity.
-./target/debug/tell-tail app.log --from start --level-path /log/level --output web --open
+tell-tail app.log --from start --level-path /log/level --output web --open
 
 # A saved Docker capture with Pino JSON inside each envelope.
-./target/debug/tell-tail saved-docker.ndjson --from start --envelope docker --profile pino --output web --open
+tell-tail saved-docker.ndjson --from start --envelope docker --profile pino --output web --open
 ```
 
 Without `--from start`, file following begins at the end. Do not add `--demo`
@@ -214,10 +203,10 @@ output or alert destination that does so.
 
 ```sh
 # Periodic aggregate snapshots, one per second by default
-./target/debug/tell-tail --demo --output json
+tell-tail --demo --output json
 
 # Plain-text aggregate reports
-./target/debug/tell-tail --demo --output text --interval-ms 500
+tell-tail --demo --output text --interval-ms 500
 ```
 
 These outputs contain aggregates, not the raw synthetic lines. The new activity
@@ -251,7 +240,7 @@ finite demonstration using a temporary local receiver.
 
 | Symptom | Explanation or next step |
 | --- | --- |
-| `unexpected argument '--demo'` | Use a build of this checkout; the published 0.2.0 package lacks the flag |
+| `unexpected argument '--demo'` | Upgrade to 0.3.0 or later and check the binary on `PATH`; 0.2.0 lacks the flag |
 | Text reports instead of a full terminal view | Automatic output requires terminal stdout and a controlling terminal; use web mode when redirected |
 | No chart immediately | Histories only include completed seconds |
 | No records for a few seconds | The 24–30 second phase is intentionally silent; check the elapsed time |

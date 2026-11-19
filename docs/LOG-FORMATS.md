@@ -1,8 +1,7 @@
 # Log format recognition
 
-These additions are on current source and are not in the published 0.2.0
-packages. Build with `cargo build --locked`; use `./target/debug/tell-tail` in
-place of `tell-tail` below to avoid an older installed binary.
+These formats and parser flags require **0.3.0 or later**. See the
+[installation guide](../README.md#install-and-try-it) to install or upgrade.
 
 ```sh
 my-app 2>&1 | tell-tail --output web --open

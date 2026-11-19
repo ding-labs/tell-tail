@@ -1,7 +1,6 @@
 # Validating coverage, history, freshness, and onboarding
 
-This guide covers the unreleased dashboard and built-in demo additions on current
-main. It complements the [broader validation commands](TESTING-0.2.md), which
+This guide covers the dashboard, parser, and built-in demo features in 0.3.0. It complements the [broader validation commands](TESTING-0.2.md), which
 cover packaging, fuzzing, performance, and extended campaigns. Run commands from
 the repository root unless specified otherwise. The repository pins Rust 1.88.0;
 browser development checks require Node 22+, npm, and Chromium. The installed

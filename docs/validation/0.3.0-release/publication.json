@@ -1,0 +1,65 @@
+{
+  "version": "0.3.0",
+  "source_commit": "05b3376e2ba1f809bf0a789faa477f3f17e1bcf2",
+  "verified_at_utc": "2026-11-12T21:03:21.423220+00:00",
+  "release": {
+    "url": "https://github.com/ding-labs/tell-tail/releases/tag/v0.3.0",
+    "published_at": "2026-11-12T20:16:12Z",
+    "latest": true,
+    "tag_commit": "05b3376e2ba1f809bf0a789faa477f3f17e1bcf2"
+  },
+  "workflow": {
+    "url": "https://github.com/ding-labs/tell-tail/actions/runs/43299594524",
+    "conclusion": "success",
+    "head_sha": "e001d9f80ea614a2d5adb61be4c3e8b1620545c6",
+    "attempt": 2
+  },
+  "capacity_retry": {
+    "tap_run": "https://github.com/ding-labs/homebrew-tap/actions/runs/43302201093",
+    "result": "Mac install cancelled without executing steps: hosted runner was not acquired after multiple attempts; GitHub reported macOS ARM64 capacity constraints",
+    "recovery": "rerun failed publication job with the same candidate and corrected tooling"
+  },
+  "initial_attempt": {
+    "run": "https://github.com/ding-labs/tell-tail/actions/runs/43297139017",
+    "result": "GitHub and crates.io published; Homebrew observer failed on initial visibility 404",
+    "tap_run": "https://github.com/ding-labs/homebrew-tap/actions/runs/43298797692",
+    "tap_result": "cancelled because macos-14 runner was retired",
+    "recovery_changes": [
+      "https://github.com/ding-labs/tell-tail/pull/24",
+      "https://github.com/ding-labs/homebrew-tap/pull/6"
+    ]
+  },
+  "archives": [
+    {
+      "target": "aarch64-apple-darwin",
+      "name": "tell-tail-0.3.0-aarch64-apple-darwin.tar.gz",
+      "sha256": "db144ca5bc2c337cecc660397e3bfc8973c92251a4b83746b52025a33f018c4c",
+      "size": 1952683
+    },
+    {
+      "target": "aarch64-unknown-linux-musl",
+      "name": "tell-tail-0.3.0-aarch64-unknown-linux-musl.tar.gz",
+      "sha256": "b54ca204af51303c3206a335db0be04bbbbeedbac728e9b88f978fba40130ee9",
+      "size": 2023941
+    },
+    {
+      "target": "x86_64-unknown-linux-musl",
+      "name": "tell-tail-0.3.0-x86_64-unknown-linux-musl.tar.gz",
+      "sha256": "8c853f79174cc2681085933f7466522d2097d4f6c77646457dd921d545dfae30",
+      "size": 2179587
+    }
+  ],
+  "crates_io": {
+    "url": "https://crates.io/crates/tell-tail/0.3.0",
+    "checksum": "bedc36963a71a6f1aad3b2a5924b20962397f6f07ded350ac064b4448d0b1578",
+    "yanked": false,
+    "source_verified": true
+  },
+  "homebrew": {
+    "run": "https://github.com/ding-labs/homebrew-tap/actions/runs/43306018552",
+    "conclusion": "success",
+    "main_commit_at_verification": "8dc8dd6656fdb7aa55f8a0d3ffad1a0bb6556ab1",
+    "formula_sha256": "f2e50cca8966fd64fccf131694dfe3a368da6c60a121991542cf9d44324773aa",
+    "matches_published_archives": true
+  }
+}

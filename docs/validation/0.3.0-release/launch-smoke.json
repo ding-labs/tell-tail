@@ -1,0 +1,166 @@
+{
+  "version": "0.3.0",
+  "binary_sha256": "480a178d8be05851f06afcb529022c8f1e15a7ec00791abfa9200ddc5b0a29a1",
+  "parser_cases": [
+    {
+      "case": "mixed",
+      "records": 5,
+      "levels": {
+        "trace": 0,
+        "debug": 0,
+        "info": 3,
+        "warn": 1,
+        "error": 1,
+        "fatal": 0,
+        "unknown": 0
+      }
+    },
+    {
+      "case": "pino",
+      "records": 2,
+      "levels": {
+        "trace": 0,
+        "debug": 0,
+        "info": 1,
+        "warn": 0,
+        "error": 1,
+        "fatal": 0,
+        "unknown": 0
+      }
+    },
+    {
+      "case": "python",
+      "records": 2,
+      "levels": {
+        "trace": 0,
+        "debug": 0,
+        "info": 1,
+        "warn": 0,
+        "error": 1,
+        "fatal": 0,
+        "unknown": 0
+      }
+    },
+    {
+      "case": "otel",
+      "records": 2,
+      "levels": {
+        "trace": 0,
+        "debug": 0,
+        "info": 1,
+        "warn": 0,
+        "error": 1,
+        "fatal": 0,
+        "unknown": 0
+      }
+    },
+    {
+      "case": "serilog",
+      "records": 2,
+      "levels": {
+        "trace": 0,
+        "debug": 0,
+        "info": 1,
+        "warn": 0,
+        "error": 1,
+        "fatal": 0,
+        "unknown": 0
+      }
+    },
+    {
+      "case": "nested",
+      "records": 1,
+      "levels": {
+        "trace": 0,
+        "debug": 0,
+        "info": 0,
+        "warn": 0,
+        "error": 1,
+        "fatal": 0,
+        "unknown": 0
+      }
+    },
+    {
+      "case": "docker",
+      "records": 1,
+      "levels": {
+        "trace": 0,
+        "debug": 0,
+        "info": 0,
+        "warn": 0,
+        "error": 1,
+        "fatal": 0,
+        "unknown": 0
+      }
+    },
+    {
+      "case": "cri-pino",
+      "records": 1,
+      "levels": {
+        "trace": 0,
+        "debug": 0,
+        "info": 0,
+        "warn": 0,
+        "error": 1,
+        "fatal": 0,
+        "unknown": 0
+      }
+    }
+  ],
+  "demo_frames": [
+    {
+      "sample_seconds": 5,
+      "window_levels": {
+        "trace": "0",
+        "debug": "0",
+        "info": "350",
+        "warn": "0",
+        "error": "0",
+        "fatal": "0",
+        "unknown": "0"
+      },
+      "records": "350"
+    },
+    {
+      "sample_seconds": 14,
+      "window_levels": {
+        "trace": "0",
+        "debug": "0",
+        "info": "210",
+        "warn": "71",
+        "error": "0",
+        "fatal": "0",
+        "unknown": "71"
+      },
+      "records": "981"
+    },
+    {
+      "sample_seconds": 22,
+      "window_levels": {
+        "trace": "0",
+        "debug": "0",
+        "info": "36",
+        "warn": "72",
+        "error": "177",
+        "fatal": "0",
+        "unknown": "71"
+      },
+      "records": "1549"
+    },
+    {
+      "sample_seconds": 37,
+      "window_levels": {
+        "trace": "0",
+        "debug": "0",
+        "info": "358",
+        "warn": "0",
+        "error": "0",
+        "fatal": "0",
+        "unknown": "0"
+      },
+      "records": "2189"
+    }
+  ],
+  "shutdown_exit": 143,
+  "passed": true
+}

@@ -1,0 +1,27 @@
+{
+  "source_commit": "05b3376e2ba1f809bf0a789faa477f3f17e1bcf2",
+  "run": "https://github.com/ding-labs/tell-tail/actions/runs/43286063233",
+  "targets": {
+    "classification": {
+      "executions": 45069300,
+      "seconds": 1801,
+      "log_sha256": "95b3cc0ac27344991c5d08aa3cef1b5b29c289de740017a6e97d7b561525fcb4",
+      "toolchain": "rustc 1.101.0-nightly (822182db4 2026-10-13)",
+      "findings": 0
+    },
+    "framing": {
+      "executions": 53354969,
+      "seconds": 1801,
+      "log_sha256": "24443ae146cb712d1493b02e09b1e2a0a4dc1eeebfc80b19cf0b34a52d354c5b",
+      "toolchain": "rustc 1.101.0-nightly (822182db4 2026-10-13)",
+      "findings": 0
+    },
+    "timed_engine": {
+      "executions": 3375081,
+      "seconds": 1801,
+      "log_sha256": "e84ffe81b2c0e236241346ab909b275c2d014fdbf4d6dbb386c06fe91a6fc2c2",
+      "toolchain": "rustc 1.101.0-nightly (822182db4 2026-10-13)",
+      "findings": 0
+    }
+  }
+}

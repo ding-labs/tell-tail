@@ -44,8 +44,9 @@ def check(path):
                 if not (bundle / 'THIRD_PARTY_LICENSES/musl' / name).is_file():
                     raise ValueError('static musl license notices missing')
         check_web_install(binary, directory)
+        check_web_install(binary, directory, mcp=True)
         print(json.dumps({'archive': path.name, 'native_smoke': 'passed',
-                          'embedded_web_smoke': 'passed', 'build': build}))
+                          'embedded_web_smoke': 'passed', 'installed_mcp_and_opener_failure': 'passed', 'build': build}))
 
 
 if __name__ == '__main__':
