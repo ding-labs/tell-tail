@@ -34,10 +34,10 @@ The Rust collector subsequently verified the same source shape on real calls;
 its first production check returned two Railway rows with durations 1,185 ms and
 567 ms. These were separate calls, not revisions of a wrapper.
 
-Configuration was restored after capture, preserving other edits made meanwhile.
-The already-running app retains its exporter until its next restart; the live
-receiver remains running for inspection. No additional restart was forced and no
-app-server was launched to impersonate observation of the existing app.
+Configuration was initially restored after the finite capture, preserving other
+edits. The user subsequently requested persistent tracing; the follow-up below
+supersedes that temporary configuration state. No additional app restart was
+forced and no app-server impersonated observation of the existing app.
 
 ## Observed source contract
 
@@ -57,9 +57,11 @@ OTLP event-name field and Codex's `event.name` attribute to match. The source
 contract now gives the semantic attribute precedence, with a regression fixture.
 The production endpoint then accepted real Railway batches without that rejection.
 
-The exact Railway namespace maps to `railway`. Other namespaces remain qualified
-tool names with an unidentified plugin. No underscore splitting, script parsing,
-or fabricated child traces are used. Built-in wrappers and local commands also
+The original adapter mapped only the exact Railway namespace. The follow-up
+adapter accepts every hosted namespace suffix as an observed provider label,
+without an allowlist or splitting internal underscores. Other namespaces remain
+qualified tool names with no asserted manifest identity. No script parsing or
+fabricated child traces are used. Built-in wrappers and local commands also
 appear, as separate records. A global client exporter can cover multiple chats;
 execution labels keep their call identities separate.
 
@@ -133,3 +135,28 @@ The probe is finite and single-request-at-a-time, not the production receiver.
 The [compatibility record](validation/plugin-trace-capture-2026-11-19.json) contains
 only metadata. The [November 18 record](validation/plugin-trace-capture-2026-11-18.json)
 is retained as historical evidence of the earlier pending capture decision.
+
+## Persistent multi-provider follow-up
+
+At the user's request, installed a per-user macOS LaunchAgent with a private,
+independent binary and stable credential. Reused the already-loaded endpoint/key,
+so current capture continued without an additional app restart; the user config
+now retains the exporter for future restarts. Verified enable, repeated enable,
+disable preserving unrelated config, re-enable, and automatic launchd recovery
+after forced collector termination. No logout/reboot was forced.
+
+After recovery, a parallel GitHub `get_user_login` and Railway `search_docs`
+produced separate real rows: GitHub 406 ms, Railway 1,182 ms, both reporting
+execution success. Provider response contents and identity values were not
+retained in this record. The browser displayed both rows and the API supplied
+`github` and `railway` as automatic filter suggestions. This verifies these
+providers on the tested execution path, not every installed plugin or subagent.
+
+The native macOS arm64 plugin preview includes its executable and an onboarding
+skill. Verified packaged paths, executable permissions, checksum, dependency
+notices, exclusion of local credentials, and standalone `tracing status` from an
+extracted binary. Desktop marketplace installation itself remains untested; the
+installed-plugin CLI timed out. No plugin catalog is required for capture.
+
+See the [persistence validation record](validation/plugin-trace-persistence-2026-11-19.json)
+for the follow-up checks and remaining limits.

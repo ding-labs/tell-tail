@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Capture Codex OTLP tool results across hosted provider namespaces, with automatic
+  observed-plugin filters and a compact inspectable call table; payloads are discarded.
+- Add macOS `tracing enable/status/disable` for an owned exporter and persistent
+  login service. Preserve unrelated config and refuse existing/edited exporters.
+- Add a native Codex plugin preview bundle with an explicit onboarding skill.
+  Neither this plugin nor the tracing commands have been publicly released.
+- Reserve `tracing` for service management; use `./tracing` or `-- tracing` to
+  monitor a file with that name.
+
 - Add `tell-tail mcp --open`: passive macOS Codex/Claude Desktop log discovery,
   bounded multi-file following, scoped failure/recovery groups, Claude mirror
   deduplication, and an embedded searchable timeline with safe evidence details.

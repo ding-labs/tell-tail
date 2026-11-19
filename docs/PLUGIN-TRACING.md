@@ -14,10 +14,21 @@ never arguments, outputs, credentials, or raw execution IDs.
 
 On Codex Desktop 26.1111.21308 (engine 0.169.0-alpha.11.1), Railway documentation
 calls made sequentially and in parallel inside `functions.exec` export separate
-results. The wrapper is also a separate tool call. Source namespace
-`mcp__codex_apps__railway` is mapped explicitly to `railway`; other namespaces are
-retained in the qualified tool name and remain **unidentified plugins**. Search
-can match those namespaces without inventing a plugin mapping.
+results. The wrapper is also a separate tool call. A subsequent live check verified
+GitHub and Railway calls made together, with separate rows and durations.
+
+There is no provider allowlist. Every hosted namespace matching
+`mcp__codex_apps__<provider>` supplies its complete `<provider>` suffix as the
+plugin filter label, including internal underscores. Suggestions automatically
+populate from retained calls (up to 128 distinct labels). These labels identify
+**observed source namespaces**, not installed manifest IDs or friendly names.
+Other tools retain their qualified name and transport server and remain searchable.
+New hosted providers need no Tell-Tail configuration.
+
+A cached bundle is not evidence of an enabled plugin. The installed-plugin CLI
+also timed out during this audit, so capture does not depend on catalog polling.
+Installed-but-unused plugins and skills without tool calls do not produce rows.
+This is automatic discovery of observed activity, not an installed-plugin inventory.
 
 This is result-only capture. Starts, cancellations, subagent coverage, parent
 relationships, and provider-level errors are unverified. A source `success=true`
@@ -29,7 +40,86 @@ unverified. No account or balance access is needed for verification.
 
 See the [capture audit](PLUGIN-TRACE-CAPTURE-AUDIT.md) for evidence and limitations.
 
-## Set up the local exporter
+## Persistent macOS setup
+
+Build this checkout with the default `web` feature, then:
+
+```sh
+cargo run --release --locked -- tracing enable
+cargo run --release --locked -- tracing status
+```
+
+After installation, the self-contained management executable is:
+
+```sh
+"$HOME/Library/Application Support/Tell-Tail/tell-tail" tracing status
+```
+
+Setup copies the executable into that private application-support directory,
+creates a private credential, backs up the original user config, and writes only
+an owned `[otel]` table. It refuses another exporter or user edits to its table.
+`CODEX_HOME` selects the configuration home at installation; otherwise it uses
+`~/.codex`. Setup never changes managed/workspace configuration layers, which may
+still override user settings; verify actual receipt after setup.
+
+The per-user LaunchAgent `ing.ding.tell-tail.tracing` starts at login, stays
+independent of app/chats, and restarts after a collector exit. Default ports are
+63701 for authenticated intake and 61193 for the dashboard. Both are loopback
+only. `--trace-port` and `--web-port` accept distinct stable nonzero ports; port
+conflicts fail without changing Codex settings. No unbounded service logs are
+written. `tracing status` reports exporter ownership, service loading and receiver
+health without printing credentials. Repeating enable with unchanged settings is
+idempotent; disable before changing ports or upgrading the copied executable.
+
+Restart Codex **once** to load the exporter, unless that exact endpoint and
+credential are already active. Later app restarts keep tracing enabled. A collector
+restart resets its bounded in-memory history; an app restart alone does not stop
+the collector. This does not provide durable audit storage.
+
+For a known temporary receiver migration, stop that receiver and pass
+`--import-token-file /absolute/path/to/existing-private-key` to `tracing enable`,
+using its existing trace port. Never put the token value in shell arguments.
+
+To disable:
+
+```sh
+"$HOME/Library/Application Support/Tell-Tail/tell-tail" tracing disable
+```
+
+Then restart Codex to unload the exporter it still holds in memory. Disable
+removes only unchanged, owned exporter settings and the LaunchAgent. It retains
+private backup/key/installation files for re-enabling. If the exporter was edited,
+it refuses to remove it; reconcile those edits before retrying. Never restore the
+whole backup over later user changes. An interrupted setup may leave `setup.lock`;
+check that setup is no longer running before removing that lock and retrying.
+
+## Installable plugin preview
+
+The plugin source is `packaging/codex-plugin`. Build a self-contained native
+preview with Python 3.11+ and the repository's Rust toolchain:
+
+```sh
+python3 scripts/package-tracing-plugin.py
+```
+
+This produces `dist/tell-tail-macos-<architecture>/` and a ZIP of that local
+marketplace, including the executable, onboarding skill, dependency notices and
+build provenance. Users of the built bundle do not need Python, Node or Rust.
+Extract the ZIP and add its directory as a local marketplace in Codex (or
+`codex plugin marketplace add /absolute/path/to/extracted-marketplace`), install
+Tell-Tail, then run its setup. The source directory alone lacks the executable;
+install the generated bundle. This preview has not been published to the public
+directory or validated through a fresh desktop plugin-install flow.
+
+The [supported onboarding mechanism](https://developers.openai.com/plugins/build/plugins#add-an-onboarding-skill)
+is a skill invoked when users run setup after installation. This package has no
+silent lifecycle hooks. Setup installs the service/config described above. Before
+removing the plugin, run `tracing disable`: plugin removal alone cannot stop the
+separately installed service. Automatic installed-plugin inventory, durable
+history, and guaranteed coverage of every Codex execution path remain outside
+this preview.
+
+## Manual foreground exporter setup
 
 Use a private directory and a stable loopback port:
 

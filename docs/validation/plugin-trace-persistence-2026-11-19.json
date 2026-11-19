@@ -1,0 +1,67 @@
+{
+  "audit_version": 1,
+  "date": "2026-11-19",
+  "scope": "persistent multi-provider tracing follow-up",
+  "adapter": "codex-otlp-tool-result-v1",
+  "observed_provider_labels": "complete suffix after mcp__codex_apps__; not manifest IDs",
+  "provider_allowlist": false,
+  "installed_plugin_catalog_required": false,
+  "installed_plugin_inventory": false,
+  "live_checks": [
+    {
+      "provider": "github",
+      "tool": "_get_user_login",
+      "duration_ms": 406,
+      "execution_success": true
+    },
+    {
+      "provider": "railway",
+      "tool": "_search_docs",
+      "duration_ms": 1182,
+      "execution_success": true
+    }
+  ],
+  "parallel_nested_results": "separate rows verified after service recovery",
+  "persistent_exporter_enabled": true,
+  "existing_loaded_endpoint_and_credential_reused": true,
+  "additional_app_restart_required_for_this_migration": false,
+  "login_service": "ing.ding.tell-tail.tracing",
+  "run_at_load": true,
+  "keep_alive": true,
+  "enable_disable_reenable": "verified",
+  "unrelated_config_preserved": "verified",
+  "forced_collector_exit_recovery": "verified",
+  "logout_or_reboot_test": "not performed",
+  "history_durable": false,
+  "retained_payloads": false,
+  "validation": {
+    "default_rust_tests_passed": 207,
+    "no_default_lib_tests_passed": 105,
+    "default_and_no_default_clippy": "passed",
+    "notifications_only_check": "passed",
+    "browser_passed": 35,
+    "browser_skipped": 1,
+    "new_trace_and_setup_unit_tests": 28,
+    "plugin_skill_validation": "passed",
+    "plugin_archive_smoke": "passed",
+    "source_package_inventory": "passed"
+  },
+  "plugin_bundle": {
+    "platform": "macos",
+    "architecture": "arm64",
+    "onboarding": "explicit setup skill",
+    "native_executable_included": true,
+    "dependency_notices_included": true,
+    "credentials_included": false,
+    "fresh_desktop_plugin_install": "not tested",
+    "public_distribution": "not published"
+  },
+  "remaining_limits": [
+    "client-exported results only",
+    "starts/cancellation/subagents/parent relationships not established",
+    "installed plugin CLI timed out; capture has no catalog dependency",
+    "new provider names do not establish every execution path",
+    "collector restarts reset in-memory history"
+  ],
+  "soak_tests": "not run; optional and nonblocking"
+}

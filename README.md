@@ -75,6 +75,22 @@ The [hosted MCP guide](https://docs.ding.ing/tell-tail/next/mcp/) belongs to the
 unreleased preview. It follows a pinned source revision and may lag this checkout;
 MCP is not in the released guides yet.
 
+### Tool-call tracing (unreleased)
+
+Capture exported Codex tool results across hosted plugin namespaces, with a
+compact table, automatic provider filters, durations and execution outcomes.
+On macOS, enable a persistent local collector and exporter with:
+
+```sh
+cargo run --release --locked -- tracing enable
+```
+
+Restart Codex once after first setup. Tracing stays enabled across future app
+restarts and starts at login. Use `tracing status` or `tracing disable` to manage
+it. History is bounded and in memory; this is result metadata, not guaranteed
+coverage of every client execution path. See [setup, plugin packaging and
+coverage](docs/PLUGIN-TRACING.md). These commands are not in published 0.2.0 builds.
+
 ### Built-in demo (unreleased)
 
 Current main includes an offline demo; it is not in the published 0.2.0 packages.
