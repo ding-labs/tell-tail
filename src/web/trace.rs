@@ -176,7 +176,7 @@ async fn events(State(app): State<App>) -> Response {
                     sent = tokio::time::Instant::now();
                     return Some((Ok(": keep-alive\n\n".into()), (shared, permit, last, sent)));
                 }
-                tokio::time::sleep(Duration::from_millis(500)).await;
+                tokio::time::sleep(Duration::from_millis(200)).await;
             }
         },
     );

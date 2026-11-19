@@ -30,8 +30,8 @@ export function initTraces({ chooseDefault, pause }) {
       const data = await r.json(); if (own !== serial) return; page = data;
       const focusId = $('trace-rows').contains(document.activeElement) ? document.activeElement.dataset.call : null;
       $('trace-rows').replaceChildren(...data.calls.map(c => {
-        const row = el('tr'); const time = el('td', date(c.completed_ms)); time.append(el('small', c.historical ? 'Imported replay' : 'Observed result'));
-        const tool = el('td', c.plugin || 'Unidentified plugin'); tool.append(el('small', c.tool));
+        const row = el('tr'); const time = el('td', date(c.completed_ms ?? c.received_ms)); time.append(el('small', c.historical ? 'Imported replay' : c.completed_ms == null ? 'Received · completion time unavailable' : 'Completed'));
+        const tool = el('td', c.plugin || (c.tool.startsWith('functions.') ? 'Client tool' : 'Unidentified plugin')); tool.append(el('small', c.tool));
         const execution = el('td', c.execution.slice(0, 8)); execution.title = c.execution;
         const action = el('td'); const b = el('button', 'Inspect'); b.dataset.call = c.id; b.setAttribute('aria-label', `Inspect call ${c.id}`); b.addEventListener('click', () => inspect(c.id)); action.append(b);
         row.append(time, tool, el('td', outcome(c)), el('td', c.duration_ms == null ? 'Unavailable' : `${c.duration_ms.toLocaleString()} ms`), execution, action); return row;

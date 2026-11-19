@@ -59,7 +59,7 @@ impl Args {
         }
         if self.trace_replay.is_some() && self.mode() == Output::Web {
             return Err(
-                "Trace replay currently supports --output text or json; live capture is not yet verified",
+                "Trace replay supports --output text or json; use --trace-port for live web capture",
             );
         }
         if self.open && self.mode() != Output::Web {

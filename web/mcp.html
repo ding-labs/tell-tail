@@ -56,7 +56,7 @@
           <label>Time<select id="trace-since"><option value="">All retained</option><option value="900000">Last 15 minutes</option><option value="3600000">Last hour</option><option value="86400000">Last 24 hours</option></select></label>
           <button id="trace-clear" type="button">Clear call filters</button>
         </form>
-        <div class="table-scroll evidence-scroll" role="region" aria-label="Tool calls" tabindex="0"><table class="mcp-table"><thead><tr><th scope="col">Completed</th><th scope="col">Plugin / tool</th><th scope="col">Outcome</th><th scope="col">Duration</th><th scope="col">Execution</th><th scope="col">Evidence</th></tr></thead><tbody id="trace-rows"></tbody></table></div>
+        <div class="table-scroll evidence-scroll" role="region" aria-label="Tool calls" tabindex="0"><table class="mcp-table"><thead><tr><th scope="col">Time</th><th scope="col">Plugin / tool</th><th scope="col">Outcome</th><th scope="col">Duration</th><th scope="col">Execution</th><th scope="col">Evidence</th></tr></thead><tbody id="trace-rows"></tbody></table></div>
         <p id="trace-empty" class="empty">Waiting for captured calls…</p>
         <div class="pagination"><button id="trace-latest">Latest calls</button><button id="trace-older" disabled>Older calls</button><span id="trace-page-note" role="status"></span></div>
         <p id="trace-limits" class="coverage-note"></p>
