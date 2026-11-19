@@ -96,6 +96,29 @@ fn run(args: &Args) -> io::Result<i32> {
     Ok(if signal > 1 { 128 + signal as i32 } else { 0 })
 }
 fn main() {
+    if std::env::args_os()
+        .nth(1)
+        .is_some_and(|arg| arg == "tracing")
+    {
+        #[cfg(feature = "web")]
+        {
+            let args = tell_tail::tool_trace::service::Args::parse_from(
+                std::iter::once(std::ffi::OsString::from("tell-tail tracing"))
+                    .chain(std::env::args_os().skip(2)),
+            );
+            if let Err(error) = tell_tail::tool_trace::service::run(args) {
+                eprintln!("tell-tail: {error}");
+                std::process::exit(1);
+            }
+            return;
+        }
+        #[cfg(not(feature = "web"))]
+        {
+            eprintln!("tell-tail: tracing setup requires a build with the web feature");
+            std::process::exit(2);
+        }
+    }
+
     if tell_tail::webhook::is_helper() {
         std::process::exit(tell_tail::webhook::run_helper());
     }

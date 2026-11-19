@@ -45,7 +45,7 @@ pub struct Running {
     stop: Arc<AtomicUsize>,
     pub port: u16,
 }
-fn token(path: &Path) -> io::Result<String> {
+pub(super) fn token(path: &Path) -> io::Result<String> {
     use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
     let mut file = match OpenOptions::new()
         .write(true)

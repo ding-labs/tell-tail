@@ -13,3 +13,6 @@ pub mod receiver;
 
 #[cfg(feature = "web")]
 mod setup_config;
+
+#[cfg(feature = "web")]
+pub mod service;
