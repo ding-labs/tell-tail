@@ -9,6 +9,7 @@ use std::{
 pub struct Demo {
     directory: tempfile::TempDir,
     phase: u64,
+    desktop: bool,
     next: Instant,
 }
 impl Demo {
@@ -16,12 +17,27 @@ impl Demo {
         let mut demo = Self {
             directory: tempfile::tempdir()?,
             phase: 0,
+            desktop: false,
             next: Instant::now(),
         };
         fs::create_dir(demo.directory.path().join("codex"))?;
         fs::create_dir(demo.directory.path().join("claude"))?;
         demo.tick()?;
         Ok(demo)
+    }
+    pub fn enable_desktop(&mut self) -> io::Result<()> {
+        self.desktop = true;
+        self.desktop_record("[browser-session-registry] browser_use_iab_backend_startup_started")?;
+        self.desktop_record("[browser-session-registry] browser_use_iab_backend_startup_ready")?;
+        self.desktop_record("[AppServerConnection] plugin_install_succeeded")?;
+        self.desktop_record("[electron-message-handler] chatgpt_pubsub_transport_opened")
+    }
+    fn desktop_record(&self, body: &str) -> io::Result<()> {
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(self.directory.path().join("codex/activity.log"))?;
+        writeln!(file, "{} info {body}", utc(now_ms()))
     }
     pub fn roots(&self) -> Vec<Root> {
         vec![
@@ -95,6 +111,14 @@ impl Demo {
                 .truncate(self.phase % 8 == 0)
                 .open(self.directory.path().join(name))?;
             file.write_all(line.as_bytes())?;
+        }
+        if self.desktop {
+            self.desktop_record(match self.phase % 4 {
+                0 => "[electron-message-handler] chatgpt_pubsub_transport_opened",
+                1 => "[AppServerConnection] response_routed method=thread/read durationMs=41",
+                2 => "[electron-message-handler] chatgpt_pubsub_transport_closed",
+                _ => "[electron-message-handler] chatgpt_pubsub_reconnect_scheduled retryCount=1",
+            })?;
         }
         self.phase += 1;
         self.next = Instant::now() + Duration::from_secs(2);

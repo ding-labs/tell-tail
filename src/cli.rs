@@ -63,7 +63,7 @@ pub enum From {
 #[command(
     version,
     about,
-    after_help = "MCP diagnostics:\n  tell-tail mcp --open        Watch existing desktop MCP logs\n  tell-tail mcp --demo --open  Try synthetic MCP failures and recovery\n  tell-tail mcp --help         MCP options\n\nFor a log file literally named mcp, use ./mcp or -- mcp."
+    after_help = "Desktop activity:\n  tell-tail desktop --open       Activity for ChatGPT and Codex\n  tell-tail desktop --demo --open  Try synthetic desktop and tool activity\n  tell-tail desktop --help        Desktop options\n\nMCP diagnostics:\n  tell-tail mcp --open        Watch existing desktop MCP logs\n  tell-tail mcp --demo --open  Try synthetic MCP failures and recovery\n  tell-tail mcp --help         MCP options\n\nFor a file named mcp or desktop, use ./mcp, ./desktop, or -- before the filename."
 )]
 pub struct Args {
     /// File to follow; omit or use - to read stdin.

@@ -61,3 +61,32 @@ fn desktop_help_and_literal_filename_are_compatible() {
         );
     }
 }
+
+#[test]
+fn desktop_demo_is_isolated_and_includes_every_category() {
+    let dir = tempfile::tempdir().unwrap();
+    let output = bin()
+        .env("HOME", dir.path())
+        .env_remove("CODEX_HOME")
+        .args(["desktop", "--demo", "--once", "--output", "json"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let text = String::from_utf8(output.stdout).unwrap();
+    let rows: Vec<serde_json::Value> = text
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    for category in ["tools", "mcp", "connections", "desktop"] {
+        assert!(
+            rows.iter().any(|v| v["item"]["category"] == category),
+            "{category}"
+        );
+    }
+    assert_eq!(rows.last().unwrap()["snapshot"]["sources"]["demo"], true);
+    assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 0);
+}

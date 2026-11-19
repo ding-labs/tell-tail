@@ -98,6 +98,12 @@ impl Running {
             });
         }
         let mut demo = args.demo.then(Demo::new).transpose()?;
+        if args.desktop
+            && let Some(demo) = &mut demo
+        {
+            demo.enable_desktop()?;
+            crate::activity::demo::seed(&traces);
+        }
         let roots = match &demo {
             Some(d) => d.roots(),
             None => args.roots()?,
