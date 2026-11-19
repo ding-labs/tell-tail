@@ -1,12 +1,17 @@
 # Per-plugin tool-call tracing implementation plan
 
-Status: partially implemented November 18, 2026. The bounded probe, normalized
-contract, identity/correlation core, revision store, and finite text/JSON replay
-are implemented. Live capture selection remains pending a configured client
-restart and evidence check; the production adapter, receiver, API, and dashboard
-integration are not implemented. See the [capture audit](PLUGIN-TRACE-CAPTURE-AUDIT.md).
-The capture mechanism must pass the feasibility checkpoint below before we
-promise coverage for the installed Codex desktop app.
+Status: result-only desktop delivery implemented November 19, 2026. The live
+capture checkpoint verified attributable Railway results for sequential and
+parallel calls inside `functions.exec`. The OTLP adapter, authenticated receiver,
+headless output, read-only API/SSE, bounded Tool calls workspace, frozen inspection,
+and offline browser replay are implemented. See the [capture audit](PLUGIN-TRACE-CAPTURE-AUDIT.md)
+and [setup guide](PLUGIN-TRACING.md).
+
+Coverage remains deliberately scoped: start/cancellation/subagent/provider-error
+semantics and direct model calls are unverified; plugin mappings beyond the exact
+observed Railway namespace are not inferred. Render-latency benchmarking remains
+separate from receipt-to-query measurements. These are limitations of this delivery,
+not claims that every installed plugin and execution path has been verified.
 
 ## Outcome and scope
 
@@ -250,8 +255,9 @@ tell-tail mcp --trace-replay ./synthetic-trace.ndjson --output json --once
 `--trace-port` is appropriate only for an export-based adapter. A different chosen
 adapter gets an explicit source option rather than an unused listener. A network
 receiver cannot combine with `--once`; a finite replay can. Demo and replay modes
-must not also read real client telemetry. Only finite text/JSON `--trace-replay`
-is implemented so far; the receiver and dashboard commands remain proposed.
+must not also read real client telemetry. Replay supports finite text/JSON output
+and a browser view containing only imported fixture evidence. Live intake also
+requires `--trace-token-file`; `--trace-config-out` writes an opt-in setup fragment.
 
 For a receiver, use a separate loopback listener from the read-only dashboard.
 It accepts only the selected protocol, method, route, and bounded encoding. Reject
