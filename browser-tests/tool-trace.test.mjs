@@ -54,5 +54,5 @@ test('offline trace replay opens the tool workspace without a live receiver or c
   assert.match(await page.locator('#trace-rows').textContent(),/Imported replay/);
   assert.doesNotMatch(await page.locator('body').textContent(),/PRIVATE_/);
   const mcp=await(await fetch(server.url+'api/mcp/snapshot')).json();assert.equal(mcp.sources.length,0);
-  const trace=await(await fetch(server.url+'api/traces/snapshot')).json();assert.equal(trace.mode,'synthetic_replay');assert.equal(trace.accepted_batches,'0');
+  const trace=await(await fetch(server.url+'api/traces/snapshot')).json();assert.equal(trace.mode,'synthetic_replay');assert.equal(trace.adapter,'normalized_fixture_v1');assert.equal(trace.capabilities.live_capture_verified,false);assert.equal(trace.accepted_batches,'0');
 });
