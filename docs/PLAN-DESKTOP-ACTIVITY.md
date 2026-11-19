@@ -1,7 +1,14 @@
 # Tell-Tail for ChatGPT and Codex implementation plan
 
-Status: proposed implementation, November 19, 2026. This plan follows the working
-plugin tracing and collector lifecycle implementation. It does not authorize or
+Status: implemented in the source checkout, November 19, 2026. See the
+[usage and API guide](DESKTOP-ACTIVITY.md) and
+[validation record](VALIDATION-DESKTOP-ACTIVITY.md). The audited adapter,
+unified workspace, owned service migration and live capture check are complete.
+Cross-source chat correlation and complete cloud visibility remain unverified;
+the UI exposes those limits. Tool projection samples bounded accepted revisions
+and reports coalescing/loss instead of introducing a second queue.
+
+This plan follows the working plugin tracing and collector lifecycle implementation. It does not authorize or
 require beta packaging, a release, a version bump, or new cloud infrastructure.
 
 Build a local observability workspace that answers: what happened, which tool or

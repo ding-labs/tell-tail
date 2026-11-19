@@ -1,0 +1,125 @@
+{
+  "screenshots": [
+    "tell-tail-activity-dark-1440.png",
+    "tell-tail-activity-dark-1280.png",
+    "tell-tail-activity-dark-1024.png",
+    "tell-tail-activity-dark-768.png",
+    "tell-tail-activity-dark-390.png",
+    "tell-tail-activity-dark-320.png",
+    "tell-tail-activity-light-1440.png",
+    "tell-tail-activity-light-1280.png",
+    "tell-tail-activity-light-1024.png",
+    "tell-tail-activity-light-768.png",
+    "tell-tail-activity-light-390.png",
+    "tell-tail-activity-light-320.png",
+    "tell-tail-activity-overview.png",
+    "tell-tail-activity-problems.png",
+    "tell-tail-activity-sources.png"
+  ],
+  "contrast": [
+    {
+      "theme": "dark",
+      "textMinimum": 5.633046755505407,
+      "controlMinimum": 3.8915542018507194
+    },
+    {
+      "theme": "light",
+      "textMinimum": 4.863193382973493,
+      "controlMinimum": 3.1431907966222754
+    }
+  ],
+  "layouts": [
+    {
+      "theme": "dark",
+      "width": 1440,
+      "height": 900,
+      "overflow": false
+    },
+    {
+      "theme": "dark",
+      "width": 1280,
+      "height": 800,
+      "overflow": false
+    },
+    {
+      "theme": "dark",
+      "width": 1024,
+      "height": 768,
+      "overflow": false
+    },
+    {
+      "theme": "dark",
+      "width": 768,
+      "height": 1024,
+      "overflow": false
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "height": 844,
+      "overflow": false
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "height": 640,
+      "overflow": false
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "height": 900,
+      "overflow": false
+    },
+    {
+      "theme": "light",
+      "width": 1280,
+      "height": 800,
+      "overflow": false
+    },
+    {
+      "theme": "light",
+      "width": 1024,
+      "height": 768,
+      "overflow": false
+    },
+    {
+      "theme": "light",
+      "width": 768,
+      "height": 1024,
+      "overflow": false
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "overflow": false
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "height": 640,
+      "overflow": false
+    }
+  ],
+  "date": "2026-11-19",
+  "source": "Synthetic desktop demo; real embedded UI",
+  "revision": "9b612ae",
+  "tablet_geometry_regression": {
+    "widths": [
+      1024,
+      1100,
+      1200,
+      1280,
+      1440
+    ],
+    "feed_beside_navigation": true,
+    "first_row_above_px": 350
+  },
+  "inspector_1280x800": {
+    "first_row_at_or_above_px": 300,
+    "visible_rows_at_least": 7
+  },
+  "touch_controls_minimum_height_px": 44,
+  "scope": "Palette and geometry checks plus screenshot review; not a complete accessibility conformance audit"
+}

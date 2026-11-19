@@ -1,0 +1,52 @@
+{
+  "date": "2026-11-19",
+  "revision": "22ad4dee92c744a6fcb01316730f2207c3282f80",
+  "platform": "Darwin arm64",
+  "applications": {
+    "ChatGPT": {
+      "CFBundleShortVersionString": "26.1111.71704",
+      "CFBundleVersion": "29030"
+    }
+  },
+  "managed_migration": {
+    "from": "mcp",
+    "to": "desktop",
+    "credential_exporter_and_config_byte_identical": true,
+    "codex_restart_required": false,
+    "dashboard": "http://127.0.0.1:61193/",
+    "rollback_available": true
+  },
+  "observations": {
+    "files_followed": 59,
+    "retained_by_category": {
+      "tools": 5,
+      "mcp": 610,
+      "connections": 998,
+      "desktop": 343
+    },
+    "projection_gaps": "0",
+    "tool_probe": {
+      "subject": "mcp__codex_apps__github._get_user_login",
+      "plugin": "github",
+      "outcome": "execution_succeeded",
+      "duration_ms": 446,
+      "duration_basis": "source_reported",
+      "scope": "unlinked_execution",
+      "start_observed": false,
+      "completion_observed": true,
+      "execution_success": true,
+      "tool_error": null
+    },
+    "tool_probe_seen_in_unified_activity": true,
+    "final_refresh_probe_seen": true,
+    "real_plugin_result_rendered_and_inspected": true
+  },
+  "limitations": [
+    "Result-only capture; provider-level errors and full cloud coverage remain unverified",
+    "Chat correlation unverified; nearby timestamps do not establish linkage",
+    "Bootstrap is bounded imported history; not every observed lifecycle event was triggered live in this check",
+    "Fresh Desktop plugin installation was not repeated; existing collector was upgraded without packaging",
+    "Live receipt-to-render latency not measured; synthetic query latency reported separately"
+  ],
+  "final_ui_revision": "121a31aa05842c6e7430d7584d4fc8e50ec7a791"
+}

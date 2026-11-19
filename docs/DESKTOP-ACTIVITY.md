@@ -5,6 +5,11 @@ The desktop workspace combines supported local desktop observations, MCP
 server diagnostics, and opted-in Codex tool results. It does not read conversation
 databases or claim to observe every ChatGPT cloud operation.
 
+![Synthetic desktop activity with the evidence inspector](design/desktop-activity-implemented.png)
+
+See the [implementation validation](VALIDATION-DESKTOP-ACTIVITY.md) for measured
+limits, native migration evidence and live capture results.
+
 ## Start with Activity
 
 ```sh
