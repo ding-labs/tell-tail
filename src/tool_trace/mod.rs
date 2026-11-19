@@ -5,3 +5,5 @@ mod identity;
 pub mod model;
 pub mod replay;
 pub mod store;
+
+pub mod otlp;
