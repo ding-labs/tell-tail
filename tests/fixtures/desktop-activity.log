@@ -1,0 +1,14 @@
+2026-11-19T12:00:00.000Z info [electron-message-handler] chatgpt_pubsub_transport_opened
+2026-11-19T12:00:01.000Z warning [electron-message-handler] chatgpt_pubsub_transport_closed error="PRIVATE_ERROR_SENTINEL"
+2026-11-19T12:00:02.000Z info [electron-message-handler] chatgpt_pubsub_reconnect_scheduled retryCount=2
+2026-11-19T12:00:03.000Z info [electron-message-handler] chatgpt_pubsub_topic_subscribed topic="PRIVATE_TOPIC_SENTINEL"
+2026-11-19T12:00:04.000Z info [AppServerConnection] plugin_install_succeeded pluginId="PRIVATE_PLUGIN_SENTINEL"
+2026-11-19T12:00:05.000Z info [AppServerConnection] plugin_marketplace_add_succeeded url="https://PRIVATE_URL_SENTINEL"
+2026-11-19T12:00:06.000Z info [BundledPluginsMarketplace] plugin_marketplace_sync_completed
+2026-11-19T12:00:07.000Z info [browser-session-registry] browser_use_iab_backend_startup_started path="PRIVATE_PATH_SENTINEL"
+2026-11-19T12:00:08.000Z info [browser-session-registry] browser_use_iab_backend_startup_ready
+2026-11-19T12:00:09.000Z info [install-primary-runtime] primary_runtime_dependencies_diagnose_started hostId="PRIVATE_HOST_SENTINEL"
+2026-11-19T12:00:10.000Z info [install-primary-runtime] primary_runtime_dependencies_diagnose_finished
+2026-11-19T12:00:11.000Z info [AppServerConnection] response_routed method=thread/read durationMs=123 errorCode=null requestId="PRIVATE_REQUEST_SENTINEL" prompt="PRIVATE_PROMPT_SENTINEL"
+2026-11-19T12:00:12.000Z info [AppServerConnection] mcp_server_startup_status_updated server=example-docs status=failed failureReason=reauthenticationRequired threadId="PRIVATE_THREAD_SENTINEL" hostId=local
+2026-11-19T12:00:13.000Z info [AppServerConnection] mcp_server_startup_status_updated server=example-docs status=ready threadId="PRIVATE_THREAD_SENTINEL" hostId=local

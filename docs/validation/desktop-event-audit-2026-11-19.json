@@ -1,0 +1,29 @@
+{
+  "date": "2026-11-19",
+  "scope": "Local ChatGPT/Codex desktop log shapes; no claim of cloud execution coverage",
+  "method": "Read at most the last 1 MiB of each of six recent files; retain only recognized event names, component names, field presence and counts",
+  "files": 6,
+  "lines": 4966,
+  "events": {
+    "response_routed": 1590,
+    "browser_use_iab_backend_startup_started": 10,
+    "browser_use_iab_backend_startup_ready": 10,
+    "plugin_marketplace_add_succeeded": 4,
+    "plugin_marketplace_sync_completed": 4,
+    "chatgpt_pubsub_transport_opened": 40,
+    "chatgpt_pubsub_topic_subscribed": 82,
+    "primary_runtime_dependencies_diagnose_started": 8,
+    "primary_runtime_dependencies_diagnose_finished": 8,
+    "chatgpt_pubsub_transport_closed": 30,
+    "chatgpt_pubsub_reconnect_scheduled": 30,
+    "plugin_install_succeeded": 5
+  },
+  "interpretation": {
+    "transport_closed": "All 30 sampled records used warning level; closure alone does not prove failure or an interrupted chat",
+    "response_routed": "durationMs, errorCode, method and requestId present; duration scope unverified; do not equate routing with tool or model execution",
+    "identity": "Cross-source chat/request identity equivalence unverified; do not correlate by timing",
+    "runtime": "Startup/ready names observed; no verified attempt pairing",
+    "version": "Audit describes this local installation, not a version-independent logging API"
+  },
+  "privacy": "No raw log records, field values, private paths, chat IDs, URLs, arguments or outputs retained"
+}
