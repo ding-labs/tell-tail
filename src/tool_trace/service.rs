@@ -13,6 +13,8 @@ use std::{
     time::{Duration, Instant},
 };
 
+mod lifecycle;
+
 const LABEL: &str = "ing.ding.tell-tail.tracing";
 const MAX_CONFIG: u64 = 2 * 1024 * 1024;
 
@@ -39,12 +41,20 @@ enum Action {
     },
     /// Show service, exporter, and receiver health without exposing credentials.
     Status,
+    /// Replace the managed collector with this executable, preserving configuration and credentials.
+    Upgrade,
+    /// Restore the previous collector executable; keep the same credential and ports.
+    Rollback,
+    /// Disable capture and remove managed files, including credentials and the setup backup.
+    Uninstall,
     /// Remove only Tell-Tail's exporter settings and unload its login service.
     Disable,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 struct Install {
+    #[serde(default)]
+    version: Option<String>,
     config: PathBuf,
     trace_port: u16,
     web_port: u16,
@@ -54,12 +64,13 @@ struct Paths {
     plist: PathBuf,
     config: PathBuf,
     domain: String,
+    label: String,
 }
 impl Paths {
     fn discover() -> io::Result<Self> {
-        let home = PathBuf::from(
+        let home = std::path::absolute(PathBuf::from(
             std::env::var_os("HOME").ok_or_else(|| io::Error::other("HOME unavailable"))?,
-        );
+        ))?;
         let codex = std::env::var_os("CODEX_HOME")
             .map(PathBuf::from)
             .unwrap_or_else(|| home.join(".codex"));
@@ -73,12 +84,13 @@ impl Paths {
             plist: home
                 .join("Library/LaunchAgents")
                 .join(format!("{LABEL}.plist")),
-            config: codex.join("config.toml"),
+            config: std::path::absolute(codex)?.join("config.toml"),
             domain: format!("gui/{uid}"),
+            label: LABEL.into(),
         })
     }
     fn job(&self) -> String {
-        format!("{}/{LABEL}", self.domain)
+        format!("{}/{}", self.domain, self.label)
     }
     fn install(&self) -> io::Result<Install> {
         serde_json::from_str(&read(&self.root.join("install.json"))?)
@@ -143,7 +155,7 @@ fn xml(text: &str) -> String {
         .replace('"', "&quot;")
         .replace('\'', "&apos;")
 }
-fn plist(root: &Path, install: &Install) -> String {
+fn plist(root: &Path, install: &Install, label: &str) -> String {
     let arguments = [
         root.join("tell-tail").display().to_string(),
         "mcp".into(),
@@ -163,7 +175,7 @@ fn plist(root: &Path, install: &Install) -> String {
         .map(|a| format!("<string>{}</string>", xml(a)))
         .collect::<String>();
     format!(
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\"><dict><key>Label</key><string>{LABEL}</string><key>ProgramArguments</key><array>{arguments}</array><key>RunAtLoad</key><true/><key>KeepAlive</key><true/><key>ThrottleInterval</key><integer>10</integer><key>ExitTimeOut</key><integer>5</integer><key>ProcessType</key><string>Background</string><key>StandardOutPath</key><string>/dev/null</string><key>StandardErrorPath</key><string>/dev/null</string></dict></plist>\n"
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\"><dict><key>Label</key><string>{label}</string><key>ProgramArguments</key><array>{arguments}</array><key>RunAtLoad</key><true/><key>KeepAlive</key><true/><key>ThrottleInterval</key><integer>10</integer><key>ExitTimeOut</key><integer>5</integer><key>ProcessType</key><string>Background</string><key>StandardOutPath</key><string>/dev/null</string><key>StandardErrorPath</key><string>/dev/null</string></dict></plist>\n"
     )
 }
 fn launchctl(args: &[&str]) -> io::Result<bool> {
@@ -204,7 +216,13 @@ fn snapshot(port: u16) -> Option<serde_json::Value> {
         .read_to_string()
         .ok()?;
     let value: serde_json::Value = serde_json::from_str(&body).ok()?;
-    (value["adapter"] == "codex-otlp-tool-result-v1" && value["enabled"] == true).then_some(value)
+    (value["adapter"] == "codex-otlp-tool-result-v1"
+        && value["enabled"] == true
+        && matches!(
+            value["status"].as_str(),
+            Some("waiting_for_exporter" | "receiving" | "quiet")
+        ))
+    .then_some(value)
 }
 fn status(paths: &Paths) -> io::Result<()> {
     let installed = paths.root.join("install.json").exists();
@@ -216,13 +234,22 @@ fn status(paths: &Paths) -> io::Result<()> {
         value["exporter_configured"] = setup_config::is_enabled(&config, &owned).into();
         value["dashboard"] = format!("http://127.0.0.1:{}/", install.web_port).into();
         value["trace_port"] = install.trace_port.into();
+        value["installed_version"] = install.version.clone().into();
+        value["manager_version"] = env!("CARGO_PKG_VERSION").into();
+        value["rollback_available"] = paths.root.join("tell-tail.previous").is_file().into();
         value["receiver"] = snapshot(install.web_port).unwrap_or(serde_json::Value::Null);
     }
     println!("{}", serde_json::to_string_pretty(&value)?);
     Ok(())
 }
 
-fn enable(paths: &Paths, trace_port: u16, web_port: u16, import: Option<&Path>) -> io::Result<()> {
+fn enable(
+    paths: &Paths,
+    trace_port: u16,
+    web_port: u16,
+    import: Option<&Path>,
+    executable: &Path,
+) -> io::Result<()> {
     if trace_port == 0 || web_port == 0 || trace_port == web_port {
         return Err(io::Error::other("Use two distinct, nonzero stable ports"));
     }
@@ -284,17 +311,9 @@ fn enable(paths: &Paths, trace_port: u16, web_port: u16, import: Option<&Path>) 
     if !backup.exists() {
         write_atomic(&backup, old.as_deref().unwrap_or("").as_bytes(), None)?;
     }
-    let mut binary = tempfile::NamedTempFile::new_in(&paths.root)?;
-    let mut source = fs::File::open(std::env::current_exe()?)?;
-    io::copy(&mut source, &mut binary)?;
-    binary
-        .as_file()
-        .set_permissions(fs::Permissions::from_mode(0o700))?;
-    binary.as_file().sync_all()?;
-    binary
-        .persist(paths.root.join("tell-tail"))
-        .map_err(|e| e.error)?;
+    lifecycle::copy_binary(executable, &paths.root.join("tell-tail"))?;
     let install = Install {
+        version: Some(env!("CARGO_PKG_VERSION").into()),
         config: paths.config.clone(),
         trace_port,
         web_port,
@@ -312,7 +331,7 @@ fn enable(paths: &Paths, trace_port: u16, web_port: u16, import: Option<&Path>) 
     )?;
     write_atomic(
         &paths.plist,
-        plist(&paths.root, &install).as_bytes(),
+        plist(&paths.root, &install, &paths.label).as_bytes(),
         read_optional(&paths.plist)?.as_deref(),
     )?;
     drop((intake, dashboard));
@@ -403,6 +422,32 @@ pub fn run(args: Args) -> io::Result<()> {
     if matches!(args.command, Action::Status) {
         return status(&paths);
     }
+    if matches!(args.command, Action::Uninstall) && !paths.root.join("install.json").exists() {
+        if launchctl(&["print", &paths.job()])? || paths.plist.exists() {
+            return Err(io::Error::other(
+                "Service exists without installation metadata; preserved it for manual recovery",
+            ));
+        }
+        if [
+            "trace.key",
+            "otel.toml",
+            "tell-tail",
+            "tell-tail.previous",
+            "install.previous.json",
+            "config.before-setup.toml",
+        ]
+        .iter()
+        .any(|name| paths.root.join(name).exists())
+        {
+            return Err(io::Error::other(
+                "Managed files exist without installation metadata; preserved them for manual recovery",
+            ));
+        }
+        println!("Tell-Tail collector is already uninstalled.");
+        return Ok(());
+    }
+    let uninstalling = matches!(args.command, Action::Uninstall);
+    let executable = std::env::current_exe()?;
     private_dir(&paths.root)?;
     let lock_path = paths.root.join("setup.lock");
     let _lock = OpenOptions::new().write(true).create_new(true).mode(0o600).open(&lock_path)
@@ -412,11 +457,25 @@ pub fn run(args: Args) -> io::Result<()> {
             trace_port,
             web_port,
             import_token_file,
-        } => enable(&paths, trace_port, web_port, import_token_file.as_deref()),
+        } => enable(
+            &paths,
+            trace_port,
+            web_port,
+            import_token_file.as_deref(),
+            &executable,
+        ),
         Action::Disable => disable(&paths),
+        Action::Upgrade => lifecycle::upgrade(&paths, &executable),
+        Action::Rollback => lifecycle::rollback(&paths),
+        Action::Uninstall => lifecycle::uninstall(&paths),
         Action::Status => unreachable!(),
     };
+    drop(_lock);
     let _ = fs::remove_file(lock_path);
+    if uninstalling && result.is_ok() {
+        // Remove only an empty managed directory; preserve any unrecognized user files.
+        let _ = fs::remove_dir(&paths.root);
+    }
     result
 }
 
@@ -451,10 +510,12 @@ mod tests {
         let data = plist(
             Path::new("/Users/test/A & B"),
             &Install {
+                version: None,
                 config: PathBuf::new(),
                 trace_port: 63701,
                 web_port: 61193,
             },
+            LABEL,
         );
         assert!(data.contains("A &amp; B/tell-tail"));
         assert!(data.contains("<key>KeepAlive</key><true/>"));

@@ -1,6 +1,6 @@
 ---
 name: tell-tail
-description: Set up, inspect, or disable Tell-Tail's local Codex Desktop tool-call tracing and open its dashboard. Use for Tell-Tail observability, not for changing provider-side application tracing.
+description: Set up, inspect, upgrade, roll back, or uninstall Tell-Tail's local Codex Desktop tool-call tracing and open its dashboard. Use for Tell-Tail observability, not for changing provider-side application tracing.
 ---
 
 The packaged executable is `../../bin/tell-tail` relative to this SKILL.md's
@@ -37,9 +37,19 @@ relationships, cancellations, and complete coverage of all execution paths are
 not guaranteed. Arguments, outputs, credentials and raw chat/call IDs are not
 retained. History is bounded and in memory, and resets when the collector restarts.
 
-When the user requests disabling or removing tracing, run `tracing disable`
+When the user requests an update, run this packaged executable's `tracing upgrade`.
+It replaces the independent collector, preserves credentials and ports, and checks
+health. The previous executable is retained for `tracing rollback`; failed
+activation attempts restore it automatically. Report recovery failures without
+claiming the collector is healthy. A disabled installation stays disabled. Collector
+restart clears in-memory history; it does not require an app restart with unchanged
+credentials. Run `tracing status` afterward and verify actual call capture.
+
+When the user requests disabling tracing, run `tracing disable` to retain private
+setup files for re-enabling. When they request removal, run `tracing uninstall`
 before removing this plugin. Restart Codex afterward to unload its in-memory
 exporter. Plugin removal alone does not stop the separately installed login
-service. Disable preserves unrelated config and keeps a private credential and
-backup under `~/Library/Application Support/Tell-Tail` for re-enabling. Never
+service. Disable keeps a private credential and backup under
+`~/Library/Application Support/Tell-Tail` for re-enabling. Uninstall removes those
+owned files; it preserves unrelated config and user-added files. Never
 restore the whole backup over newer user edits. No lifecycle hook runs silently.

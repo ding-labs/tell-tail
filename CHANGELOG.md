@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add managed collector upgrade, rollback, and uninstall commands. Preserve
+  credentials and client settings during replacement, recover failed activation,
+  and retain user-added files during removal.
+
 ## 0.4.0
 
 - Capture Codex OTLP tool results across hosted provider namespaces, with automatic

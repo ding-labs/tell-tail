@@ -70,7 +70,8 @@ only. `--trace-port` and `--web-port` accept distinct stable nonzero ports; port
 conflicts fail without changing Codex settings. No unbounded service logs are
 written. `tracing status` reports exporter ownership, service loading and receiver
 health without printing credentials. Repeating enable with unchanged settings is
-idempotent; disable before changing ports or upgrading the copied executable.
+idempotent; disable before changing ports. Use the upgrade command below to
+replace the copied executable while retaining the credential and ports.
 
 Restart Codex **once** to load the exporter, unless that exact endpoint and
 credential are already active. Later app restarts keep tracing enabled. A collector
@@ -93,6 +94,45 @@ private backup/key/installation files for re-enabling. If the exporter was edite
 it refuses to remove it; reconcile those edits before retrying. Never restore the
 whole backup over later user changes. An interrupted setup may leave `setup.lock`;
 check that setup is no longer running before removing that lock and retrying.
+
+## Upgrade, roll back, or uninstall the collector
+
+Run the **new** executable's `tracing upgrade` command after obtaining a newer
+build. A plugin update alone does not replace the separately installed collector.
+For a source checkout, use `cargo run --locked -- tracing upgrade`. The command
+preserves the credential, ports, exporter and unrelated settings, retains one
+previous executable, restarts an enabled collector, and checks receiver health.
+A disabled installation stays disabled. Failed activation attempts restore the
+previous executable and service automatically; failures of that recovery are
+reported explicitly. Collector restarts clear in-memory history; Codex does not
+need a restart when the endpoint and credential remain unchanged.
+
+`tracing status` reports the managing executable's version, the installed version
+when known, the running collector version when reported, and rollback availability.
+For an explicit rollback, run `tracing rollback` using a supported executable.
+Rollback swaps the current and previous executables while preserving configuration.
+
+`tracing disable` remains the reversible option that retains private setup files.
+For complete collector removal, run `tracing uninstall` before removing the plugin
+in Desktop. It removes only owned exporter settings, the LaunchAgent, collector
+executables, credentials, metadata and the private setup backup. User-added files
+in the directory are preserved. Changed exporter settings block removal rather
+than being overwritten. Interrupted final cleanup can be retried. Restart Codex
+after uninstall to unload its in-memory exporter; removing the plugin alone does
+not stop the collector service.
+
+Native lifecycle verification uses an isolated service label and private temporary
+installation, leaving an existing collector alone:
+
+```sh
+cargo build --locked --bin tell-tail
+TELL_TAIL_TEST_BINARY="$PWD/target/debug/tell-tail" cargo test --lib \
+  native_lifecycle_preserves_credentials_recovers_and_uninstalls -- --ignored
+```
+
+This test requires macOS with an active GUI launchd domain. It covers active and
+disabled upgrades, explicit rollback, failed activation recovery, credential/config
+preservation, edited-exporter refusal, uninstall and interrupted cleanup recovery.
 
 ## Installable plugin preview
 

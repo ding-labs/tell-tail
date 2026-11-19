@@ -15,6 +15,10 @@ pub fn is_enabled(raw: &str, owned: &str) -> bool {
     matches!((parse(raw), parse(owned)), (Ok(a), Ok(b)) if a.contains_key("otel") && same_table(&a, &b))
 }
 
+pub fn has_otel(raw: &str) -> io::Result<bool> {
+    Ok(parse(raw)?.contains_key("otel"))
+}
+
 pub fn enable(raw: &str, previously_owned: Option<&str>, fragment: &str) -> io::Result<String> {
     let mut config = parse(raw)?;
     let new = parse(fragment)?;
