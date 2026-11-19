@@ -146,6 +146,7 @@ pub struct Bins {
 pub struct Lane {
     pub category: Category,
     pub counts: Vec<usize>,
+    pub failures: Vec<usize>,
 }
 #[derive(Serialize)]
 pub struct Problem {
@@ -278,6 +279,7 @@ impl Store {
         .map(|category| Lane {
             category,
             counts: vec![0; buckets],
+            failures: vec![0; buckets],
         })
         .collect();
         if let (Some(start), Some(end)) = (start, end) {
@@ -287,11 +289,12 @@ impl Store {
                     let index = (((i128::from(t) - i128::from(start)).max(0) * buckets as i128)
                         / span)
                         .min((buckets - 1) as i128) as usize;
-                    lanes
+                    let lane = lanes
                         .iter_mut()
                         .find(|l| l.category == item.category)
-                        .unwrap()
-                        .counts[index] += 1;
+                        .unwrap();
+                    lane.counts[index] += 1;
+                    lane.failures[index] += usize::from(item.severity == Severity::Error);
                 }
             }
         }
