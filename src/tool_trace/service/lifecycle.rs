@@ -44,7 +44,7 @@ fn start(paths: &Paths, install: &Install) -> io::Result<()> {
     }
     let until = Instant::now() + Duration::from_secs(10);
     loop {
-        if snapshot(install.web_port).is_some() {
+        if healthy(install) {
             return Ok(());
         }
         if Instant::now() >= until {
@@ -56,7 +56,12 @@ fn start(paths: &Paths, install: &Install) -> io::Result<()> {
     }
 }
 
-fn replace(paths: &Paths, source: &Path, version: Option<String>) -> io::Result<()> {
+fn replace(
+    paths: &Paths,
+    source: &Path,
+    version: Option<String>,
+    command: CollectorCommand,
+) -> io::Result<()> {
     let mut install = paths.install()?;
     let metadata_path = paths.root.join("install.json");
     let original_metadata = read(&metadata_path)?;
@@ -71,7 +76,12 @@ fn replace(paths: &Paths, source: &Path, version: Option<String>) -> io::Result<
             "Collector is loaded without its owned exporter; resolve setup before upgrading",
         ));
     }
-    if configured && read(&paths.plist)? != plist(&paths.root, &install, &paths.label) {
+    let original_plist = read_optional(&paths.plist)?;
+    if (configured && original_plist.is_none())
+        || original_plist
+            .as_ref()
+            .is_some_and(|v| *v != plist(&paths.root, &install, &paths.label))
+    {
         return Err(io::Error::other(
             "Service definition changed since setup; preserved it",
         ));
@@ -90,12 +100,19 @@ fn replace(paths: &Paths, source: &Path, version: Option<String>) -> io::Result<
     )?;
     let original_install = install.clone();
     install.version = version;
+    install.command = command;
+    let replacement_plist = plist(&paths.root, &install, &paths.label);
     let transaction = || -> io::Result<()> {
         if configured {
             stop(paths, &original_install)?;
         }
         copy_binary(candidate.path(), &current)?;
         if configured {
+            write_atomic(
+                &paths.plist,
+                replacement_plist.as_bytes(),
+                original_plist.as_deref(),
+            )?;
             start(paths, &install)?;
         }
         // Configuration is not rewritten by upgrades. Detect edits made during activation.
@@ -115,6 +132,17 @@ fn replace(paths: &Paths, source: &Path, version: Option<String>) -> io::Result<
             }
             copy_binary(&previous, &current)?;
             if configured {
+                let present = read_optional(&paths.plist)?;
+                if present.as_deref() != Some(&replacement_plist) && present != original_plist {
+                    return Err(io::Error::other(
+                        "Service definition changed during recovery; preserved it",
+                    ));
+                }
+                write_atomic(
+                    &paths.plist,
+                    original_plist.as_deref().unwrap().as_bytes(),
+                    present.as_deref(),
+                )?;
                 start(paths, &original_install)?;
             }
             Ok(())
@@ -130,13 +158,18 @@ fn replace(paths: &Paths, source: &Path, version: Option<String>) -> io::Result<
     }
     status(paths)?;
     eprintln!(
-        "Collector replaced. Credential, ports and client settings preserved. In-memory call history resets on collector restart. Use tracing rollback to restore the previous executable."
+        "Collector replaced. Credential, ports and client settings preserved. In-memory call history resets on collector restart. Use tracing rollback to restore the previous executable and launch command."
     );
     Ok(())
 }
 
 pub(super) fn upgrade(paths: &Paths, source: &Path) -> io::Result<()> {
-    replace(paths, source, Some(env!("CARGO_PKG_VERSION").into()))
+    replace(
+        paths,
+        source,
+        Some(env!("CARGO_PKG_VERSION").into()),
+        CollectorCommand::Desktop,
+    )
 }
 
 pub(super) fn rollback(paths: &Paths) -> io::Result<()> {
@@ -151,7 +184,12 @@ pub(super) fn rollback(paths: &Paths) -> io::Result<()> {
             "Previous executable belongs to different installation settings; preserved it",
         ));
     }
-    replace(paths, &paths.root.join("tell-tail.previous"), old.version)
+    replace(
+        paths,
+        &paths.root.join("tell-tail.previous"),
+        old.version,
+        old.command,
+    )
 }
 
 pub(super) fn uninstall(paths: &Paths) -> io::Result<()> {
@@ -257,6 +295,21 @@ mod tests {
         drop((first, second));
         fs::write(&paths.config, "# preserve\nmodel = 'test'\n").unwrap();
         enable(&paths, intake, web, None, &binary).unwrap();
+        assert!(healthy(&paths.install().unwrap()));
+        // Simulate legacy metadata (without command) and its owned MCP launch definition.
+        let mut legacy = paths.install().unwrap();
+        stop(&paths, &legacy).unwrap();
+        legacy.command = CollectorCommand::Mcp;
+        let mut metadata = serde_json::to_value(&legacy).unwrap();
+        metadata.as_object_mut().unwrap().remove("command");
+        fs::write(
+            paths.root.join("install.json"),
+            serde_json::to_vec(&metadata).unwrap(),
+        )
+        .unwrap();
+        fs::write(&paths.plist, plist(&paths.root, &legacy, &paths.label)).unwrap();
+        start(&paths, &legacy).unwrap();
+        assert!(response_json(web, "/api/activity/snapshot").is_none());
         let key = fs::read(paths.root.join("trace.key")).unwrap();
         let config = fs::read(&paths.config).unwrap();
         let first_epoch = snapshot(web).unwrap()["snapshot"]["collector_epoch"].clone();
@@ -267,7 +320,11 @@ mod tests {
         );
         assert_eq!(fs::read(paths.root.join("trace.key")).unwrap(), key);
         assert_eq!(fs::read(&paths.config).unwrap(), config);
+        assert!(paths.install().unwrap().command == CollectorCommand::Desktop);
+        assert!(response_json(web, "/api/activity/snapshot").is_some());
         rollback(&paths).unwrap();
+        assert!(paths.install().unwrap().command == CollectorCommand::Mcp);
+        assert!(response_json(web, "/api/activity/snapshot").is_none());
         let current = fs::read(paths.root.join("tell-tail")).unwrap();
         assert!(
             upgrade(&paths, Path::new("/usr/bin/false"))
@@ -279,6 +336,12 @@ mod tests {
         assert!(snapshot(web).is_some());
         assert_eq!(fs::read(paths.root.join("trace.key")).unwrap(), key);
         assert_eq!(fs::read(&paths.config).unwrap(), config);
+        let owned_plist = read(&paths.plist).unwrap();
+        fs::write(&paths.plist, format!("{owned_plist}<!-- edited -->")).unwrap();
+        assert!(upgrade(&paths, &binary).is_err());
+        assert!(disable(&paths).is_err());
+        assert_eq!(fs::read(&paths.config).unwrap(), config);
+        fs::write(&paths.plist, owned_plist).unwrap();
         let edited = String::from_utf8(config.clone())
             .unwrap()
             .replace("log_user_prompt = false", "log_user_prompt = true");

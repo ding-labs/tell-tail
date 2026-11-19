@@ -51,10 +51,27 @@ enum Action {
     Disable,
 }
 
+#[derive(Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum CollectorCommand {
+    #[default]
+    Mcp,
+    Desktop,
+}
+impl CollectorCommand {
+    fn argument(self) -> &'static str {
+        match self {
+            Self::Mcp => "mcp",
+            Self::Desktop => "desktop",
+        }
+    }
+}
 #[derive(Clone, Serialize, Deserialize)]
 struct Install {
     #[serde(default)]
     version: Option<String>,
+    #[serde(default)]
+    command: CollectorCommand,
     config: PathBuf,
     trace_port: u16,
     web_port: u16,
@@ -158,7 +175,7 @@ fn xml(text: &str) -> String {
 fn plist(root: &Path, install: &Install, label: &str) -> String {
     let arguments = [
         root.join("tell-tail").display().to_string(),
-        "mcp".into(),
+        install.command.argument().into(),
         "--source".into(),
         "codex-desktop".into(),
         "--output".into(),
@@ -198,7 +215,7 @@ fn launchctl(args: &[&str]) -> io::Result<bool> {
         thread::sleep(Duration::from_millis(50));
     }
 }
-fn snapshot(port: u16) -> Option<serde_json::Value> {
+fn response_json(port: u16, path: &str) -> Option<serde_json::Value> {
     let agent: ureq::Agent = ureq::Agent::config_builder()
         .timeout_global(Some(Duration::from_secs(1)))
         .max_redirects(0)
@@ -206,7 +223,7 @@ fn snapshot(port: u16) -> Option<serde_json::Value> {
         .build()
         .into();
     let mut response = agent
-        .get(format!("http://127.0.0.1:{port}/api/traces/snapshot"))
+        .get(format!("http://127.0.0.1:{port}{path}"))
         .call()
         .ok()?;
     let body = response
@@ -215,7 +232,10 @@ fn snapshot(port: u16) -> Option<serde_json::Value> {
         .limit(64 * 1024)
         .read_to_string()
         .ok()?;
-    let value: serde_json::Value = serde_json::from_str(&body).ok()?;
+    serde_json::from_str(&body).ok()
+}
+fn snapshot(port: u16) -> Option<serde_json::Value> {
+    let value = response_json(port, "/api/traces/snapshot")?;
     (value["adapter"] == "codex-otlp-tool-result-v1"
         && value["enabled"] == true
         && matches!(
@@ -223,6 +243,12 @@ fn snapshot(port: u16) -> Option<serde_json::Value> {
             Some("waiting_for_exporter" | "receiving" | "quiet")
         ))
     .then_some(value)
+}
+fn healthy(install: &Install) -> bool {
+    snapshot(install.web_port).is_some()
+        && (install.command == CollectorCommand::Mcp
+            || response_json(install.web_port, "/api/activity/snapshot")
+                .is_some_and(|v| v["schema_version"] == 1))
 }
 fn status(paths: &Paths) -> io::Result<()> {
     let installed = paths.root.join("install.json").exists();
@@ -235,6 +261,9 @@ fn status(paths: &Paths) -> io::Result<()> {
         value["dashboard"] = format!("http://127.0.0.1:{}/", install.web_port).into();
         value["trace_port"] = install.trace_port.into();
         value["installed_version"] = install.version.clone().into();
+        value["collector_command"] = install.command.argument().into();
+        value["activity_healthy"] =
+            (install.command == CollectorCommand::Desktop && healthy(&install)).into();
         value["manager_version"] = env!("CARGO_PKG_VERSION").into();
         value["rollback_available"] = paths.root.join("tell-tail.previous").is_file().into();
         value["receiver"] = snapshot(install.web_port).unwrap_or(serde_json::Value::Null);
@@ -266,7 +295,7 @@ fn enable(
         }
         let owned = read(&paths.root.join("otel.toml"))?;
         let config = read_optional(&paths.config)?.unwrap_or_default();
-        if !setup_config::is_enabled(&config, &owned) || snapshot(web_port).is_none() {
+        if !setup_config::is_enabled(&config, &owned) || !healthy(&installed) {
             return Err(io::Error::other(
                 "Service exists but is unhealthy or settings changed; run tracing status",
             ));
@@ -279,6 +308,13 @@ fn enable(
     if paths.plist.exists() && !paths.root.join("install.json").exists() {
         return Err(io::Error::other(
             "An unmanaged service definition already exists; preserved it",
+        ));
+    }
+    if paths.plist.exists()
+        && read(&paths.plist)? != plist(&paths.root, &paths.install()?, &paths.label)
+    {
+        return Err(io::Error::other(
+            "Service definition changed since setup; preserved it",
         ));
     }
     let old = read_optional(&paths.config)?;
@@ -314,6 +350,7 @@ fn enable(
     lifecycle::copy_binary(executable, &paths.root.join("tell-tail"))?;
     let install = Install {
         version: Some(env!("CARGO_PKG_VERSION").into()),
+        command: CollectorCommand::Desktop,
         config: paths.config.clone(),
         trace_port,
         web_port,
@@ -349,7 +386,7 @@ fn enable(
             ));
         }
         let until = Instant::now() + Duration::from_secs(10);
-        while snapshot(web_port).is_none() {
+        while !healthy(&install) {
             if Instant::now() >= until {
                 return Err(io::Error::other(
                     "Collector did not become healthy; client settings unchanged",
@@ -375,6 +412,11 @@ fn disable(paths: &Paths) -> io::Result<()> {
         return Err(io::Error::other("No managed tracing installation found"));
     }
     let install = paths.install()?;
+    if paths.plist.exists() && read(&paths.plist)? != plist(&paths.root, &install, &paths.label) {
+        return Err(io::Error::other(
+            "Service definition changed since setup; preserved it",
+        ));
+    }
     let owned = read(&paths.root.join("otel.toml"))?;
     let old = read_optional(&install.config)?;
     let updated = setup_config::disable(old.as_deref().unwrap_or(""), &owned)?;
@@ -511,6 +553,7 @@ mod tests {
             Path::new("/Users/test/A & B"),
             &Install {
                 version: None,
+                command: CollectorCommand::Desktop,
                 config: PathBuf::new(),
                 trace_port: 63701,
                 web_port: 61193,
