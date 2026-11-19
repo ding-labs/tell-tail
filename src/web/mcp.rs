@@ -401,6 +401,15 @@ fn router(app: App) -> Router {
                 )
             }),
         )
+        .route(
+            "/traces.mjs",
+            get(|| async {
+                (
+                    [(header::CONTENT_TYPE, "text/javascript")],
+                    include_str!("../../web/traces.mjs"),
+                )
+            }),
+        )
         .route("/api/mcp/snapshot", get(snapshot))
         .route("/api/mcp/events", get(events))
         .route("/api/mcp/event/{id}", get(detail))

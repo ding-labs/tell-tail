@@ -73,3 +73,10 @@ main { padding-top: 20px; }
   .activity-tabs [role="tab"] { font-size: 12px; }
   .activity-panel .section-heading { gap: 4px; }
 }
+[hidden] { display: none !important; }
+#trace-status { font-size: 12px; color: var(--ding-muted); }
+#trace-clear { align-self: flex-end; }
+#trace-coverage { margin-block: 8px; }
+#trace-copy-status { font-size: 12px; color: var(--ding-muted); }
+#trace-rows td:nth-child(2) { min-width: 190px; max-width: 300px; }
+@media(max-width:600px) { .activity-tabs { gap: 12px; flex-wrap: wrap; } .activity-tabs [role="tab"] { padding-block: 10px; } }

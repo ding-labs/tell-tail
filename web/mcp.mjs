@@ -1,3 +1,5 @@
+import { initTraces } from './traces.mjs';
+let viewChosen = false;
 const $ = id => document.getElementById(id);
 const hosts = { 'codex-desktop': 'Codex Desktop', 'claude-desktop': 'Claude Desktop' };
 const reasons = { reauthentication: 'OAuth reauthentication required', authentication: 'Authentication required or rejected', timeout: 'Host reported a timeout', missing_executable: 'Executable or file not found', transport: 'Connection or transport failure', other: 'Failure reported by host' };
@@ -58,7 +60,7 @@ function renderIssues(snapshot) {
   }));
 }
 function selectView(id, focus = false) {
-  for (const name of ['timeline', 'issues']) {
+  for (const name of ['timeline', 'issues', 'traces']) {
     const selected = name === id;
     const tab = $(`${name}-tab`);
     tab.setAttribute('aria-selected', String(selected));
@@ -66,16 +68,20 @@ function selectView(id, focus = false) {
     $(`${name}-view`).hidden = !selected;
     if (selected && focus) tab.focus();
   }
+  $('filters').hidden = id === 'traces';
   $('search-label').textContent = id === 'issues' ? 'Search available failure groups' : 'Search retained evidence';
   $('search').placeholder = id === 'issues' ? 'Server, failure reason, execution…' : 'Server, failure reason, method…';
 }
-for (const id of ['timeline', 'issues']) {
+for (const id of ['timeline', 'issues', 'traces']) {
   const tab = $(`${id}-tab`);
-  tab.addEventListener('click', () => selectView(id));
+  tab.addEventListener('click', () => { viewChosen = true; selectView(id); });
   tab.addEventListener('keydown', event => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();
-    selectView(event.key === 'Home' ? 'timeline' : event.key === 'End' ? 'issues' : id === 'timeline' ? 'issues' : 'timeline', true);
+    viewChosen = true;
+    const ids = ['timeline', 'issues', 'traces'];
+    const index = ids.indexOf(id);
+    selectView(event.key === 'Home' ? ids[0] : event.key === 'End' ? ids[2] : ids[(index + (event.key === 'ArrowRight' ? 1 : 2)) % 3], true);
   });
 }
 function timeline(events) {
@@ -91,7 +97,7 @@ async function history() {
   try { const res = await fetch(`/api/mcp/history?${params}`, { signal: queryAbort.signal }); if (!res.ok) throw new Error(res.status === 410 ? 'History has been evicted. Select Latest evidence.' : 'History unavailable; retained display has been kept.'); const data = await res.json(); if (request !== requestNumber) return; timeline(data.events); nextCursor = data.next_before; $('older').disabled = !nextCursor; $('page-note').textContent = `${data.events.length} shown · ${number(data.matched)} matches in this page range · ${number(data.retained)} retained`; $('history-status').textContent = ''; }
   catch (e) { if (e.name !== 'AbortError') $('history-status').textContent = e.message; }
 }
-function setPaused(value) { paused = value; pauseUntil = paused ? latest?.counts.observations : undefined; $('pause').textContent = paused ? 'Resume live' : 'Pause display'; $('pause').setAttribute('aria-pressed', String(paused)); $('display-note').textContent = paused ? 'Display paused. Collection and connection status continue; filters search evidence received before this pause.' : 'Following new observations. Imported history is labeled; server state is not a health check.'; }
+function setPaused(value) { paused = value; document.dispatchEvent(new CustomEvent('displaypause', { detail: value })); pauseUntil = paused ? latest?.counts.observations : undefined; $('pause').textContent = paused ? 'Resume live' : 'Pause display'; $('pause').setAttribute('aria-pressed', String(paused)); $('display-note').textContent = paused ? 'Display paused. Collection and connection status continue; filters search evidence received before this pause.' : 'Following new observations. Imported history is labeled; server state is not a health check.'; }
 async function inspect(id, issue) {
   $('detail-group').hidden = !issue;
   $('detail-title').textContent = issue ? 'Failure group evidence' : 'Event evidence';
@@ -131,3 +137,5 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) { str
 connect();
 
 setInterval(() => { if (paused || document.hidden) return; for (const element of document.querySelectorAll('[data-modified]')) { const stamp = Number(element.dataset.modified); element.textContent = `Last file write: ${date(stamp)} (${age(stamp)})`; } }, 1000);
+
+initTraces({ chooseDefault: () => { if (!viewChosen) selectView('traces'); }, pause: setPaused });

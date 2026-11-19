@@ -26,8 +26,8 @@ async function start(args) {
     child.once('exit', code => { clearTimeout(timer); reject(new Error(`Server exited ${code}: ${diagnostic}`)); });
     child.stderr.on('data', data => {
       diagnostic = (diagnostic + data).slice(-16384);
-      const match = diagnostic.match(/http:\/\/127\.0\.0\.1:\d+\//);
-      if (match) { clearTimeout(timer); accept(match[0]); }
+      const match = args[0] === 'mcp' ? diagnostic.match(/MCP web (http:\/\/127\.0\.0\.1:\d+\/)/) : diagnostic.match(/(http:\/\/127\.0\.0\.1:\d+\/)/);
+      if (match) { clearTimeout(timer); accept(match[1]); }
     });
   });
   return {

@@ -22,6 +22,7 @@
       <div class="activity-tabs" role="tablist" aria-label="Evidence views">
         <button id="timeline-tab" role="tab" aria-selected="true" aria-controls="timeline-view">Live timeline</button>
         <button id="issues-tab" role="tab" aria-selected="false" aria-controls="issues-view" tabindex="-1">Failure groups <span id="issues-tab-count" class="tab-count">0</span></button>
+        <button id="traces-tab" role="tab" aria-selected="false" aria-controls="traces-view" tabindex="-1">Tool calls <span id="traces-tab-count" class="tab-count">0</span></button>
       </div>
       <form id="filters" class="filters" role="search">
         <label class="search-field"><span id="search-label">Search retained evidence</span><input id="search" type="search" maxlength="200" placeholder="Server, failure reason, method…"></label>
@@ -43,11 +44,29 @@
         <div class="table-scroll evidence-scroll" role="region" aria-label="Failure groups" tabindex="0"><table class="mcp-table issues-table"><thead><tr><th scope="col">Last reported</th><th scope="col">Client / server</th><th scope="col">Failure / recovery</th><th scope="col">Count</th><th scope="col">Evidence</th></tr></thead><tbody id="issues"></tbody></table></div>
         <p id="issues-empty" class="empty">No failures observed in the available groups. This does not establish server health.</p>
       </section>
+      <section id="traces-view" role="tabpanel" aria-labelledby="traces-tab" tabindex="0" hidden>
+        <div class="section-heading"><h2>Tool calls</h2><p id="trace-status" role="status">Checking trace capture…</p></div>
+        <p id="trace-coverage" class="subtle">Result-only observations. Tool inputs and results are omitted.</p>
+        <form id="trace-filters" class="filters" role="search" aria-label="Tool call filters">
+          <label class="search-field">Search calls<input id="trace-q" type="search" maxlength="200" placeholder="Tool, plugin, execution…"></label>
+          <label>Plugin<input id="trace-plugin" type="search" maxlength="128" placeholder="Exact plugin ID"></label>
+          <label>Tool<input id="trace-tool" type="search" maxlength="128" placeholder="Exact tool name"></label>
+          <label>Execution<input id="trace-execution" type="search" maxlength="128" placeholder="Exact local label"></label>
+          <label>Outcome<select id="trace-outcome"><option value="">All outcomes</option><option value="completed">Completed</option><option value="failed">Execution failed</option><option value="conflict">Conflicting evidence</option><option value="incomplete">Incomplete</option></select></label>
+          <label>Time<select id="trace-since"><option value="">All retained</option><option value="900000">Last 15 minutes</option><option value="3600000">Last hour</option><option value="86400000">Last 24 hours</option></select></label>
+          <button id="trace-clear" type="button">Clear call filters</button>
+        </form>
+        <div class="table-scroll evidence-scroll" role="region" aria-label="Tool calls" tabindex="0"><table class="mcp-table"><thead><tr><th scope="col">Completed</th><th scope="col">Plugin / tool</th><th scope="col">Outcome</th><th scope="col">Duration</th><th scope="col">Execution</th><th scope="col">Evidence</th></tr></thead><tbody id="trace-rows"></tbody></table></div>
+        <p id="trace-empty" class="empty">Waiting for captured calls…</p>
+        <div class="pagination"><button id="trace-latest">Latest calls</button><button id="trace-older" disabled>Older calls</button><span id="trace-page-note" role="status"></span></div>
+        <p id="trace-limits" class="coverage-note"></p>
+      </section>
     </section>
     <details class="panel coverage-panel"><summary>Sources and coverage</summary><p class="subtle">File activity and the watcher connection do not establish MCP server health. Tool payloads are omitted.</p><div id="roots"></div><div id="sources" class="source-grid"></div><p id="coverage" class="coverage-note"></p><p id="limits" class="coverage-note"></p></details>
     <details class="panel coverage-panel"><summary>Last observed server states</summary><p class="subtle">Execution scopes are kept separate. An old ready record is not a current health check.</p><ul id="server-states" class="state-list"></ul><p id="states-note" class="subtle"></p></details>
-    <footer>Read from supported desktop logs · Bounded local history · No requests sent to MCP servers</footer>
+    <footer>Desktop logs and opt-in tool telemetry · Bounded local history · No requests sent to MCP servers</footer>
   </main>
 </div>
 <dialog id="detail"><div class="section-heading"><h2 id="detail-title">Event evidence</h2><button id="close-detail" aria-label="Close evidence">Close</button></div><p id="detail-summary"></p><div id="detail-group" hidden><p id="detail-advice"></p><dl id="detail-group-fields" class="evidence-fields"></dl></div><dl id="detail-fields" class="evidence-fields"></dl><p class="subtle">Diagnostic metadata only. Raw errors, credentials, tool arguments, and results are omitted.</p><div class="controls"><button id="copy">Copy diagnostic summary</button><span id="copy-status" role="status"></span></div></dialog>
+<dialog id="trace-detail"><div class="section-heading"><h2>Tool call evidence</h2><button id="trace-close" aria-label="Close tool call evidence">Close</button></div><p id="trace-detail-note"></p><dl id="trace-detail-fields" class="evidence-fields"></dl><p class="subtle">Diagnostic metadata only. Arguments, results, credentials and raw execution IDs are omitted.</p><div class="controls"><button id="trace-copy">Copy call metadata</button><span id="trace-copy-status" role="status"></span></div></dialog>
 </body></html>
