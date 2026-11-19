@@ -9,6 +9,11 @@ Status: implemented in focused commits November 12, 2026; unreleased. See the
 measured acceptance, and external checks still pending. The [local audit](MCP-LOG-AUDIT-2026-11-12.md)
 establishes useful existing log signals and their limits.
 
+The proposed next feature is covered in the
+[per-plugin tool-call tracing plan](PLAN-PLUGIN-TRACING.md). It adds a separate,
+explicitly enabled call-event source; the existing passive logs do not provide
+complete per-plugin execution traces.
+
 ## Outcome
 
 ```sh
