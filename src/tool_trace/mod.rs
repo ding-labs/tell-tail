@@ -10,3 +10,6 @@ pub mod live;
 pub mod otlp;
 #[cfg(feature = "web")]
 pub mod receiver;
+
+#[cfg(feature = "web")]
+mod setup_config;
