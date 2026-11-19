@@ -38,6 +38,7 @@ struct App {
     token: String,
     epoch: String,
     queue: SyncSender<Batch>,
+    queued_events: Arc<AtomicUsize>,
 }
 pub struct Running {
     worker: Option<JoinHandle<()>>,
@@ -104,10 +105,13 @@ impl Running {
         }
         let (tx, rx) = mpsc::sync_channel::<Batch>(4);
         let queue_state = shared.clone();
+        let queued_events = Arc::new(AtomicUsize::new(0));
+        let consumer_events = queued_events.clone();
         let consumer = thread::Builder::new()
             .name("tell-tail-trace-store".into())
             .spawn(move || {
                 while let Ok(batch) = rx.recv() {
+                    let count = batch.observations.len();
                     let Ok(mut s) = queue_state.lock() else { break };
                     s.accepted_batches += 1;
                     s.ignored_records += batch.ignored as u64;
@@ -118,6 +122,7 @@ impl Running {
                             s.rejected_records += 1;
                         }
                     }
+                    consumer_events.fetch_sub(count, Ordering::Relaxed);
                 }
             })?;
         let epoch = shared
@@ -132,6 +137,7 @@ impl Running {
             token,
             epoch,
             queue: tx,
+            queued_events,
         };
         let cancel = stop.clone();
         {
@@ -237,7 +243,12 @@ async fn intake(State(app): State<App>, req: Request) -> Response {
     let result = async {
         if let Some(status) = request_status(&req, &app) {
             if let Ok(mut s) = app.shared.lock() {
-                s.last_rejection = Some("request_headers");
+                s.last_rejection = Some(match status {
+                    StatusCode::PAYLOAD_TOO_LARGE => "body_limit",
+                    StatusCode::FORBIDDEN => "access_denied",
+                    StatusCode::UNSUPPORTED_MEDIA_TYPE => "unsupported_encoding",
+                    _ => "request_headers",
+                });
             }
             return status;
         }
@@ -255,7 +266,24 @@ async fn intake(State(app): State<App>, req: Request) -> Response {
                 return StatusCode::BAD_REQUEST;
             }
         };
+        let count = batch.observations.len();
+        if app
+            .queued_events
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
+                n.checked_add(count).filter(|n| *n <= 1024)
+            })
+            .is_err()
+        {
+            if let Ok(mut s) = app.shared.lock() {
+                s.last_rejection = Some("queue_full");
+            }
+            return StatusCode::SERVICE_UNAVAILABLE;
+        }
         if app.queue.try_send(batch).is_err() {
+            app.queued_events.fetch_sub(count, Ordering::Relaxed);
+            if let Ok(mut s) = app.shared.lock() {
+                s.last_rejection = Some("queue_full");
+            }
             return StatusCode::SERVICE_UNAVAILABLE;
         }
         StatusCode::OK
@@ -350,5 +378,41 @@ mod tests {
         running.join().unwrap();
         assert!(!state.lock().unwrap().running);
         assert!(config.exists());
+    }
+}
+
+#[cfg(test)]
+mod saturation_tests {
+    use super::*;
+    #[tokio::test]
+    async fn saturated_event_budget_rejects_without_acknowledging_or_growing_queue() {
+        let shared = Arc::new(std::sync::Mutex::new(super::super::live::State::default()));
+        let (queue, _rx) = mpsc::sync_channel(4);
+        let budget = Arc::new(AtomicUsize::new(1024));
+        let app = App {
+            shared: shared.clone(),
+            host: "127.0.0.1:4318".into(),
+            token: "a".repeat(64),
+            epoch: "epoch".into(),
+            queue,
+            queued_events: budget.clone(),
+        };
+        let body = include_bytes!("../../tests/fixtures/tool-trace/codex-result.pb");
+        let req = Request::builder()
+            .method("POST")
+            .uri("/v1/logs")
+            .header("host", "127.0.0.1:4318")
+            .header("content-type", "application/x-protobuf")
+            .header("content-length", body.len())
+            .header("x-tell-tail-probe-key", "a".repeat(64))
+            .body(axum::body::Body::from(body.as_slice()))
+            .unwrap();
+        assert_eq!(
+            intake(State(app), req).await.status(),
+            StatusCode::SERVICE_UNAVAILABLE
+        );
+        assert_eq!(budget.load(Ordering::Relaxed), 1024);
+        assert_eq!(shared.lock().unwrap().accepted_batches, 0);
+        assert_eq!(shared.lock().unwrap().rejected_batches, 1);
     }
 }
