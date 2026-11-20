@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Unify Logs and AI Activity under Tell-Tail with a shared workspace switch,
+  branding and appearance. File/stdin launches keep the original Logs dashboard;
+  desktop collectors provide real aggregate log metrics through the same follower.
+- Preserve file/stdin parsers, counters, charts, recent errors and APIs. Desktop
+  metrics remain metadata-only. Inactive AI Activity offers explicit setup guidance;
+  navigating there does not start desktop discovery or change tracing settings.
+
 - Add `desktop` mode: an allowlisted general desktop event adapter and a unified
   Activity workspace for ChatGPT and Codex, alongside Tools & MCP, Problems and
   Sources. Include a time navigator, frozen evidence inspector, retained-history

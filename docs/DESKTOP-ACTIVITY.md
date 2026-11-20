@@ -1,7 +1,7 @@
-# Tell-Tail for ChatGPT and Codex
+# Tell-Tail · AI Activity
 
 Available in this source checkout; not included in published 0.4.0 binaries.
-The desktop workspace combines supported local desktop observations, MCP
+The AI Activity workspace combines supported local desktop observations, MCP
 server diagnostics, and opted-in Codex tool results. It does not read conversation
 databases or claim to observe every ChatGPT cloud operation.
 
@@ -9,6 +9,23 @@ databases or claim to observe every ChatGPT cloud operation.
 
 See the [implementation validation](VALIDATION-DESKTOP-ACTIVITY.md) for measured
 limits, native migration evidence and live capture results.
+
+## One Tell-Tail, two workspaces
+
+Use the **Logs / AI Activity** switch beside the Tell-Tail name. ChatGPT and
+Codex identify this integration, not a separate product. `/activity` opens the
+activity workspace; `/logs` opens the original metrics dashboard with aggregate
+counts from the desktop logs already followed. No second follower is started.
+The metrics are based on complete record contents and source-reported severity;
+AI Activity applies its own event semantics. Ordinary warning-level connection
+closures can therefore contribute to Logs warnings without becoming Problems.
+
+Desktop Logs includes imported history at receipt time. Its byte counts exclude
+line endings, oversized records, partial records and unread bootstrap history;
+raw previews and unavailable ingestion diagnostics are hidden. The Activity
+Sources view retains follower/discovery diagnostics. General file/stdin launches
+keep their original physical-byte counters, parsers and recent-error previews.
+See [workspaces](WORKSPACES.md) for the full entry-point contract.
 
 ## Start with Activity
 

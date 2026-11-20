@@ -1,9 +1,15 @@
 # Tell-Tail
 
-A Rust log throughput and severity monitor with terminal and local web dashboards.
-Tell-Tail reads one file or stdin and keeps counters, bounded rolling statistics,
-and a small in-memory sample of recent errors for its dashboards. It supports
-plain text, NDJSON, Prometheus, and a local HTTP/SSE metrics API.
+Local observability for logs, tools, and applications.
+
+Tell-Tail's **Logs** workspace monitors throughput, severity, rolling statistics,
+and recent errors from a file or stdin. The terminal dashboard, plain text,
+NDJSON, Prometheus, and local HTTP/SSE metrics API remain core capabilities.
+
+The unreleased **AI Activity** workspace adds supported desktop events, plugin
+results, connections, and MCP diagnostics. Both workspaces share Tell-Tail's
+navigation and appearance; ChatGPT and Codex are integrations within the product.
+See [workspaces](docs/WORKSPACES.md) for entry points and source boundaries.
 
 Hosted documentation: [released guides](https://docs.ding.ing/tell-tail/) ·
 [unreleased preview](https://docs.ding.ing/tell-tail/next/) ·
@@ -74,7 +80,7 @@ See [MCP diagnostics](docs/MCP.md) for sources, headless output, and coverage li
 Read the [hosted MCP guide](https://docs.ding.ing/tell-tail/mcp/) for installation
 and usage. MCP diagnostics require 0.4.0 or later; no source build is needed.
 
-### Tell-Tail for ChatGPT and Codex (unreleased)
+### AI Activity for ChatGPT and Codex (unreleased)
 
 The new desktop workspace brings general desktop events, connections, plugin
 results and MCP diagnostics into one Activity timeline. Compact rows, a time

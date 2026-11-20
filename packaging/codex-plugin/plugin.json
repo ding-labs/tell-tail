@@ -2,7 +2,7 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "tell-tail",
   "version": "0.2.0",
-  "description": "Local desktop activity, MCP diagnostics and tool-call observability for ChatGPT and Codex on macOS.",
+  "description": "Tell-Tail local observability, with AI Activity for ChatGPT and Codex and a first-class Logs workspace.",
   "license": "MIT",
   "homepage": "https://github.com/ding-labs/tell-tail",
   "extensions": {
@@ -11,8 +11,8 @@
       "onboardingSkill": "./skills/tell-tail/SKILL.md",
       "interface": {
         "displayName": "Tell-Tail",
-        "shortDescription": "Desktop activity for ChatGPT and Codex",
-        "longDescription": "Explore supported desktop events, connections, MCP diagnostics and plugin tool results in one local Activity timeline. Persistent tool capture requires setup and a one-time Codex restart. Metadata only; bounded in-memory history. Complete cloud activity is not observed.",
+        "shortDescription": "AI Activity for ChatGPT and Codex",
+        "longDescription": "Open Tell-Tail AI Activity for supported desktop events, connections, MCP diagnostics and plugin results. Switch to Logs for aggregate desktop log metrics. Persistent tool capture requires setup and a one-time Codex restart. Metadata only; bounded in-memory history.",
         "developerName": "Ding Labs",
         "category": "Productivity",
         "defaultPrompt": [
