@@ -20,6 +20,7 @@ pub type Shared = Arc<Mutex<Store>>;
 pub struct Running {
     pub shared: Shared,
     pub activity: Option<crate::activity::runtime::Shared>,
+    pub logs: Option<super::log_metrics::Shared>,
     pub traces: crate::tool_trace::live::Shared,
     #[cfg(feature = "web")]
     trace_receiver: Option<crate::tool_trace::receiver::Running>,
@@ -28,6 +29,11 @@ pub struct Running {
 }
 impl Running {
     pub fn start(args: &Args, stop: Arc<AtomicUsize>) -> io::Result<Self> {
+        let logs = (args.mode() == Output::Web).then(|| {
+            Arc::new(Mutex::new(super::log_metrics::LogMetrics::new(
+                args.demo || args.trace_replay.is_some(),
+            )))
+        });
         let activity = args
             .desktop
             .then(|| Arc::new(Mutex::new(crate::activity::store::Store::default())));
@@ -48,6 +54,9 @@ impl Running {
             })
             .transpose()?;
         if let Some(path) = &args.trace_replay {
+            if let Some(logs) = &logs {
+                logs.lock().unwrap().update(&[], false);
+            }
             let file = crate::platform::open_regular(path)?;
             let shared = Arc::new(Mutex::new(Store::default()));
             shared.lock().unwrap().demo = true;
@@ -89,6 +98,7 @@ impl Running {
                 })?;
             return Ok(Self {
                 shared,
+                logs,
                 activity,
                 traces,
                 #[cfg(feature = "web")]
@@ -114,6 +124,7 @@ impl Running {
         let slot = shared.clone();
         let projection = activity.clone();
         let trace_slot = traces.clone();
+        let log_slot = logs.clone();
         let demo_mode = args.demo;
         let cancel = stop.clone();
         let worker = thread::Builder::new()
@@ -126,6 +137,9 @@ impl Running {
                         demo.tick().expect("synthetic replay failed");
                     }
                     collector.poll(|r| {
+                        if let Some(logs) = &log_slot {
+                            logs.lock().unwrap().record(r.bytes);
+                        }
                         if let Some(b) = &mut bridge {
                             b.record(r, &slot);
                         } else {
@@ -134,6 +148,9 @@ impl Running {
                     });
                     if let Some(b) = &mut bridge {
                         b.sync(Some(&collector), &trace_slot, true, demo_mode);
+                    }
+                    if let Some(logs) = &log_slot {
+                        logs.lock().unwrap().update(&collector.views(), true);
                     }
                     let backlog = collector.views().iter().any(|s| s.backlog_bytes > 0);
                     {
@@ -164,6 +181,9 @@ impl Running {
                         Duration::from_millis(100)
                     });
                 }
+                if let Some(logs) = &log_slot {
+                    logs.lock().unwrap().update(&collector.views(), false);
+                }
                 let mut s = slot.lock().unwrap();
                 s.running = false;
                 s.sequence += 1;
@@ -174,6 +194,7 @@ impl Running {
             })?;
         Ok(Self {
             shared,
+            logs,
             activity,
             traces,
             #[cfg(feature = "web")]

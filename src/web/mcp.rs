@@ -72,14 +72,35 @@ async fn serve(
     let initial = running.snapshot()?;
     let mut published = initial.sequence;
     let (tx, frames) = watch::channel(Bytes::from(initial.json()?));
-    let app = router(App {
-        shared: running.shared.clone(),
-        activity: running.activity.clone(),
-        traces: running.traces.clone(),
-        frames,
+    let logs = running.logs.as_ref().expect("web log metrics").clone();
+    let mut log_sequence = 0;
+    let encode_logs = |generation| -> io::Result<super::Delivery> {
+        let snapshot = logs
+            .lock()
+            .map_err(|_| io::Error::other("Log metrics unavailable"))?
+            .snapshot();
+        super::Delivery::encode(crate::snapshots::PublishedSnapshot {
+            generation,
+            snapshot,
+        })
+    };
+    let (log_tx, log_frames) = watch::channel(Arc::new(encode_logs(0)?));
+    let log_app = super::App {
+        frames: log_frames,
         streams: Arc::new(Semaphore::new(STREAMS)),
         host: host.clone(),
-    });
+    };
+    let app = router(
+        App {
+            shared: running.shared.clone(),
+            activity: running.activity.clone(),
+            traces: running.traces.clone(),
+            frames,
+            streams: Arc::new(Semaphore::new(STREAMS)),
+            host: host.clone(),
+        },
+        log_app,
+    );
     let slots = Arc::new(Semaphore::new(CONNECTIONS));
     let mut tasks = JoinSet::new();
     let mut tick = tokio::time::interval(Duration::from_millis(200));
@@ -115,6 +136,8 @@ async fn serve(
         }
         tokio::select! {
             _=tick.tick()=>{
+                log_sequence += 1;
+                log_tx.send_replace(Arc::new(encode_logs(log_sequence)?));
                 let sequence = running.shared.lock().map(|s|s.sequence).map_err(|_|io::Error::other("MCP collector failed"));
                 match sequence {
                     Ok(sequence) if sequence == published => continue,
@@ -143,6 +166,8 @@ async fn serve(
     // Give connected clients a bounded chance to receive an explicit stopped state.
     running.stop();
     running.join()?;
+    log_sequence += 1;
+    log_tx.send_replace(Arc::new(encode_logs(log_sequence)?));
     if let Ok(snapshot) = running
         .snapshot()
         .and_then(|s| s.json().map_err(io::Error::other))
@@ -357,7 +382,7 @@ async fn history(State(app): State<App>, request: Request) -> Response {
         64 * 1024,
     )
 }
-fn router(app: App) -> Router {
+fn router(app: App, log_app: super::App) -> Router {
     let routes = Router::new()
         .route(
             "/",
@@ -372,15 +397,6 @@ fn router(app: App) -> Router {
         .route(
             "/mcp",
             get(|| async { Html(include_str!("../../web/mcp.html")) }),
-        )
-        .route(
-            "/dashboard.css",
-            get(|| async {
-                (
-                    [(header::CONTENT_TYPE, "text/css")],
-                    include_str!("../../web/dashboard.css"),
-                )
-            }),
         )
         .route(
             "/mcp.css",
@@ -401,24 +417,6 @@ fn router(app: App) -> Router {
             }),
         )
         .route(
-            "/logo.svg",
-            get(|| async {
-                (
-                    [(header::CONTENT_TYPE, "image/svg+xml")],
-                    include_str!("../../web/logo.svg"),
-                )
-            }),
-        )
-        .route(
-            "/favicon.svg",
-            get(|| async {
-                (
-                    [(header::CONTENT_TYPE, "image/svg+xml")],
-                    include_str!("../../web/favicon.svg"),
-                )
-            }),
-        )
-        .route(
             "/traces.mjs",
             get(|| async {
                 (
@@ -432,7 +430,23 @@ fn router(app: App) -> Router {
         .route("/api/mcp/event/{id}", get(detail))
         .route("/api/mcp/history", get(history))
         .with_state(app.clone())
-        .merge(super::trace::router(app.traces.clone()));
+        .merge(super::trace::router(app.traces.clone()))
+        .merge(super::assets::files())
+        .route(
+            "/logs",
+            get(|| async {
+                Html(
+                    include_str!("../../web/index.html")
+                        .replace("data-collector=\"logs\"", "data-collector=\"desktop\""),
+                )
+            }),
+        )
+        .merge(
+            Router::new()
+                .route("/api/snapshot", get(super::snapshot))
+                .route("/api/events", get(super::events))
+                .with_state(log_app),
+        );
     let routes = if let Some(activity) = &app.activity {
         routes.merge(super::activity::router(activity.clone()))
     } else {

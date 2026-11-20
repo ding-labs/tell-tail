@@ -13,3 +13,5 @@ pub mod store;
 pub mod cli;
 pub mod demo;
 pub mod runtime;
+
+pub mod log_metrics;

@@ -1,12 +1,20 @@
 //! Fixed compile-time assets; no filesystem reads or external frontend runtime.
-use super::App;
 use axum::{Router, http::header, response::Html, routing::get};
 
-pub(super) fn routes() -> Router<App> {
-    let mut routes = Router::new().route(
-        "/",
-        get(|| async { Html(include_str!("../../web/index.html")) }),
-    );
+pub(super) fn routes<S: Clone + Send + Sync + 'static>() -> Router<S> {
+    files()
+        .route(
+            "/",
+            get(|| async { Html(include_str!("../../web/index.html")) }),
+        )
+        .route(
+            "/logs",
+            get(|| async { Html(include_str!("../../web/index.html")) }),
+        )
+}
+
+pub(super) fn files<S: Clone + Send + Sync + 'static>() -> Router<S> {
+    let mut routes = Router::new();
     for (path, mime, content) in [
         (
             "/dashboard.css",

@@ -148,3 +148,41 @@ fn activity_api_preserves_freeze_filter_bins_provenance_and_access_rules() {
             .starts_with("HTTP/1.1 410")
     );
 }
+
+#[test]
+fn desktop_logs_reuse_real_metrics_and_keep_raw_bodies_private() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("desktop.log");
+    fs::write(&path, "INFO ready\nERROR PRIVATE_SECRET\n").unwrap();
+    let m = Monitor::start(dir.path());
+    let began = Instant::now();
+    let snapshot = loop {
+        let s = m.json("/api/snapshot");
+        if s["metrics"]["totals"]["records"] == "2" {
+            break s;
+        }
+        assert!(began.elapsed() < Duration::from_secs(5));
+        std::thread::sleep(Duration::from_millis(20));
+    };
+    assert!(!snapshot.to_string().contains("PRIVATE"));
+    assert_eq!(snapshot["metrics"]["totals"]["levels"]["error"], "1");
+    let page = m.request("/logs", "").unwrap();
+    assert!(page.contains("data-collector=\"desktop\""));
+    assert!(page.contains("Throughput"));
+    assert!(
+        m.request("/api/snapshot", "Origin: https://foreign.example\r\n")
+            .unwrap()
+            .starts_with("HTTP/1.1 403")
+    );
+    fs::OpenOptions::new()
+        .append(true)
+        .open(path)
+        .unwrap()
+        .write_all(b"WARN next\n")
+        .unwrap();
+    let began = Instant::now();
+    while m.json("/api/snapshot")["metrics"]["totals"]["records"] != "3" {
+        assert!(began.elapsed() < Duration::from_secs(5));
+        std::thread::sleep(Duration::from_millis(20));
+    }
+}

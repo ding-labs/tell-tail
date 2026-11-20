@@ -165,3 +165,5 @@ footer { display: flex; justify-content: space-between; gap: 24px; border-top: 1
   .diagnostics > .subtle { padding: 0 16px 16px; }
   footer { flex-direction: column; gap: 8px; }
 }
+
+.desktop-log-note{display:none}body[data-collector=desktop] .desktop-log-note{display:block;padding:14px 18px;border:1px solid var(--ding-border);border-radius:6px;color:var(--ding-muted);font-size:12px}body[data-collector=desktop] .recent-panel,body[data-collector=desktop] .diagnostics{display:none}
