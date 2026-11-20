@@ -109,7 +109,7 @@ async function load({live=false}={}){
     state.page=page;state.bins=bins;state.next=page?.next_cursor||null;state.groups=new Map();
     if(state.view==='sources'){
       $('view-count').textContent='Sources and coverage';$('empty').hidden=true;
-      renderSources($('sources-view'),state.sources,state.now,snapshot);
+      renderSources($('capture-sources'),state.sources,state.now,snapshot);
     }else{
       if(problems){state.groups=new Map(problems.groups.map(g=>[g.item_id,g]));page.items=problems.groups.map(g=>g.item);state.next=null;}
       renderRows($('rows'),page.items,state.selected,inspect,state.groups);

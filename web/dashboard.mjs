@@ -1,3 +1,4 @@
+import {metricsEndpoint, sourceId} from './log-sources.mjs';
 import { elapsed, finalStates, FrameError, parseFrame } from './frame.mjs';
 import { render, stopChartAnimation } from './render.mjs';
 
@@ -37,7 +38,7 @@ function reportError(reason, endpoint = '/api/events') {
 
 function setText(element, value) { if (element.textContent !== value) element.textContent = value; }
 function isFinal() { return latest && finalStates.has(latest.metrics.state); }
-function requiresManualRetry() { return ['capacity', 'invalid', 'failure'].includes(phase); }
+function requiresManualRetry() { return ['capacity', 'invalid', 'failure', 'source-unavailable'].includes(phase); }
 
 // One latest frame and one scheduled paint, including while display is frozen.
 function paint() {
@@ -66,6 +67,7 @@ function paint() {
         capacity: 'Stream capacity reached · four live tabs are already connected. Close one, then retry.',
         invalid: `${failureDetail} Last metrics retained. See browser console; retry after resolving the error.`,
         failure: 'Web output failed · last metrics retained',
+        'source-unavailable': `${failureDetail} Choose another log or use Manage sources.`,
       }[phase];
       if (phase === 'invalid' || phase === 'failure') tone = 'error';
     }
@@ -127,7 +129,7 @@ async function recover(stale = false) {
   request = controller;
   const timeout = setTimeout(() => controller.abort(), 2000);
   try {
-    const response = await fetch('/api/snapshot', { cache: 'no-store', signal: controller.signal });
+    const response = await fetch(metricsEndpoint('snapshot'), { cache: 'no-store', signal: controller.signal });
     if (ticket !== epoch) return;
     if (response.ok) {
       const json = await response.text();
@@ -143,6 +145,13 @@ async function recover(stale = false) {
         paint();
         return;
       }
+    } else if (sourceId && [404,409].includes(response.status)) {
+      const detail = await response.json();
+      if (ticket !== epoch) return;
+      failureDetail = typeof detail.error === 'string' ? detail.error : 'Source unavailable.';
+      phase = 'source-unavailable';
+      paint();
+      return;
     } else {
       warnConnection(`Snapshot request returned HTTP ${response.status}`, 'snapshot');
     }
@@ -168,7 +177,7 @@ function connect({ manual = false } = {}) {
   failureDetail = '';
   phase = latest ? 'reconnecting' : 'connecting';
   paint();
-  const stream = new EventSource('/api/events');
+  const stream = new EventSource(metricsEndpoint('events'));
   source = stream;
   stream.addEventListener('snapshot', event => {
     if (source !== stream) return;

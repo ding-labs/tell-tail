@@ -7,6 +7,8 @@
   <script type="module" src="/activity.mjs"></script>
   <link rel="stylesheet" href="/workspace.css">
   <script type="module" src="/workspace.mjs"></script>
+<link rel="stylesheet" href="/log-sources.css">
+<script type="module" src="/log-sources.mjs"></script>
 </head>
 <body>
   <a class="skip-link" href="#feed">Skip to activity</a>
@@ -59,7 +61,7 @@
           <div id="list-heading" class="list-heading"><span>Recorded time</span><span>Observation</span><span>Outcome / duration</span></div>
           <div id="rows" role="list"></div>
           <div id="empty" class="empty" hidden><div class="empty-symbol" aria-hidden="true">≋</div><h2 id="empty-title">Waiting for activity</h2><p id="empty-note"></p><button id="empty-reset" hidden>Clear filters</button></div>
-          <section id="sources-view" hidden aria-label="Capture sources"></section>
+          <section id="sources-view" hidden aria-label="Capture sources"><section id="user-sources" class="source-section"></section><div id="capture-sources"></div></section>
           <div id="pagination" class="pagination"><button id="latest">Latest activity</button><button id="older" disabled>Older activity</button><span id="page-note" class="muted"></span></div>
         </section>
         <dialog id="inspector" class="inspector" aria-labelledby="detail-title">

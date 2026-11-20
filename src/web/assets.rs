@@ -21,6 +21,16 @@ pub(super) fn files<S: Clone + Send + Sync + 'static>() -> Router<S> {
     let mut routes = Router::new();
     for (path, mime, content) in [
         (
+            "/log-sources.mjs",
+            "text/javascript; charset=utf-8",
+            include_str!("../../web/log-sources.mjs"),
+        ),
+        (
+            "/log-sources.css",
+            "text/css; charset=utf-8",
+            include_str!("../../web/log-sources.css"),
+        ),
+        (
             "/workspace.css",
             "text/css; charset=utf-8",
             include_str!("../../web/workspace.css"),

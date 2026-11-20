@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/dashboard.css">
   <script type="module" src="/dashboard.mjs"></script>
   <link rel="stylesheet" href="/workspace.css">
+  <link rel="stylesheet" href="/log-sources.css">
   <script type="module" src="/workspace.mjs"></script>
 </head>
 <body data-collector="logs">
@@ -24,6 +25,7 @@
           <button class="primary" id="retry" type="button" hidden>Retry connection</button>
         </div>
       </div>
+      <section id="log-source-toolbar" hidden aria-label="Log source selection"></section>
       <div class="connection" id="connection" data-tone="neutral" role="status" aria-live="polite" aria-atomic="true">Connecting to local monitor…</div>
       <p class="display-note" id="display-note">Waiting for the first snapshot.</p>
       <p class="desktop-log-note">Complete records from the desktop logs already followed by this collector. Rates include imported history at receipt time; bytes count record contents, excluding line endings. Oversized and partial records are excluded. Raw previews are disabled here. Source limits are available in <a href="/activity">AI Activity → Sources</a>.</p>
