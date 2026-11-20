@@ -53,8 +53,24 @@ pub fn run(args: &Args, signals: &crate::runtime::Signals) -> io::Result<i32> {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()?;
+    let sources_path = args.sources_file.clone().or_else(|| {
+        args.trace_token_file
+            .as_ref()
+            .and_then(|p| p.parent())
+            .map(|p| p.join("log-sources.json"))
+    });
+    let sources = Arc::new(std::sync::Mutex::new(crate::log_sources::Manager::open(
+        sources_path,
+    )?));
     let mut running = Running::start(args, signals.requested.clone())?;
-    let result = runtime.block_on(serve(listener, host, args.open, &mut running, signals));
+    let result = runtime.block_on(serve(
+        listener,
+        host,
+        args.open,
+        &mut running,
+        signals,
+        sources,
+    ));
     running.stop();
     running.join()?;
     result?;
@@ -67,6 +83,7 @@ async fn serve(
     open: bool,
     running: &mut Running,
     signals: &crate::runtime::Signals,
+    sources: Arc<std::sync::Mutex<crate::log_sources::Manager>>,
 ) -> io::Result<()> {
     let listener = tokio::net::TcpListener::from_std(listener)?;
     let initial = running.snapshot()?;
@@ -90,6 +107,11 @@ async fn serve(
         streams: Arc::new(Semaphore::new(STREAMS)),
         host: host.clone(),
     };
+    let source_app = super::log_sources::App {
+        manager: sources,
+        host: host.clone(),
+        streams: log_app.streams.clone(),
+    };
     let app = router(
         App {
             shared: running.shared.clone(),
@@ -100,7 +122,8 @@ async fn serve(
             host: host.clone(),
         },
         log_app,
-    );
+    )
+    .merge(super::log_sources::router(source_app));
     let slots = Arc::new(Semaphore::new(CONNECTIONS));
     let mut tasks = JoinSet::new();
     let mut tick = tokio::time::interval(Duration::from_millis(200));

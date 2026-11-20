@@ -2,6 +2,7 @@
 mod activity;
 mod assets;
 mod browser;
+mod log_sources;
 pub mod mcp;
 mod socket;
 mod trace;

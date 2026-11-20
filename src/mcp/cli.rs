@@ -31,6 +31,9 @@ pub struct Args {
     /// Loopback port (default: choose an available port).
     #[arg(long)]
     pub web_port: Option<u16>,
+    /// Persist user-selected log sources here (managed installs default beside the trace credential).
+    #[arg(long)]
+    pub sources_file: Option<PathBuf>,
     /// Inspect bounded existing history and exit; headless outputs only.
     #[arg(long)]
     pub once: bool,
@@ -56,6 +59,9 @@ impl Args {
             .unwrap_or(if self.open { Output::Web } else { Output::Text })
     }
     pub fn validate(&self) -> Result<(), &'static str> {
+        if self.sources_file.is_some() && self.mode() != Output::Web {
+            return Err("--sources-file requires web output");
+        }
         if self.trace_port.is_some() && !cfg!(feature = "web") {
             return Err("Live trace capture requires the web feature; replay remains available");
         }
