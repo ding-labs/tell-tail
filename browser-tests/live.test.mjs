@@ -124,14 +124,19 @@ test('real SSE freezes only display, resumes by keyboard and retains final state
   page.on('request', r => { if (r.url().endsWith('/api/events')) requests.push(r.url()); });
   server.child.stdin.write('INFO first\n');
   await page.waitForFunction(() => document.getElementById('total-records').textContent === '1');
-  await page.keyboard.press('Tab');
-  await page.keyboard.press('Tab');
+  const visited=[];
+  for(let n=0;n<8&&!await page.locator('#freeze').evaluate(el=>el===document.activeElement);n++){
+    await page.keyboard.press('Tab');
+    visited.push(await page.evaluate(()=>document.activeElement.getAttribute('href')||document.activeElement.id));
+  }
+  assert.ok(visited.includes('/logs')&&visited.includes('/activity'),'workspace links are keyboard reachable');
   assert.equal(await page.locator('#freeze').evaluate(el => el === document.activeElement), true);
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => document.getElementById('freeze').getAttribute('aria-pressed') === 'true');
   server.child.stdin.write('WARN second\nERROR third\n');
   // A real snapshot fetch confirms ingestion moved independently of the frozen UI.
-  await page.waitForFunction(async () => (await (await fetch('/api/snapshot')).json()).metrics.totals.records === '3');
+  const deadline=Date.now()+5000;
+  while((await(await fetch(server.url+'api/snapshot')).json()).metrics.totals.records!=='3'){assert.ok(Date.now()<deadline);await new Promise(r=>setTimeout(r,20));}
   assert.equal(await page.locator('#total-records').textContent(), '1');
   assert.match(await page.locator('#connection').textContent(), /Live/);
   await page.keyboard.press('Space');
