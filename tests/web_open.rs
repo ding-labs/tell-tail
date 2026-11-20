@@ -110,7 +110,7 @@ fn browser_handoff_is_literal_nonfatal_and_never_delays_server_shutdown() {
         let mut response = String::new();
         socket.read_to_string(&mut response).unwrap();
         assert!(response.starts_with("HTTP/1.1 200"), "{mode}: {response}");
-        assert!(response.contains("Live metrics"));
+        assert!(response.contains("id=\"record-rate\""));
         let began = Instant::now();
         assert!(
             Command::new("/bin/kill")
