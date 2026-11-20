@@ -4,6 +4,10 @@ use axum::{Router, http::header, response::Html, routing::get};
 pub(super) fn routes<S: Clone + Send + Sync + 'static>() -> Router<S> {
     files()
         .route(
+            "/activity",
+            get(|| async { Html(include_str!("../../web/activity-start.html")) }),
+        )
+        .route(
             "/",
             get(|| async { Html(include_str!("../../web/index.html")) }),
         )
@@ -16,6 +20,21 @@ pub(super) fn routes<S: Clone + Send + Sync + 'static>() -> Router<S> {
 pub(super) fn files<S: Clone + Send + Sync + 'static>() -> Router<S> {
     let mut routes = Router::new();
     for (path, mime, content) in [
+        (
+            "/workspace.css",
+            "text/css; charset=utf-8",
+            include_str!("../../web/workspace.css"),
+        ),
+        (
+            "/workspace.mjs",
+            "text/javascript; charset=utf-8",
+            include_str!("../../web/workspace.mjs"),
+        ),
+        (
+            "/preferences.mjs",
+            "text/javascript; charset=utf-8",
+            include_str!("../../web/preferences.mjs"),
+        ),
         (
             "/dashboard.css",
             "text/css; charset=utf-8",

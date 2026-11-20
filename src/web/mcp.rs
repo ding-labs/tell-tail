@@ -395,6 +395,16 @@ fn router(app: App, log_app: super::App) -> Router {
             }),
         )
         .route(
+            "/activity",
+            get(|State(app): State<App>| async move {
+                Html(if app.activity.is_some() {
+                    include_str!("../../web/activity.html")
+                } else {
+                    include_str!("../../web/mcp.html")
+                })
+            }),
+        )
+        .route(
             "/mcp",
             get(|| async { Html(include_str!("../../web/mcp.html")) }),
         )

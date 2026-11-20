@@ -14,14 +14,10 @@ const frozen=()=>state.paused||state.held||state.cursor!==null||state.selected!=
 const filter=()=>state.filters[state.view]||state.filters.activity;
 
 function applyPreferences(){
-  const theme=['light','dark'].includes(preferences.theme)?preferences.theme:'system';
-  document.documentElement.dataset.theme=theme;
   document.documentElement.dataset.density=preferences.compact?'compact':'comfortable';
-  $('theme').textContent=theme==='system'?'System theme':`${theme[0].toUpperCase()+theme.slice(1)} theme`;
-  $('theme').setAttribute('aria-label',`Appearance: ${theme}`);
   $('density').setAttribute('aria-pressed',String(!!preferences.compact));
 }
-function persist(){savePreferences({theme:preferences.theme,compact:!!preferences.compact});}
+function persist(){savePreferences({compact:!!preferences.compact});}
 function cancelView(){state.request?.abort();state.generation++;state.loading=false;}
 function params(at,epoch,withCursor=false,now=state.now){
   const f=filter(),p=new URLSearchParams({as_of:at,epoch,view:state.view==='sources'?'activity':state.view});
@@ -214,7 +210,6 @@ narrow.addEventListener('change',()=>{if($('inspector').open){$('inspector').clo
 $('copy').onclick=async()=>{if(!state.item)return;try{await navigator.clipboard.writeText(`Tell-Tail diagnostic summary · Metadata only\n${JSON.stringify({event:state.item,group:state.group||undefined},null,2)}`);$('copy-status').textContent='Copied sanitized metadata.';}catch{$('copy-status').textContent='Clipboard unavailable in this browser.';}};
 $('exact-times').onclick=()=>{if(!state.bins)return;hold();renderExactTimes($('times-values'),state.bins,selectRange);$('times-dialog').showModal();updateStatus();};
 $('close-times').onclick=()=>$('times-dialog').close();
-$('theme').onclick=()=>{const themes=['system','dark','light'];preferences.theme=themes[(themes.indexOf(preferences.theme||'system')+1)%themes.length];applyPreferences();persist();};
 $('density').onclick=()=>{preferences.compact=!preferences.compact;applyPreferences();persist();};
 document.addEventListener('pointerdown',event=>{if(!$('more-filters').contains(event.target))$('more-filters').open=false;});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&$('inspector').open&&!$('times-dialog').open){event.preventDefault();closeInspector();}});

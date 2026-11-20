@@ -2,15 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="color-scheme" content="light dark"><title>Tell-Tail · Desktop activity</title>
+  <meta name="color-scheme" content="light dark"><title>Tell-Tail · AI Activity</title>
   <link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/activity.css">
   <script type="module" src="/activity.mjs"></script>
+  <link rel="stylesheet" href="/workspace.css">
+  <script type="module" src="/workspace.mjs"></script>
 </head>
 <body>
   <a class="skip-link" href="#feed">Skip to activity</a>
-  <header class="app-header">
-    <a class="brand" href="/" aria-label="Tell-Tail home"><img src="/logo.svg" width="30" height="30" alt=""><span>tell-tail</span></a>
-    <span class="product-label">For ChatGPT <span>&amp; Codex</span></span>
+  <header class="app-header tt-masthead">
+    <a class="brand tt-brand" href="/" aria-label="Tell-Tail home"><img src="/logo.svg" width="32" height="32" alt=""><span>tell-tail</span></a>
+    <nav class="tt-workspaces" aria-label="Tell-Tail workspaces"><a href="/logs">Logs</a><a href="/activity" aria-current="page">AI Activity</a></nav>
     <span id="connection" class="connection" role="status" data-state="connecting">Connecting…</span>
     <div class="header-actions">
       <button id="theme" class="quiet" aria-label="Appearance: system">System theme</button>
@@ -19,7 +21,7 @@
     </div>
   </header>
   <div class="app-shell">
-    <nav class="sidebar" aria-label="Workspace">
+    <nav class="sidebar" aria-label="AI Activity views">
       <div class="nav-links">
         <button data-view="activity" aria-current="page"><span class="nav-icon" aria-hidden="true">≋</span>Activity</button>
         <button data-view="tools"><span class="nav-icon" aria-hidden="true">⌘</span>Tools &amp; MCP</button>

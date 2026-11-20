@@ -4,21 +4,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>Tell-Tail · Live metrics</title>
+  <title>Tell-Tail · Logs</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/dashboard.css">
   <script type="module" src="/dashboard.mjs"></script>
+  <link rel="stylesheet" href="/workspace.css">
+  <script type="module" src="/workspace.mjs"></script>
 </head>
 <body data-collector="logs">
+  <header class="tt-masthead"><a class="brand tt-brand" href="/" aria-label="Tell-Tail home"><img src="/logo.svg" width="32" height="32" alt=""><span>tell-tail</span></a><nav class="tt-workspaces" aria-label="Tell-Tail workspaces"><a href="/logs" aria-current="page">Logs</a><a href="/activity">AI Activity</a></nav><span class="tt-local">Local observability</span><button id="theme" class="quiet" aria-label="Appearance: system">System theme</button></header>
   <div class="shell">
-    <header class="masthead">
-      <a class="brand" href="/" aria-label="Tell-Tail dashboard"><img class="brand-mark" src="/logo.svg" width="40" height="32" alt=""> tell-tail</a>
-      <span class="local-label">LOCAL METRICS <span aria-hidden="true">/</span> V1</span>
-    </header>
+
     <main>
-      <p class="desktop-log-note">Complete records from the desktop logs already followed by this collector. Rates include imported history at receipt time; bytes count record contents, excluding line endings. Oversized and partial records are excluded. Raw previews are disabled here. Source limits are available in <a href="/mcp">MCP diagnostics</a>.</p>
+
       <div class="heading">
-        <div><p class="eyebrow">LOG MONITOR</p><h1>Live metrics</h1></div>
+        <div><p class="eyebrow">LOG OBSERVABILITY</p><h1>Logs</h1><p class="tt-intro">Throughput, severity, and the details behind your log stream.</p></div>
         <div class="controls">
           <button id="freeze" type="button" aria-pressed="false" disabled>Freeze display</button>
           <button class="primary" id="retry" type="button" hidden>Retry connection</button>
@@ -26,6 +26,7 @@
       </div>
       <div class="connection" id="connection" data-tone="neutral" role="status" aria-live="polite" aria-atomic="true">Connecting to local monitor…</div>
       <p class="display-note" id="display-note">Waiting for the first snapshot.</p>
+      <p class="desktop-log-note">Complete records from the desktop logs already followed by this collector. Rates include imported history at receipt time; bytes count record contents, excluding line endings. Oversized and partial records are excluded. Raw previews are disabled here. Source limits are available in <a href="/activity">AI Activity → Sources</a>.</p>
       <section class="source-panel" aria-label="Input and session">
         <div class="source"><span class="label">SOURCE</span><span id="source">—</span></div>
         <dl class="session-meta">

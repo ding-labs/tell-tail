@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>Tell-Tail · AI Activity</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/dashboard.css"><link rel="stylesheet" href="/workspace.css"><script type="module" src="/workspace.mjs"></script></head>
+<body><header class="tt-masthead"><a class="brand tt-brand" href="/" aria-label="Tell-Tail home"><img src="/logo.svg" width="32" height="32" alt=""><span>tell-tail</span></a><nav class="tt-workspaces" aria-label="Tell-Tail workspaces"><a href="/logs">Logs</a><a href="/activity" aria-current="page">AI Activity</a></nav><span class="tt-local">Local observability</span><button id="theme" class="quiet" aria-label="Appearance: system">System theme</button></header>
+<main class="tt-start"><p class="eyebrow">AI ACTIVITY</p><h1>Your tools and desktop, in context.</h1><p class="tt-lead">Follow connections, plugin calls, and MCP diagnostics in one timeline. Inspect what happened and the evidence behind it.</p>
+<p class="tt-session-note">This session is monitoring a log stream. Its collection continues while you explore this workspace.</p>
+<section><h2>Open your desktop workspace</h2><p>If you already use the Tell-Tail plugin, ask it to open AI Activity. It will use your existing local collector.</p><p>Or start a temporary desktop session from your terminal:</p><pre><code>tell-tail desktop --open</code></pre><p class="subtle">Opens a separate local dashboard. Desktop log discovery is passive; plugin tool results require tracing setup.</p></section>
+<section><h2>Try it with synthetic activity</h2><pre><code>tell-tail desktop --demo --open</code></pre><p class="subtle">Explore the same interface without reading client logs or configuring tracing.</p></section>
+<a class="tt-return" href="/logs">← Return to your log stream</a>
+</main></body></html>
