@@ -99,6 +99,11 @@ async fn local(State(app): State<App>, request: Request, next: Next) -> Response
             .get(header::CONTENT_LENGTH)
             .and_then(|v| v.to_str().ok())
             .and_then(|v| v.parse::<usize>().ok())
+            .or_else(|| {
+                (request.method() == Method::DELETE
+                    && !headers.contains_key(header::CONTENT_LENGTH))
+                .then_some(0)
+            })
             .is_none_or(|n| n > 8192)
     {
         Some(StatusCode::PAYLOAD_TOO_LARGE)

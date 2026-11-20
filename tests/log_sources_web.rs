@@ -254,3 +254,23 @@ fn mutations_require_local_browser_intent_and_reject_non_regular_inputs() {
             .starts_with("HTTP/1.1 405")
     );
 }
+
+#[test]
+fn browser_delete_accepts_an_empty_body_without_content_length() {
+    let root = tempfile::tempdir().unwrap();
+    let m = Monitor::start(root.path());
+    let (_, value) = m.call(
+        "POST",
+        "/api/log-sources",
+        serde_json::json!({"name":"App","path":root.path().join("app.log")}),
+    );
+    let id = value["id"].as_u64().unwrap();
+    let mut socket = TcpStream::connect(m.address).unwrap();
+    socket
+        .set_read_timeout(Some(Duration::from_secs(4)))
+        .unwrap();
+    write!(socket,"DELETE /api/log-sources/{id} HTTP/1.1\r\nHost: {}\r\nOrigin: http://{}\r\nX-Tell-Tail-Action: manage-sources\r\n\r\n",m.address,m.address).unwrap();
+    let mut response = String::new();
+    socket.read_to_string(&mut response).unwrap();
+    assert!(response.starts_with("HTTP/1.1 200"), "{response}");
+}
