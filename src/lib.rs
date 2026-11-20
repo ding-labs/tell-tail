@@ -43,3 +43,6 @@ pub mod mcp;
 pub mod tool_trace;
 
 pub mod activity;
+
+#[cfg(feature = "web")]
+pub mod log_sources;
