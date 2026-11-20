@@ -104,3 +104,6 @@ Names and paths are visible locally in Sources and saved settings. Unlike automa
 AI capture, manually added logs intentionally expose original error previews in
 Logs. The add form discloses this distinction. Previews and metrics remain in memory;
 only source settings persist. No beta packaging or release is part of this feature.
+
+See the [validation record](VALIDATION-LOG-SOURCES.md) for browser, lifecycle,
+visual and installed-collector checks.

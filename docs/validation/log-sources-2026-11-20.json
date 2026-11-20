@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-20",
+  "source_revision": "01a379e",
+  "collector_upgrade": true,
+  "added_through_ui": true,
+  "original_error_preview": true,
+  "live_append": true,
+  "paused_source_restored_after_managed_restart": true,
+  "resumed_original_follower": true,
+  "removed_through_ui_without_modifying_file": true,
+  "existing_source_settings_preserved": true,
+  "activity_connected": true,
+  "browser_errors": 0,
+  "tracing_configuration_and_credentials_unchanged": true,
+  "receiver_status": "waiting_for_exporter",
+  "service_loaded": true,
+  "receiver_status_followup": "quiet",
+  "activity_healthy": true,
+  "validation": {
+    "fmt": true,
+    "rust_tests_and_clippy": [
+      "default",
+      "no-default-features",
+      "no-default-features + snapshot-notifications"
+    ],
+    "browser_passed": 47,
+    "browser_headless_skipped": 1,
+    "native_lifecycle_passed": true,
+    "no_beta_packaging": true
+  }
+}
