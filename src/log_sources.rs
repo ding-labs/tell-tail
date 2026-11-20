@@ -354,8 +354,9 @@ impl Manager {
     }
     pub fn list(&self) -> serde_json::Value {
         let sources:Vec<_>=self.sources.iter().map(|s|{
-            let state=if !s.saved.enabled {"paused".to_owned()} else if let Some(r)=&s.running {serde_json::to_value(r.snapshot().state).unwrap().as_str().unwrap().to_owned()} else {"failed".to_owned()};
-            serde_json::json!({"id":s.saved.id,"enabled":s.saved.enabled,"config":s.saved.config,"state":state,"error":s.error})
+            let snapshot=s.running.as_ref().map(Running::snapshot);
+            let state=if !s.saved.enabled {"paused".to_owned()} else if let Some(snapshot)=&snapshot {serde_json::to_value(snapshot.state).unwrap().as_str().unwrap().to_owned()} else {"failed".to_owned()};
+            serde_json::json!({"id":s.saved.id,"enabled":s.saved.enabled,"config":s.saved.config,"state":state,"error":s.error,"session_id":snapshot.as_ref().map(|s|&s.session_id)})
         }).collect();
         serde_json::json!({"persistent":self.path.is_some(),"limit":MAX_SOURCES,"sources":sources})
     }
