@@ -15,6 +15,7 @@ activity freshness require **0.3.0 or later**. Their guides use the installed
 
 | Guide | What it answers |
 | --- | --- |
+| [Application log sources (unreleased)](LOG-SOURCES.md) | Add and manage local files in the installed dashboard; persistence and API boundaries |
 | [Workspaces (unreleased)](WORKSPACES.md) | Logs and AI Activity in one Tell-Tail; navigation, input boundaries and appearance |
 | [Desktop activity (unreleased)](DESKTOP-ACTIVITY.md) | Unified ChatGPT/Codex observations, tools and MCP; time navigator, inspector, source coverage and migration |
 | [MCP diagnostics](MCP.md) | Existing desktop MCP logs, grouped failures, live timeline, safe evidence, source coverage, demo, and API |

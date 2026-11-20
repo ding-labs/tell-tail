@@ -9,7 +9,10 @@ NDJSON, Prometheus, and local HTTP/SSE metrics API remain core capabilities.
 The unreleased **AI Activity** workspace adds supported desktop events, plugin
 results, connections, and MCP diagnostics. Both workspaces share Tell-Tail's
 navigation and appearance; ChatGPT and Codex are integrations within the product.
-See [workspaces](docs/WORKSPACES.md) for entry points and source boundaries.
+The installed dashboard can also follow your own application files through
+**Logs → Manage sources**, with the original parsing, charts and error previews.
+See [workspaces](docs/WORKSPACES.md) and [application sources](docs/LOG-SOURCES.md)
+for entry points, saved settings and source boundaries.
 
 Hosted documentation: [released guides](https://docs.ding.ing/tell-tail/) ·
 [unreleased preview](https://docs.ding.ing/tell-tail/next/) ·

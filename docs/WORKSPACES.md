@@ -8,15 +8,16 @@ are unreleased source-checkout features, not a claim about published 0.4.0 build
 | --- | --- | --- |
 | `tell-tail app.log --output web --open` | Logs | AI Activity explains how to open the plugin's collector or start a desktop session |
 | `tell-tail --demo --output web --open` | Logs | Keeps the existing log demo, charts and error review |
-| `tell-tail desktop --open` | AI Activity | Logs shows real aggregate metrics from the same followed desktop files |
-| Managed plugin collector | AI Activity | Same two workspaces, without launching another collector |
+| `tell-tail desktop --open` | AI Activity | Logs offers desktop aggregate metrics and user-selected application logs |
+| Managed plugin collector | AI Activity | Same two workspaces; application log sources are saved across collector restarts |
 | `tell-tail mcp --open` | Focused MCP diagnostics | Logs shows aggregate followed-log metrics; the AI Activity link retains this focused MCP session |
 
 The root URL preserves the collector's entry point. `/logs` is the metrics
 workspace; `/activity` is AI Activity or its explicit entry page when this
 process is only monitoring a file/stdin stream. `/mcp` retains focused diagnostics
-in desktop mode. No browser filesystem picker, arbitrary path-reading API,
-automatic port scanning or automatic extra log discovery is introduced.
+in desktop mode. Explicit application-file selection is available through the
+protected [source-management API](LOG-SOURCES.md); no directory browsing, automatic
+port scanning or extra automatic log discovery is introduced.
 
 Switching pages leaves the collector running. Opening AI Activity in a file
 monitor does not reinterpret arbitrary application logs as AI events. The entry
@@ -45,13 +46,24 @@ that workspace; use AI Activity → Sources for follower coverage. General
 file/stdin Logs continues to offer its existing raw error previews and physical
 input-byte diagnostics. Tracing configuration is unchanged.
 
+## Application log sources
+
+Use **Manage sources** in Logs or **Application logs** in AI Activity → Sources to
+add, edit, pause, resume or remove a regular local file. These sources retain the
+original error previews and diagnostics; automatic desktop capture stays metadata
+only. The managed plugin saves source configuration across collector restarts.
+See [application log sources](LOG-SOURCES.md) for persistence, parsing options,
+limits and the difference between pausing monitoring and freezing the display.
+
 ## A shared product frame
 
 Both workspaces use the same Tell-Tail mark, Logs / AI Activity navigation,
 colors, typography and appearance control. Light, dark and system appearance
 carry between pages on the same dashboard origin. Existing AI Activity
 appearance preferences are read for migration; new preferences use
-`tell-tail-preferences`. Only appearance and row density are saved. Storage
+`tell-tail-preferences`. Appearance and row density are stored as browser preferences; the current
+application-log selection uses tab session storage. Source configuration lives in
+the local collector registry, separately from those preferences. Storage
 restrictions still allow appearance changes for the current page.
 
 AI Activity keeps its compact event feed, inspector, time lanes and subnavigation.

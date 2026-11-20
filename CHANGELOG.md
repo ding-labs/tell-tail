@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Add unified application log sources to the desktop/plugin dashboard: add, edit,
+  pause, resume and remove files from Logs or AI Activity → Sources. Reuse the
+  original parser/follower, charts, error previews and diagnostics per source.
+- Persist managed source settings privately across collector restarts; bound source
+  counts and protect mutations with same-origin checks. Preserve automatic desktop
+  metadata-only capture and all existing file/stdin CLI behavior.
+
 - Unify Logs and AI Activity under Tell-Tail with a shared workspace switch,
   branding and appearance. File/stdin launches keep the original Logs dashboard;
   desktop collectors provide real aggregate log metrics through the same follower.

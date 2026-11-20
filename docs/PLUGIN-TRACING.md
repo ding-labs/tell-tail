@@ -6,7 +6,10 @@ passive `tell-tail mcp --open` command still requires no client configuration.
 
 The [Activity workspace](DESKTOP-ACTIVITY.md) is the default for new managed
 collectors. Its Tools & MCP destination combines results with server diagnostics.
-The existing MCP dashboard remains at `/mcp`.
+The existing MCP dashboard remains at `/mcp`. The same installed collector supports
+[user-selected application logs](LOG-SOURCES.md), with saved settings and original
+log metrics/error review in Logs. Those previews are separate from metadata-only
+tool tracing.
 
 The MCP dashboard’s Tool calls tab shows a bounded table with tool identity, outcome, duration,
 execution label, filters, pagination, and an inspector. Pause freezes the displayed

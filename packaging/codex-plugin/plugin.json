@@ -12,7 +12,7 @@
       "interface": {
         "displayName": "Tell-Tail",
         "shortDescription": "AI Activity for ChatGPT and Codex",
-        "longDescription": "Open Tell-Tail AI Activity for supported desktop events, connections, MCP diagnostics and plugin results. Switch to Logs for aggregate desktop log metrics. Persistent tool capture requires setup and a one-time Codex restart. Metadata only; bounded in-memory history.",
+        "longDescription": "Open Tell-Tail AI Activity for supported desktop events, connections, MCP diagnostics and plugin results. Switch to Logs for desktop metrics or add your own application log files, with parsing, charts and recent errors. Persistent tool capture requires setup and a one-time Codex restart. AI capture is metadata only; added application logs include error previews. History stays bounded and in memory.",
         "developerName": "Ding Labs",
         "category": "Productivity",
         "defaultPrompt": [
