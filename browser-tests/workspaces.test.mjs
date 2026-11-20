@@ -64,3 +64,21 @@ test('appearance still changes when browser storage is unavailable',async t=>{
  assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
  await page.locator('#theme').click();assert.equal(await page.locator('html').getAttribute('data-theme'),'light');
 });
+
+
+test('restoring AI Activity from the browser cache reconnects without replacing paused evidence',async t=>{
+ const dir=await mkdtemp(join(tmpdir(),'tell-tail-restore-'));t.after(()=>rm(dir,{recursive:true,force:true}));
+ const file=join(dir,'desktop.log');const line='2026-11-19T12:00:00Z info [electron-message-handler] chatgpt_pubsub_transport_opened\n';await writeFile(file,line);
+ const server=await monitorDesktop(['--source','codex-desktop','--log-dir',dir]);t.after(()=>server.close());
+ const browser=await chromium.launch();t.after(()=>browser.close());const page=await browser.newPage();
+ await page.goto(server.url+'activity');await page.waitForFunction(()=>document.querySelectorAll('.event-row').length===1);
+ await page.locator('#pause').click();
+ await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true})));
+ await appendFile(file,line);
+ const end=Date.now()+5000;while((await(await fetch(server.url+'api/activity/snapshot')).json()).retained_items<2){assert.ok(Date.now()<end);await new Promise(r=>setTimeout(r,20));}
+ await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));
+ await page.waitForFunction(()=>document.getElementById('connection').textContent==='Connected locally');
+ await page.waitForFunction(()=>document.getElementById('pending').textContent.includes('Updates available'));
+ assert.equal(await page.locator('.event-row').count(),1);
+ await page.locator('#pending').click();await page.waitForFunction(()=>document.querySelectorAll('.event-row').length===2);
+});

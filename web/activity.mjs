@@ -213,6 +213,7 @@ $('close-times').onclick=()=>$('times-dialog').close();
 $('density').onclick=()=>{preferences.compact=!preferences.compact;applyPreferences();persist();};
 document.addEventListener('pointerdown',event=>{if(!$('more-filters').contains(event.target))$('more-filters').open=false;});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&$('inspector').open&&!$('times-dialog').open){event.preventDefault();closeInspector();}});
-window.addEventListener('pagehide',()=>{stream?.close();state.request?.abort();state.detailRequest?.abort();});
+window.addEventListener('pagehide',()=>{clearTimeout(refreshTimer);clearTimeout(searchTimer);stream?.close();state.connected=false;cancelView();state.detailRequest?.abort();});
+window.addEventListener('pageshow',event=>{if(event.persisted){connect();if(!frozen())load({live:true});else updateStatus();}});
 $('timezone').textContent=`Times: ${Intl.DateTimeFormat().resolvedOptions().timeZone||'local timezone'}`;
 applyPreferences();syncControls();connect();load({live:true});
