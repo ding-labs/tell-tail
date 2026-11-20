@@ -62,3 +62,6 @@ Browser cache restoration reconnects AI Activity while keeping a paused view fix
 No beta packaging, release, version bump or changes to plugin installation are
 part of this pass. The plugin's descriptive text identifies its integration and
 both workspaces without creating a second product identity.
+
+See the [validation record](VALIDATION-WORKSPACES.md) for regression checks,
+reviewed screenshots and installed-collector acceptance.

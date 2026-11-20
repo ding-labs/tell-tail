@@ -1,0 +1,35 @@
+{
+  "date": "2026-11-19",
+  "source_revision": "5165e45",
+  "root_opens_ai_activity": true,
+  "logs_navigation": true,
+  "activity_navigation": true,
+  "theme_preserved": true,
+  "desktop_raw_previews_hidden": true,
+  "aggregate_records": 25129,
+  "activity_rows_visible": 100,
+  "activity_connected": true,
+  "browser_errors": 0,
+  "receiver_status": "receiving",
+  "installed_collector": {
+    "collector_command": "desktop",
+    "activity_healthy": true,
+    "exporter_configured": true,
+    "service_loaded": true,
+    "configuration_and_credentials_unchanged": true
+  },
+  "validation": {
+    "rust_feature_variants": [
+      "default",
+      "no-default-features",
+      "no-default-features + snapshot-notifications"
+    ],
+    "fmt": true,
+    "clippy_all_targets": true,
+    "rust_tests": true,
+    "browser_passed": 44,
+    "browser_headless_skipped": 1,
+    "isolated_native_lifecycle_passed": true,
+    "beta_packaging": false
+  }
+}
