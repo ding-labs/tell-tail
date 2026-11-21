@@ -15,7 +15,7 @@ class FormulaTests(unittest.TestCase):
         formula = render(manifest, template.read_text())
         self.assertNotIn('@', formula)
         for asset in manifest['assets']:
-            self.assertIn(f'/v0.2.0/{asset["name"]}', formula)
+            self.assertIn(f'https://github.com/zuchka/tell-tail/releases/download/v0.2.0/{asset["name"]}', formula)
             self.assertIn(asset['sha256'], formula)
         self.assertIn('depends_on arch: :arm64', formula)
         self.assertIn('on_intel do', formula)

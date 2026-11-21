@@ -18,7 +18,7 @@ import release_publish as publish
 
 SHA = 'a' * 40
 VERSION = '0.2.0'
-REPO = 'ding-labs/tell-tail'
+REPO = 'zuchka/tell-tail'
 
 
 def crate(commit=SHA, dirty=False):

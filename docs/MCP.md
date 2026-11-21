@@ -17,7 +17,7 @@ tell-tail mcp --open
 For an existing installation, run `brew update && brew upgrade ding-labs/tap/tell-tail`.
 Check `tell-tail --version`; MCP requires 0.4.0 or later. Native archives for
 Apple Silicon and Linux x86-64/ARM64 are also on
-[GitHub Releases](https://github.com/ding-labs/tell-tail/releases/tag/v0.4.0).
+[GitHub Releases](https://github.com/zuchka/tell-tail/releases/tag/v0.4.0).
 With Rust 1.88+ installed, `cargo install tell-tail --version 0.4.0 --locked`
 installs from crates.io. A source checkout is not required.
 

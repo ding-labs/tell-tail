@@ -2,6 +2,8 @@
 
 Local observability for logs, tools, and applications.
 
+Created and maintained by [Matt Abrams](https://github.com/zuchka).
+
 Tell-Tail's **Logs** workspace monitors throughput, severity, rolling statistics,
 and recent errors from a file or stdin. The terminal dashboard, plain text,
 NDJSON, Prometheus, and local HTTP/SSE metrics API remain core capabilities.
@@ -52,7 +54,7 @@ terminal shows up to 20 error/fatal previews, each capped at 512 bytes and kept
 only in memory. Long previews are marked with an ellipsis. Previews are omitted
 from CLI JSON, text, Prometheus, and webhook payloads.
 
-[GitHub Releases](https://github.com/ding-labs/tell-tail/releases/tag/v0.4.0)
+[GitHub Releases](https://github.com/zuchka/tell-tail/releases/tag/v0.4.0)
 provides native archives for Apple Silicon on macOS 14+ and static Linux binaries
 for x86_64 and ARM64. The dashboard is embedded; the archives need no Rust, Node,
 or Python. See the [distribution guide](docs/RELEASING.md) for platform details.
