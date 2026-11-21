@@ -128,7 +128,7 @@ def github_release(directory, version, commit, notes=''):
 
 def fetch(url):
     request = urllib.request.Request(url, headers={
-        'User-Agent': 'tell-tail-release-workflow (https://github.com/ding-labs/tell-tail)'})
+        'User-Agent': 'tell-tail-release-workflow (https://github.com/zuchka/tell-tail)'})
     return urllib.request.urlopen(request, timeout=60)
 
 

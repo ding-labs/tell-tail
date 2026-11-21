@@ -2,11 +2,11 @@
 
 Tell-Tail **0.4.0** was published on November 12, 2026 from commit
 `09df02f7c233b819b94c08c6229b2ea0934ec206`. It is available on
-[GitHub Releases](https://github.com/ding-labs/tell-tail/releases/tag/v0.4.0),
+[GitHub Releases](https://github.com/zuchka/tell-tail/releases/tag/v0.4.0),
 [crates.io](https://crates.io/crates/tell-tail/0.4.0), and
 [Homebrew](https://github.com/ding-labs/homebrew-tap/blob/main/tell-tail.rb).
 Normal installations include `tell-tail mcp --open` and its embedded dashboard.
-The [completed publication workflow](https://github.com/ding-labs/tell-tail/actions/runs/43317916073)
+The [completed publication workflow](https://github.com/zuchka/tell-tail/actions/runs/43317916073)
 and [publication receipt](validation/0.4.0-release/publication.json) verify all
 three channels against the same frozen source. The
 [0.4 validation record](VALIDATION-0.4-RELEASE.md) records reviewed gates and the
@@ -84,7 +84,7 @@ publication runs remain serialized and are never cancelled by a new build.
 To build a branch:
 
 ```sh
-gh workflow run release.yml --repo ding-labs/tell-tail --ref main -f publish=false
+gh workflow run release.yml --repo zuchka/tell-tail --ref main -f publish=false
 ```
 
 Replace `main` with the branch to check. Omit `source_commit` to use that
@@ -114,7 +114,7 @@ channels from one approved candidate. Configure these integrations before the
 first automated publication:
 
 1. In the [tell-tail crate settings](https://crates.io/crates/tell-tail/settings),
-   add a GitHub trusted publisher with owner `ding-labs`, repository `tell-tail`,
+   add a GitHub trusted publisher with owner `zuchka`, repository `tell-tail`,
    workflow filename `release.yml`, and environment `release`. The workflow uses
    GitHub OIDC and the pinned official `rust-lang/crates-io-auth-action` to obtain
    a temporary publishing token. Do not add a permanent crates.io token to CI.
@@ -157,7 +157,7 @@ stops the publication job before it creates a GitHub release.
 3. Commit the evidence on `main`, then dispatch:
 
    ```sh
-   gh workflow run release.yml --repo ding-labs/tell-tail --ref main \
+   gh workflow run release.yml --repo zuchka/tell-tail --ref main \
      -f publish=true -f source_commit=FULL_CANDIDATE_SHA
    ```
 
