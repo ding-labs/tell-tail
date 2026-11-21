@@ -55,6 +55,11 @@ function toolList(tools) {
     const detail = [tool.selected ? 'Selected call' : '', tool.operation ? tool.name : '', outcome].filter(Boolean);
     row.append(element('small',detail.join(' · ')));
     if (unsuccessful(tool)) row.className = 'turn-failure';
+    if (tool.output_excerpt) {
+      const output = element('details');
+      output.append(element('summary','Failure output'),element('pre',tool.output_excerpt,'call-input'));
+      row.append(output);
+    }
     list.append(row);
   }
   return list;

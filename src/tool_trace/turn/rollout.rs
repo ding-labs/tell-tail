@@ -66,6 +66,23 @@ fn response_turn(p: &Value) -> Option<&str> {
         .as_str()
 }
 
+// An excerpt is read only while inspecting a failed call. It is never copied into the feed.
+fn excerpt(text: &str) -> Option<String> {
+    let text = text.trim();
+    if text.is_empty() {
+        return None;
+    }
+    let mut offset = text.len().saturating_sub(320);
+    while !text.is_char_boundary(offset) {
+        offset += 1
+    }
+    Some(if offset == 0 {
+        text.into()
+    } else {
+        format!("…{}", &text[offset..])
+    })
+}
+
 fn native_tool(item: &Value) -> Option<Tool> {
     let kind = item.get("type")?.as_str()?;
     let (name, op) = match kind {
@@ -104,7 +121,16 @@ fn native_tool(item: &Value) -> Option<Tool> {
     } else {
         "observed"
     };
+    let output_excerpt = if matches!(outcome, "failed" | "nonzero_exit") {
+        item.pointer("/error/message")
+            .or_else(|| item.get("aggregated_output"))
+            .and_then(Value::as_str)
+            .and_then(excerpt)
+    } else {
+        None
+    };
     Some(Tool {
+        output_excerpt,
         name,
         operation: op,
         outcome,
@@ -214,6 +240,7 @@ fn project(
     let turn = candidates.pop_first().unwrap();
     evidence.matched = true;
     let mut tools = Vec::<(String, Tool)>::new();
+    let mut failures = HashMap::new();
     for line in lines() {
         let Ok(r) = serde_json::from_slice::<Value>(line) else {
             evidence.partial = true;
@@ -255,6 +282,22 @@ fn project(
                     p["type"].as_str(),
                     Some("function_call_output" | "custom_tool_call_output")
                 ) {
+                    if let Some(key) = id.map(tag)
+                        && live.get(&key).is_some_and(|t| t.failed())
+                        && let Some(output) = p["output"].as_str().or_else(|| {
+                            p["output"]
+                                .as_array()?
+                                .iter()
+                                .find(|part| {
+                                    part["type"] == "text" || part["type"] == "output_text"
+                                })?
+                                .get("text")?
+                                .as_str()
+                        })
+                        && let Some(text) = excerpt(output)
+                    {
+                        failures.insert(key, text);
+                    }
                     if id.is_some_and(|s| tag(s) == loc.call) {
                         let metadata = &p["internal_chat_message_metadata_passthrough"];
                         if let Some(calls) = metadata["executed_tool_calls"].as_array() {
@@ -268,6 +311,7 @@ fn project(
                                     outcome: "observed",
                                     exit_code: None,
                                     selected: false,
+                                    output_excerpt: None,
                                 })
                                 .collect();
                             evidence.children_complete = metadata["tool_calls_complete"]
@@ -299,6 +343,7 @@ fn project(
                         outcome: "observed",
                         exit_code: None,
                         selected: false,
+                        output_excerpt: None,
                     }),
                 )
             }
@@ -310,9 +355,14 @@ fn project(
         let key = tag(id);
         if let Some(captured) = live.get(&key) {
             // An explicit process outcome or native failure is stronger than transport success.
+            let native_output = tool.output_excerpt.take();
+            let native_operation = tool.operation.take();
             let native_outcome = tool.outcome;
             let exit = tool.exit_code;
             tool = captured.clone();
+            tool.output_excerpt = native_output;
+            tool.operation = tool.operation.or(native_operation);
+            tool.exit_code = tool.exit_code.or(exit);
             if matches!(native_outcome, "failed" | "nonzero_exit" | "interrupted")
                 && !matches!(tool.outcome, "failed" | "nonzero_exit")
             {
@@ -345,10 +395,15 @@ fn project(
         }
         tools.push((key, tool));
     }
+    for (key, tool) in &mut tools {
+        if let Some(text) = failures.remove(key) {
+            tool.output_excerpt = Some(text)
+        }
+    }
     if !scope.children.is_empty() {
         let mut native: Vec<_> = evidence.children.iter().map(|t| t.name.as_str()).collect();
         let mut agrees = true;
-        for child in &scope.children {
+        for (_, child) in &scope.children {
             if let Some(index) = native.iter().position(|name| *name == child.name) {
                 native.remove(index);
             } else {
@@ -357,7 +412,18 @@ fn project(
         }
         let complete = evidence.children_complete == Some(true) && agrees && native.is_empty();
         evidence.children_complete = Some(complete);
-        evidence.children = scope.children.clone();
+        evidence.children = scope
+            .children
+            .iter()
+            .map(|(key, child)| {
+                tools
+                    .iter()
+                    .find(|(id, _)| id == key)
+                    .map(|(_, t)| t)
+                    .unwrap_or(child)
+                    .clone()
+            })
+            .collect();
     }
     for (key, tool) in &scope.tools {
         if tools.iter().any(|(id, _)| id == key) {

@@ -110,7 +110,7 @@ test('selecting a wrapper shows its own request, nested manifest and turn failur
     {type:'session_meta',payload:{id:chat}},event('other',message('OTHER_PRIVATE_REQUEST')),
     event('wanted', message('Why did cargo test exit early?')),
     {type:'response_item',payload:{type:'custom_tool_call',call_id:'wrapper',name:'exec',internal_chat_message_metadata_passthrough:metadata}},
-    event('wanted',{type:'CommandExecution',id:'command',command:['sh','-c','cargo test --lib'],exit_code:101,status:'failed'}),
+    event('wanted',{type:'CommandExecution',id:'command',command:['sh','-c','cargo test --lib'],exit_code:101,status:'failed',aggregated_output:'test parse_request failed'}),
     {type:'response_item',payload:{type:'custom_tool_call_output',call_id:'wrapper',internal_chat_message_metadata_passthrough:{
       ...metadata,executed_tool_calls:[{name:'functions.exec_command'}],tool_calls_complete:true}}},
   ];
@@ -132,6 +132,8 @@ test('selecting a wrapper shows its own request, nested manifest and turn failur
   assert.match(await panel.innerText(),/Tools inside this call\s+functions.exec_command/);
   assert.match(await panel.innerText(),/Failures in this turn\s+cargo test --lib\s+functions.exec_command · Exit 101/);
   assert.doesNotMatch(await panel.innerText(),/OTHER_PRIVATE/);
+  await panel.getByText('Failure output').first().click();
+  await panel.getByText('test parse_request failed',{exact:true}).first().waitFor();
   await panel.getByText('All tools in this turn (2)').click();
   await panel.getByText('Selected call · Completed').waitFor();
   const paths=[server.url+'api/traces/call/1/turn?source=stale',server.url+'api/traces/calls'];

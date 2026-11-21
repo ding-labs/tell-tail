@@ -55,6 +55,8 @@ pub struct Tool {
     pub outcome: &'static str,
     pub exit_code: Option<i32>,
     pub selected: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_excerpt: Option<String>,
 }
 
 impl Tool {
@@ -89,6 +91,7 @@ impl Tool {
             outcome,
             exit_code,
             selected: false,
+            output_excerpt: None,
         }
     }
 

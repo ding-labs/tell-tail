@@ -21,7 +21,7 @@ pub struct Scope {
     pub conflict: bool,
     pub partial: bool,
     pub tools: Vec<(String, Tool)>,
-    pub children: Vec<Tool>,
+    pub children: Vec<(String, Tool)>,
 }
 
 impl Links {
@@ -84,11 +84,12 @@ impl Links {
                     outcome: "observed",
                     exit_code: None,
                     selected: false,
+                    output_excerpt: None,
                 });
             tool.selected = link.call == loc.call;
             if own_cell && link.cell == selected.cell && link.child_tool.is_some() {
                 if scope.children.len() < super::MAX_TOOLS {
-                    scope.children.push(tool.clone());
+                    scope.children.push((link.call.clone(), tool.clone()));
                 } else {
                     scope.partial = true;
                 }
@@ -132,7 +133,7 @@ mod tests {
         let scope = links.resolve(&loc, &HashMap::new());
         assert_eq!(scope.tools.len(), 4);
         assert_eq!(scope.children.len(), 1);
-        assert_eq!(scope.children[0].name, "functions.exec_command");
+        assert_eq!(scope.children[0].1.name, "functions.exec_command");
         links.push(make("turn", "collision", "1", None));
         assert!(links.resolve(&loc, &HashMap::new()).children.is_empty());
         links.push(make("other", "a", "3", None));
