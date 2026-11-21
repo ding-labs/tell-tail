@@ -87,7 +87,13 @@ fn native_tool(item: &Value) -> Option<Tool> {
     let kind = item.get("type")?.as_str()?;
     let (name, op) = match kind {
         "CommandExecution" => (
-            "functions.exec_command".into(),
+            match item["source"].as_str() {
+                Some("user_shell") => return None,
+                Some("unified_exec_interaction") => "functions.write_stdin",
+                Some("unified_exec_startup") => "functions.exec_command",
+                _ => "Shell command",
+            }
+            .into(),
             item.get("command")
                 .and_then(|v| v.as_str().or_else(|| v.as_array()?.last()?.as_str()))
                 .map(|s| bounded(s, 200)),
@@ -98,7 +104,22 @@ fn native_tool(item: &Value) -> Option<Tool> {
             let server = item.get("server")?.as_str()?;
             (bounded(&format!("{server}.{name}"), 144), None)
         }
-        "DynamicToolCall" => (bounded(item.get("tool")?.as_str()?, 144), None),
+        "DynamicToolCall" | "CollabAgentToolCall" => {
+            let name = item.get("tool")?.as_str()?;
+            let ns = item["namespace"]
+                .as_str()
+                .or((kind == "CollabAgentToolCall").then_some("collaboration"));
+            (
+                bounded(
+                    &ns.map_or_else(|| name.into(), |ns| format!("{ns}.{name}")),
+                    144,
+                ),
+                None,
+            )
+        }
+        "Extension" => (bounded(item.get("kind")?.as_str()?, 144), None),
+        "ImageView" => ("functions.view_image".into(), None),
+        "ImageGeneration" => ("Image generation".into(), None),
         "FileChange" | "PatchApply" => ("functions.apply_patch".into(), None),
         _ => return None,
     };
@@ -110,6 +131,7 @@ fn native_tool(item: &Value) -> Option<Tool> {
     let outcome = if code.is_some_and(|n| n != 0) {
         "nonzero_exit"
     } else if matches!(status, "failed" | "Failed")
+        || item.get("success") == Some(&Value::Bool(false))
         || item.get("error").is_some_and(|v| !v.is_null())
         || item.pointer("/result/isError") == Some(&Value::Bool(true))
     {
@@ -123,6 +145,7 @@ fn native_tool(item: &Value) -> Option<Tool> {
     };
     let output_excerpt = if matches!(outcome, "failed" | "nonzero_exit") {
         item.pointer("/error/message")
+            .or_else(|| item.get("error").filter(|e| e.is_string()))
             .or_else(|| item.get("aggregated_output"))
             .and_then(Value::as_str)
             .and_then(excerpt)
@@ -161,10 +184,10 @@ pub fn read(
     let first = head.split(|b| *b == b'\n').next().unwrap_or_default();
     let meta: Value = serde_json::from_slice(first).unwrap_or(Value::Null);
     if meta["type"] != "session_meta"
-        || !meta
+        || meta
             .pointer("/payload/id")
             .and_then(Value::as_str)
-            .is_some_and(|s| tag(s) == loc.chat)
+            .is_none_or(|s| tag(s) != loc.chat)
     {
         return Ok(Evidence::default());
     }

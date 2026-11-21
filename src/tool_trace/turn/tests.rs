@@ -26,7 +26,7 @@ fn exact_chat_call_and_turn_keep_requests_failures_and_sibling_calls_scoped() {
         event(CHAT,"wanted",prompt("fix these tests")),
         call("wrapper","wanted"),
         call("sibling","wanted"),
-        event(CHAT,"wanted",json!({"type":"CommandExecution","id":"child","command":["sh","-c","cargo test"],"status":"completed","exit_code":101})),
+        event(CHAT,"wanted",json!({"type":"CommandExecution","source":"unified_exec_startup","id":"child","command":["sh","-c","cargo test"],"status":"completed","exit_code":101})),
         json!({"type":"response_item","payload":{"type":"custom_tool_call_output","call_id":"sibling","internal_chat_message_metadata_passthrough":{"turn_id":"wanted","executed_tool_calls":[{"name":"wrong"}]}}}),
         json!({"type":"response_item","payload":{"type":"custom_tool_call_output","call_id":"wrapper","internal_chat_message_metadata_passthrough":{"turn_id":"wanted","executed_tool_calls":[{"name":"functions.exec_command","arguments":"private"}],"tool_calls_complete":true}}})
     ].map(|r|r.to_string()).join("\n");
