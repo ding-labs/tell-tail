@@ -56,7 +56,8 @@ not guaranteed. Default tracing retains result metadata. For requested local
 call inspection, use `tracing enable --inspect-calls` on first install or
 `tracing upgrade --inspect-calls` on an existing install of a supporting build.
 This mode reads the local chat-name index and can display bounded command/script
-inputs containing private values. Copied diagnostics omit them. History is
+inputs containing private values. Opening a call can read the matching request and
+a failure excerpt from local Codex history. Copied diagnostics omit these details. History is
 bounded and in memory and resets when the collector restarts.
 
 When the user requests an update, run this packaged executable's `tracing upgrade`.

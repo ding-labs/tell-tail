@@ -13,7 +13,7 @@
       "interface": {
         "displayName": "Tell-Tail",
         "shortDescription": "Inspect local AI activity",
-        "longDescription": "See which Codex tools ran, how long they took, and which reported failures. Tell-Tail runs on Apple Silicon Macs. After installing, ask to open your Codex logs for a live local dashboard of supported desktop events and MCP connections. For ongoing tool-call tracing, run setup once and restart Codex. Setup configures a local exporter and a service that starts at login. Ask Tell-Tail to uninstall the collector before removing the plugin. Activity and tool results retain diagnostic metadata in memory. Application logs you add can show excerpts of the original errors.",
+        "longDescription": "See which Codex tools ran, how long they took, and which reported failures. Tell-Tail runs on Apple Silicon Macs. After installing, ask to open your Codex logs for a live local dashboard of supported desktop events and MCP connections. For ongoing tool-call tracing, run setup once and restart Codex. Setup configures a local exporter and a service that starts at login. Ask Tell-Tail to uninstall the collector before removing the plugin. Default tracing retains diagnostic metadata in memory. Optional call inspection can show submitted commands, the matching local chat request, and failure excerpts. Application logs you add can show excerpts of the original errors.",
         "developerName": "Matt Abrams",
         "category": "Developer Tools",
         "websiteURL": "https://tell-tail.dev/",
