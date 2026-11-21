@@ -1,7 +1,7 @@
 #![cfg(feature = "web")]
 use std::{
     fs,
-    io::{Read, Write},
+    io::{BufRead, BufReader, Read, Write},
     net::{SocketAddr, TcpListener, TcpStream},
     path::Path,
     process::{Child, Command, Stdio},
@@ -29,24 +29,44 @@ impl Monitor {
             .unwrap();
         let m = Self { child, address };
         let start = Instant::now();
-        while m.raw("GET", "/api/log-sources", "", "").is_err() {
+        while !m
+            .status_line("GET", "/api/log-sources", "", "")
+            .is_ok_and(|line| line.starts_with("HTTP/1.1 200"))
+        {
             assert!(start.elapsed() < Duration::from_secs(10));
             std::thread::sleep(Duration::from_millis(20));
         }
         m
     }
-    fn raw(&self, method: &str, path: &str, body: &str, headers: &str) -> std::io::Result<String> {
+    fn request(
+        &self,
+        method: &str,
+        path: &str,
+        body: &str,
+        headers: &str,
+    ) -> std::io::Result<TcpStream> {
         let mut socket = TcpStream::connect(self.address)?;
         socket.set_read_timeout(Some(Duration::from_secs(4)))?;
-        write!(
-            socket,
+        let request = format!(
             "{method} {path} HTTP/1.1\r\nHost: {}\r\nContent-Length: {}\r\n{headers}\r\n{body}",
             self.address,
             body.len()
-        )?;
-        let mut response = String::new();
-        socket.read_to_string(&mut response)?;
-        Ok(response)
+        );
+        socket.write_all(request.as_bytes())?;
+        Ok(socket)
+    }
+    fn status_line(
+        &self,
+        method: &str,
+        path: &str,
+        body: &str,
+        headers: &str,
+    ) -> std::io::Result<String> {
+        // An early HTTP rejection can be followed by a TCP reset with request bytes unread.
+        let mut reader = BufReader::new(self.request(method, path, body, headers)?);
+        let mut line = String::new();
+        reader.read_line(&mut line)?;
+        Ok(line)
     }
     fn call(&self, method: &str, path: &str, body: serde_json::Value) -> (u16, serde_json::Value) {
         let headers = format!(
@@ -58,9 +78,11 @@ impl Monitor {
         } else {
             body.to_string()
         };
-        let r = self.raw(method, path, &body, &headers).unwrap();
-        let status = r.split_whitespace().nth(1).unwrap().parse().unwrap();
-        let v = serde_json::from_str(r.split_once("\r\n\r\n").unwrap().1).unwrap_or_default();
+        let mut response = self.request(method, path, &body, &headers).unwrap();
+        let mut text = String::new();
+        response.read_to_string(&mut text).unwrap();
+        let status = text.split_whitespace().nth(1).unwrap().parse().unwrap();
+        let v = serde_json::from_str(text.split_once("\r\n\r\n").unwrap().1).unwrap_or_default();
         (status, v)
     }
     fn until(&self, id: u64, records: &str) -> serde_json::Value {
@@ -184,9 +206,16 @@ fn mutations_require_local_browser_intent_and_reject_non_regular_inputs() {
     let root = tempfile::tempdir().unwrap();
     let m = Monitor::start(root.path());
     let body = serde_json::json!({"name":"App","path":root.path().join("missing.log")}).to_string();
-    for headers in ["".to_owned(),"Origin: https://evil.invalid\r\nX-Tell-Tail-Action: manage-sources\r\nContent-Type: application/json\r\n".into(),format!("Origin: http://{}\r\nContent-Type: application/json\r\n",m.address)]{assert!(m.raw("POST","/api/log-sources",&body,&headers).unwrap().starts_with("HTTP/1.1 403"));}
+    for headers in [
+        "".to_owned(),
+        "Origin: https://evil.invalid\r\nX-Tell-Tail-Action: manage-sources\r\nContent-Type: application/json\r\n".into(),
+        format!("Origin: http://{}\r\nContent-Type: application/json\r\n", m.address),
+    ] {
+        let status = m.status_line("POST", "/api/log-sources", &body, &headers).unwrap();
+        assert!(status.starts_with("HTTP/1.1 403"), "{status}");
+    }
     assert!(
-        m.raw(
+        m.status_line(
             "GET",
             "/api/log-sources",
             "",
@@ -244,12 +273,12 @@ fn mutations_require_local_browser_intent_and_reject_non_regular_inputs() {
         m.address
     );
     assert!(
-        m.raw("POST", "/api/log-sources", &"x".repeat(8193), &headers)
+        m.status_line("POST", "/api/log-sources", &"x".repeat(8193), &headers)
             .unwrap()
             .starts_with("HTTP/1.1 413")
     );
     assert!(
-        m.raw("POST", "/api/snapshot", "{}", &headers)
+        m.status_line("POST", "/api/snapshot", "{}", &headers)
             .unwrap()
             .starts_with("HTTP/1.1 405")
     );
