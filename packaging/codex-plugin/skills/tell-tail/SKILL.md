@@ -10,7 +10,13 @@ Rust toolchain, or remote account is needed on the user's machine. If the
 executable is missing or incompatible, report an incomplete/wrong-platform
 package rather than downloading and executing an unverified replacement.
 
-For setup, explain that Tell-Tail enables a persistent, authenticated loopback
+When someone asks to open their Codex logs, run `tracing status`. Open the
+reported dashboard if the collector is healthy. Otherwise start the packaged
+executable with `desktop --open` in a background session and keep the session
+available while the user views the dashboard. This follows supported local logs
+immediately. No persistent setup or app restart is needed for this session.
+
+For one-time setup, explain that Tell-Tail enables a persistent, authenticated loopback
 exporter and a per-user login service. When the user requests setup or enabling
 tracing, run the packaged executable with `tracing enable`. It refuses to
 replace an existing or edited exporter; preserve those settings if it refuses.
@@ -26,7 +32,9 @@ The receiver must be healthy and `exporter_configured` and `service_loaded` must
 be true. `waiting_for_exporter` after first setup normally requires one Codex
 restart. Let the user restart their app; do not terminate active chats. If this
 same endpoint and credential were already loaded, another restart is unnecessary.
-Future app restarts keep tracing enabled. The service also starts at login and
+When setup succeeds, open Activity if requested and report whether it is
+following desktop logs or has already received tool results. Future app
+restarts keep tracing enabled. The service also starts at login and
 recovers after a collector exit.
 
 For a live check, use a harmless read-only tool already relevant to the user's
@@ -63,5 +71,7 @@ before removing this plugin. Restart Codex afterward to unload its in-memory
 exporter. Plugin removal alone does not stop the separately installed login
 service. Disable keeps a private credential and backup under
 `~/Library/Application Support/Tell-Tail` for re-enabling. Uninstall removes those
-owned files; it preserves unrelated config and user-added files. Never
+owned files; it preserves unrelated config and user-added files. Saved application
+log source names and paths can be removed in Logs → Manage sources before
+uninstall or by deleting the retained `log-sources.json` afterward. Never
 restore the whole backup over newer user edits. No lifecycle hook runs silently.
