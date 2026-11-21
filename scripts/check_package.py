@@ -77,7 +77,7 @@ def check_web_install(binary, directory, mcp=False):
                     if selector.select(.05):
                         diagnostic.extend(os.read(child.stderr.fileno(), 4096))
             assert (directory / 'opened-url').read_text() == url
-            assets = [('/', 'text/html', b'MCP activity'),
+            assets = [('/', 'text/html', b'src="/mcp.mjs"'),
                       ('/mcp.css', 'text/css', b'.mcp-table'),
                       ('/mcp.mjs', 'text/javascript', b'new EventSource')]
         else:
@@ -85,7 +85,7 @@ def check_web_install(binary, directory, mcp=False):
             assert frame['metrics']['totals']['records'] == '2'
             assert frame['metrics']['totals']['levels']['warn'] == '1'
             assert 'schema_version' not in frame['metrics']
-            assets = [('/', 'text/html', b'Live metrics'),
+            assets = [('/', 'text/html', b'src="/dashboard.mjs"'),
                       ('/dashboard.mjs', 'text/javascript', b'new EventSource'),
                       ('/frame.mjs', 'text/javascript', b'parseFrame'),
                       ('/render.mjs', 'text/javascript', b'textContent')]
@@ -101,7 +101,7 @@ def check_web_install(binary, directory, mcp=False):
                 assert response.getheader('Content-Type').startswith(mime), path
                 assert response.getheader('Cache-Control') == 'no-store', path
                 assert "script-src 'self'" in response.getheader('Content-Security-Policy'), path
-                assert marker in response.read(), path
+                assert marker in response.read(), f'{path} is missing {marker!r}'
             finally:
                 connection.close()
         assert child.poll() is None, 'web output exited at normal EOF'
