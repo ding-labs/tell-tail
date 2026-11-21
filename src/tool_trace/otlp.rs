@@ -124,6 +124,7 @@ fn scalar<'a>(b: &'a [u8], budget: &mut usize) -> Result<Option<Scalar<'a>>, Inv
 }
 const ATTRS: &[&str] = &[
     "event.name",
+    "event.timestamp",
     "tool_name",
     "tool_namespace",
     "mcp_server",
@@ -243,7 +244,9 @@ fn record(b: &[u8], budget: &mut usize, epoch: &str) -> Result<Option<Observatio
             .map(str::to_owned),
         plugin,
         phase: Phase::Completed,
-        timestamp_ms: timestamp,
+        timestamp_ms: timestamp.or_else(|| {
+            text(attrs.get("event.timestamp")).and_then(crate::mcp::time::timestamp_ms)
+        }),
         duration_ms: number(attrs.get("duration_ms")).filter(|n| *n <= 86_400_000),
         execution_success: outcome,
         tool_error: None,
@@ -350,6 +353,27 @@ mod tests {
         assert!(!page.calls[0].start_observed);
         assert_eq!(page.calls[0].execution_success, Some(true));
         assert!(!serde_json::to_string(&page).unwrap().contains("PRIVATE"));
+    }
+    #[test]
+    fn event_clock_fills_absent_otlp_time_without_using_receipt_time() {
+        let raw = [
+            fixture(),
+            attr("event.timestamp", "2026-11-21T17:38:06.123Z"),
+        ]
+        .concat();
+        let read = |bytes: &[u8]| {
+            decode(&batch(bytes), "epoch")
+                .unwrap()
+                .observations
+                .remove(0)
+                .timestamp_ms
+        };
+        assert_eq!(read(&raw), Some(1795282686123));
+        let mut timed = raw;
+        timed.push(9);
+        timed.extend(1_000_000u64.to_le_bytes());
+        assert_eq!(read(&timed), Some(1));
+        assert_eq!(read(&fixture()), None);
     }
     #[test]
     fn semantic_event_attribute_takes_precedence_over_otlp_callsite_name() {

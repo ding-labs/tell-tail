@@ -15,12 +15,13 @@ export function renderRows(container,rows,selected,onSelect,groups=new Map()) {
     button.type='button';button.dataset.id=row.id;button.dataset.severity=row.severity;button.dataset.outcome=row.outcome;
     button.setAttribute('aria-pressed',String(row.id===selected));
     button.onclick=()=>onSelect(row.id,button,groups.get(row.id));
-    const time=el('span','event-time',clock(row.occurred_ms));
-    time.title=row.occurred_ms===null?'Source timestamp unavailable':dateTime(row.occurred_ms);
+    const time=el('span','event-time',clock(row.occurred_ms ?? row.received_ms));
+    time.title=row.occurred_ms===null?'Collector receipt time':dateTime(row.occurred_ms);
     const symbol=el('span','event-symbol',row.severity==='error'?'!':row.severity==='warning'?'△':symbols[row.category]);symbol.setAttribute('aria-hidden','true');
     const body=el('span','event-body');
     const heading=el('span','event-title',title(row));heading.title=title(row);
     const meta=[categories[row.category],scopes[row.scope]||'Scope unknown'];
+    if(row.occurred_ms==null)meta.push('Receipt time');
     if(row.client==='claude_desktop')meta.push(clientNames[row.client]);
     if(row.historical)meta.push('Imported history');
     else if(row.occurred_ms!==null&&row.received_ms-row.occurred_ms>5000)meta.push('Received later');
