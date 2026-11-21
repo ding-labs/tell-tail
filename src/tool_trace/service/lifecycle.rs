@@ -61,6 +61,7 @@ fn replace(
     source: &Path,
     version: Option<String>,
     command: CollectorCommand,
+    inspecting: Option<bool>,
 ) -> io::Result<()> {
     let mut install = paths.install()?;
     let metadata_path = paths.root.join("install.json");
@@ -101,6 +102,9 @@ fn replace(
     let original_install = install.clone();
     install.version = version;
     install.command = command;
+    if let Some(enable) = inspecting {
+        install.inspect_calls = enable;
+    }
     let replacement_plist = plist(&paths.root, &install, &paths.label);
     let transaction = || -> io::Result<()> {
         if configured {
@@ -163,12 +167,13 @@ fn replace(
     Ok(())
 }
 
-pub(super) fn upgrade(paths: &Paths, source: &Path) -> io::Result<()> {
+pub(super) fn upgrade(paths: &Paths, source: &Path, inspecting: Option<bool>) -> io::Result<()> {
     replace(
         paths,
         source,
         Some(env!("CARGO_PKG_VERSION").into()),
         CollectorCommand::Desktop,
+        inspecting,
     )
 }
 
@@ -189,6 +194,7 @@ pub(super) fn rollback(paths: &Paths) -> io::Result<()> {
         &paths.root.join("tell-tail.previous"),
         old.version,
         old.command,
+        Some(old.inspect_calls),
     )
 }
 
@@ -294,7 +300,7 @@ mod tests {
         );
         drop((first, second));
         fs::write(&paths.config, "# preserve\nmodel = 'test'\n").unwrap();
-        enable(&paths, intake, web, None, &binary).unwrap();
+        enable(&paths, intake, web, None, false, &binary).unwrap();
         assert!(healthy(&paths.install().unwrap()));
         // Simulate legacy metadata (without command) and its owned MCP launch definition.
         let mut legacy = paths.install().unwrap();
@@ -313,7 +319,7 @@ mod tests {
         let key = fs::read(paths.root.join("trace.key")).unwrap();
         let config = fs::read(&paths.config).unwrap();
         let first_epoch = snapshot(web).unwrap()["snapshot"]["collector_epoch"].clone();
-        upgrade(&paths, &binary).unwrap();
+        upgrade(&paths, &binary, None).unwrap();
         assert_ne!(
             snapshot(web).unwrap()["snapshot"]["collector_epoch"],
             first_epoch
@@ -327,7 +333,7 @@ mod tests {
         assert!(response_json(web, "/api/activity/snapshot").is_none());
         let current = fs::read(paths.root.join("tell-tail")).unwrap();
         assert!(
-            upgrade(&paths, Path::new("/usr/bin/false"))
+            upgrade(&paths, Path::new("/usr/bin/false"), None)
                 .unwrap_err()
                 .to_string()
                 .contains("previous collector restored")
@@ -338,7 +344,7 @@ mod tests {
         assert_eq!(fs::read(&paths.config).unwrap(), config);
         let owned_plist = read(&paths.plist).unwrap();
         fs::write(&paths.plist, format!("{owned_plist}<!-- edited -->")).unwrap();
-        assert!(upgrade(&paths, &binary).is_err());
+        assert!(upgrade(&paths, &binary, None).is_err());
         assert!(disable(&paths).is_err());
         assert_eq!(fs::read(&paths.config).unwrap(), config);
         fs::write(&paths.plist, owned_plist).unwrap();
@@ -351,11 +357,11 @@ mod tests {
         assert!(snapshot(web).is_some());
         fs::write(&paths.config, config).unwrap();
         disable(&paths).unwrap();
-        upgrade(&paths, &binary).unwrap();
+        upgrade(&paths, &binary, None).unwrap();
         assert!(!launchctl(&["print", &paths.job()]).unwrap());
         assert!(!setup_config::has_otel(&read(&paths.config).unwrap()).unwrap());
         assert_eq!(fs::read(paths.root.join("trace.key")).unwrap(), key);
-        enable(&paths, intake, web, None, &binary).unwrap();
+        enable(&paths, intake, web, None, false, &binary).unwrap();
         fs::write(paths.root.join("user-file"), "keep").unwrap();
         uninstall(&paths).unwrap();
         assert!(!launchctl(&["print", &paths.job()]).unwrap());
@@ -365,7 +371,7 @@ mod tests {
         assert_eq!(read(&paths.config).unwrap(), "# preserve\nmodel = 'test'\n");
         assert_eq!(read(&paths.root.join("user-file")).unwrap(), "keep");
         // Simulate interruption after deleting the ownership fragment, before the marker.
-        enable(&paths, intake, web, None, &binary).unwrap();
+        enable(&paths, intake, web, None, false, &binary).unwrap();
         disable(&paths).unwrap();
         fs::remove_file(paths.root.join("otel.toml")).unwrap();
         uninstall(&paths).unwrap();
