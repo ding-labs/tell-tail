@@ -1,0 +1,417 @@
+{
+  "version": "0.5.0",
+  "source_commit": "2f2eb2c373e63d18b18272640ba63777d0ecf08b",
+  "workflows": {
+    "ci": "https://github.com/zuchka/tell-tail/actions/runs/44945503056",
+    "native_archives": "https://github.com/zuchka/tell-tail/actions/runs/44945503045",
+    "extended": "https://github.com/zuchka/tell-tail/actions/runs/44945510790",
+    "controlled_linux": "https://github.com/zuchka/tell-tail/actions/runs/44945513453"
+  },
+  "ci": {
+    "macos-15": {
+      "package": {
+        "package": "tell-tail-0.5.0",
+        "files": 308,
+        "bytes": 1512596,
+        "sha256": "2d94c3e10ca5828a5e5369b66bf10a7d0495560d24a1d97e93cd1b732626adce",
+        "allow_dirty": false,
+        "publish_dry_run": "passed",
+        "clean_install_smoke": "passed",
+        "offline_install": true,
+        "installed_web_smoke": "passed",
+        "installed_dashboard_assets": "passed",
+        "installed_mcp_and_opener_failure": "passed"
+      },
+      "terminal_freshness": {
+        "samples": 25,
+        "p95_seconds": 0.36599695899997187,
+        "max_seconds": 0.38018358300001864,
+        "shutdown_seconds": 0.38789229200000364,
+        "input": "one record per visible acknowledgment",
+        "geometry": "100x26"
+      },
+      "input_checks": {
+        "stdin": {
+          "records": 3000,
+          "bytes": 32128080,
+          "mode": "json",
+          "seconds": 3.1666217079999797,
+          "peak_sampled_rss_mib": 6.046875,
+          "shutdown_observed_seconds": 0.09968516599997201,
+          "terminal_actions": 0
+        },
+        "tui": {
+          "records": 3000,
+          "bytes": 32128080,
+          "mode": "tui",
+          "seconds": 3.1198303330000385,
+          "peak_sampled_rss_mib": 7.109375,
+          "shutdown_observed_seconds": 0.09323975000000928,
+          "terminal_actions": 0
+        },
+        "rotation": {
+          "records": 100,
+          "bytes": 23399,
+          "mode": "prometheus",
+          "seconds": 4.475098875000015,
+          "peak_sampled_rss_mib": 3.015625,
+          "shutdown_observed_seconds": 0.26167641699998967,
+          "terminal_actions": 0
+        }
+      }
+    },
+    "ubuntu-24.04": {
+      "package": {
+        "package": "tell-tail-0.5.0",
+        "files": 308,
+        "bytes": 1512596,
+        "sha256": "2d94c3e10ca5828a5e5369b66bf10a7d0495560d24a1d97e93cd1b732626adce",
+        "allow_dirty": false,
+        "publish_dry_run": "passed",
+        "clean_install_smoke": "passed",
+        "offline_install": true,
+        "installed_web_smoke": "passed",
+        "installed_dashboard_assets": "passed",
+        "installed_mcp_and_opener_failure": "passed"
+      },
+      "terminal_freshness": {
+        "samples": 25,
+        "p95_seconds": 0.2171004420000031,
+        "max_seconds": 0.2172583500000087,
+        "shutdown_seconds": 0.2125769169999785,
+        "input": "one record per visible acknowledgment",
+        "geometry": "100x26"
+      },
+      "input_checks": {
+        "stdin": {
+          "records": 3000,
+          "bytes": 32128080,
+          "mode": "json",
+          "seconds": 3.012468207999973,
+          "peak_sampled_rss_mib": 9.33203125,
+          "shutdown_observed_seconds": 0.012276563999989776,
+          "terminal_actions": 0
+        },
+        "tui": {
+          "records": 3000,
+          "bytes": 32128080,
+          "mode": "tui",
+          "seconds": 3.0592993930000034,
+          "peak_sampled_rss_mib": 10.10546875,
+          "shutdown_observed_seconds": 0.05841997300001367,
+          "terminal_actions": 0
+        },
+        "rotation": {
+          "records": 100,
+          "bytes": 23399,
+          "mode": "prometheus",
+          "seconds": 4.066189467000015,
+          "peak_sampled_rss_mib": 4.96484375,
+          "shutdown_observed_seconds": 0.023846367999965423,
+          "terminal_actions": 0
+        }
+      }
+    }
+  },
+  "dependency_audit": {
+    "database": "55e1c3dfbd834237a05bbbf7b50ba3b5be27b662",
+    "vulnerabilities": 0,
+    "informational_advisories": [
+      "RUSTSEC-2026-0486",
+      "RUSTSEC-2026-0386"
+    ],
+    "review": "Reviewed 136 normal package versions across the three release targets. No consumer calls to the affected rustix xattr getters/list functions or Tokio AsyncFd constructors were found in the release source or resolved normal dependencies. Source review included provider declarations, reexports and documentation."
+  },
+  "native_archives": [
+    {
+      "target": "aarch64-apple-darwin",
+      "name": "tell-tail-0.5.0-aarch64-apple-darwin.tar.gz",
+      "sha256": "30bf225e7eb36041090e0d165c6b0d402f64a342d18b328879d6758f6ed788f5",
+      "size": 2758575
+    },
+    {
+      "target": "aarch64-unknown-linux-musl",
+      "name": "tell-tail-0.5.0-aarch64-unknown-linux-musl.tar.gz",
+      "sha256": "689487a26f78927e42fca578b2890ad3ec4ea8da7aeb27303010b53a987296fe",
+      "size": 2690449
+    },
+    {
+      "target": "x86_64-unknown-linux-musl",
+      "name": "tell-tail-0.5.0-x86_64-unknown-linux-musl.tar.gz",
+      "sha256": "f71e9570e3248fe3eb9eb2ff106918c9d0300e31eb07afdf968c24e49e8918d3",
+      "size": 2901320
+    }
+  ],
+  "desktop_plugin_archives": {
+    "tell-tail-macos-arm64.zip": {
+      "sha256": "ec119069ac3842e99b440b5ab5c5d821cf333a6404605711cf71422ae001dba7",
+      "bytes": 3302710,
+      "binary_sha256": "9e7e67c17275da40cc03d3b984647cf987856a99c098b3e5cfe6446c71f67993",
+      "plugin_version": "0.3.0",
+      "binary_version": "0.5.0",
+      "source_commit": "2f2eb2c373e63d18b18272640ba63777d0ecf08b",
+      "target": "aarch64-apple-darwin",
+      "minimum_macos": "14.0",
+      "clean_source": true,
+      "logs_and_mcp_smoke": "passed"
+    },
+    "tell-tail-plugin-0.3.0-macos-arm64.zip": {
+      "sha256": "1e918c8c5cfcaa6a590a00848acb9f06cfb4d9f69f2906317115f7e1e529f4d4",
+      "bytes": 3286368,
+      "binary_sha256": "9e7e67c17275da40cc03d3b984647cf987856a99c098b3e5cfe6446c71f67993",
+      "plugin_version": "0.3.0",
+      "binary_version": "0.5.0",
+      "source_commit": "2f2eb2c373e63d18b18272640ba63777d0ecf08b",
+      "target": "aarch64-apple-darwin",
+      "minimum_macos": "14.0",
+      "clean_source": true,
+      "logs_and_mcp_smoke": "passed"
+    }
+  },
+  "macos_release_binary": {
+    "chromium_tests_passed": 50,
+    "mcp_browser": {
+      "first_usable_browser_ms": 227.53287500000005,
+      "append_to_browser_p95_ms": 294.84779100000014,
+      "new_file_to_browser_ms": 350.949834,
+      "shutdown_ms": 168.52249999999913,
+      "targets_met": true
+    },
+    "synthetic_activity": {
+      "steady_observations": 6000,
+      "post_to_activity_query_p95_ms": 116.35,
+      "quiet_mcp_retained": true,
+      "max_rss_kib": 21952,
+      "backpressure_retries": 0
+    },
+    "synthetic_tracing": {
+      "steady_calls": 6000,
+      "burst_calls": 10000,
+      "receipt_to_query_p95_ms": 4.359,
+      "max_rss_kib": 11104,
+      "backpressure_retries": 0
+    }
+  },
+  "macos_maximum_tui": {
+    "records": 6000,
+    "bytes": 1007974560,
+    "mode": "tui",
+    "seconds": 60.12549954187125,
+    "peak_sampled_rss_mib": 28.40625,
+    "shutdown_observed_seconds": 0.12404970801435411,
+    "terminal_actions": 6
+  },
+  "dashboards": {
+    "macos-15": {
+      "dashboard-hour": {
+        "records": 3597000,
+        "bytes": 38521567920,
+        "mode": "tui",
+        "seconds": 3600.4269843330003,
+        "peak_sampled_rss_mib": 7.578125,
+        "shutdown_observed_seconds": 0.18956950000028883,
+        "terminal_actions": 360,
+        "resource_samples": 3394,
+        "rss_10minute_medians_mib": [
+          6.78125,
+          6.78125,
+          6.78125,
+          6.78125,
+          6.78125,
+          6.796875
+        ],
+        "report_sha256": "8adaaefdf4f05753718a0e5d5cd0034fa67f3b851e59d7937dfb880fbf893f30"
+      },
+      "maximum": {
+        "records": 6000,
+        "bytes": 1007974560,
+        "mode": "json",
+        "seconds": 60.15344033300016,
+        "peak_sampled_rss_mib": 37.671875,
+        "shutdown_observed_seconds": 0.13509837499987043,
+        "terminal_actions": 0,
+        "resource_samples": 56,
+        "rss_10minute_medians_mib": [],
+        "report_sha256": "d06ff38c9edcbe067eeacf109889aff3ca7cf6fad3dfd4bef75135d587a37f9e"
+      }
+    },
+    "ubuntu-24.04": {
+      "dashboard-hour": {
+        "records": 3597000,
+        "bytes": 38521567920,
+        "mode": "tui",
+        "seconds": 3600.058238037,
+        "peak_sampled_rss_mib": 10.1640625,
+        "shutdown_observed_seconds": 0.0519347449999259,
+        "terminal_actions": 360,
+        "resource_samples": 3549,
+        "rss_10minute_medians_mib": [
+          10.12109375,
+          10.15234375,
+          10.15234375,
+          10.16015625,
+          10.16015625
+        ],
+        "report_sha256": "1e10ce461734477f07775d37ca6b7cdbb3dc2c22fc2a05cda9ec6f7da19b8347"
+      },
+      "maximum": {
+        "records": 6000,
+        "bytes": 1007974560,
+        "mode": "json",
+        "seconds": 60.00943845199981,
+        "peak_sampled_rss_mib": 27.05859375,
+        "shutdown_observed_seconds": 0.009277395000026445,
+        "terminal_actions": 0,
+        "resource_samples": 60,
+        "rss_10minute_medians_mib": [],
+        "report_sha256": "66dbbdfae8aa8ffc5695467338f3b1029e93bed7c1d1c751cb2d68d61d5d403d"
+      }
+    }
+  },
+  "fuzzing": {
+    "classification": {
+      "runs": 53938333,
+      "seconds": 1801,
+      "log_sha256": "e1f345950632d9c187d22f06770939d6b6cc89ab868f843435e824ade9a86bd5",
+      "compiler": "rustc 1.101.0-nightly (822182db4 2026-10-13)"
+    },
+    "framing": {
+      "runs": 58645070,
+      "seconds": 1801,
+      "log_sha256": "53b6e48b442cc7943babf4bec2fcf870677db254b7c8f4fe12f8f8f3a7e4363d",
+      "compiler": "rustc 1.101.0-nightly (822182db4 2026-10-13)"
+    },
+    "timed_engine": {
+      "runs": 4240539,
+      "seconds": 1801,
+      "log_sha256": "fa86bc9b4ded2bd096b9bc188cb091bec62e02e460617e2be2a89bad671148cc",
+      "compiler": "rustc 1.101.0-nightly (822182db4 2026-10-13)"
+    }
+  },
+  "performance": {
+    "controlled_linux": {
+      "workflow": "https://github.com/zuchka/tell-tail/actions/runs/44945513453",
+      "binary_sha256": "f20b7d4d3200bbb9388d46e04d9e82a783a34c447576631cf5c3dd2bec33f750",
+      "host": "runnervmeozm8",
+      "cpu_model": "Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz",
+      "cpu_affinity": {
+        "available_cpus": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "consumer_cpu": 3,
+        "producer_cpu": 0
+      },
+      "median_tui_loss_fraction": 0.02553016477436687,
+      "throughput": {
+        "json": {
+          "max": 5451781,
+          "median": 5449024,
+          "min": 5437516,
+          "relative_range": 0.002617900012919745
+        },
+        "tui": {
+          "max": 5310518,
+          "median": 5307173,
+          "min": 5288800,
+          "relative_range": 0.004092197484423439
+        }
+      },
+      "possible_generator_limit": false,
+      "timing_variation_warning": false,
+      "measurement_qualifies_for_gate": true,
+      "cached_text200": {
+        "max": 12676305.061415823,
+        "median": 12671486.312948147,
+        "min": 11908970.449855538,
+        "relative_range": 0.06055600681793714
+      },
+      "report_sha256": "120c11bc1e953ed028552af6c07839d986229a594b36f6c40f30ec97a29b1f37",
+      "reviewed_runs": 15,
+      "qualifies": true
+    },
+    "macos-15": {
+      "workflow": "https://github.com/zuchka/tell-tail/actions/runs/44945510790",
+      "binary_sha256": "67811fcef2dad176f9c1aa353971a155c11c36c993a45e0e70731567667c6159",
+      "host": "iad20-eo1214-2208980a-080d-4c60-a317-87b2f3bc3cd5-AEE776ACB202.local",
+      "cpu_model": "Apple M1 (Virtual)",
+      "cpu_affinity": {
+        "available_cpus": null,
+        "consumer_cpu": null,
+        "producer_cpu": null
+      },
+      "median_tui_loss_fraction": 0.03843868656325122,
+      "throughput": {
+        "json": {
+          "max": 7424362,
+          "median": 7052375,
+          "min": 6972229,
+          "relative_range": 0.0641107428348606
+        },
+        "tui": {
+          "max": 7270590,
+          "median": 6894985,
+          "min": 6621773,
+          "relative_range": 0.09409984213163626
+        }
+      },
+      "possible_generator_limit": false,
+      "timing_variation_warning": false,
+      "measurement_qualifies_for_gate": true,
+      "cached_text200": {
+        "max": 14666752.965839991,
+        "median": 12986735.374459704,
+        "min": 10120317.929788025,
+        "relative_range": 0.35008298120813247
+      },
+      "report_sha256": "0229e23cd90db274d4530afbd29c009df88d6c2dc1bee3fe4e44ddf9af51bba6",
+      "reviewed_runs": 15,
+      "qualifies": false
+    },
+    "ubuntu-24.04": {
+      "workflow": "https://github.com/zuchka/tell-tail/actions/runs/44945510790",
+      "binary_sha256": "f20b7d4d3200bbb9388d46e04d9e82a783a34c447576631cf5c3dd2bec33f750",
+      "host": "runnervmeozm8",
+      "cpu_model": "AMD EPYC 9V45 96-Core Processor",
+      "cpu_affinity": {
+        "available_cpus": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "consumer_cpu": null,
+        "producer_cpu": null
+      },
+      "median_tui_loss_fraction": 0.026192361507977657,
+      "throughput": {
+        "json": {
+          "max": 9072319,
+          "median": 8758104,
+          "min": 8630677,
+          "relative_range": 0.050426667689719144
+        },
+        "tui": {
+          "max": 8863489,
+          "median": 8715124,
+          "min": 8460141,
+          "relative_range": 0.046281383948180196
+        }
+      },
+      "possible_generator_limit": false,
+      "timing_variation_warning": false,
+      "measurement_qualifies_for_gate": true,
+      "cached_text200": {
+        "max": 23944607.59834332,
+        "median": 23918858.9068135,
+        "min": 23864957.560225192,
+        "relative_range": 0.003330009948569859
+      },
+      "report_sha256": "545d20ff797c5eaa5c6a8602c487c2aad485d540ff6e8103d4fb8be43b94dde4",
+      "reviewed_runs": 15,
+      "qualifies": true
+    }
+  }
+}
