@@ -16,9 +16,9 @@ Historical [0.3](VALIDATION-0.3-RELEASE.md) and
 
 ## Hosted documentation
 
-The public documentation origin is [docs.ding.ing](https://docs.ding.ing/).
-[Released Tell-Tail guides](https://docs.ding.ing/tell-tail/) and the
-[unreleased preview](https://docs.ding.ing/tell-tail/next/) are separate channels.
+The public site and documentation share [tell-tail.dev](https://tell-tail.dev/).
+[Released Tell-Tail guides](https://tell-tail.dev/docs/) and the
+[unreleased preview](https://tell-tail.dev/docs/next/) are separate channels.
 These repository Markdown files are the guide sources; the Ding website build
 fetches immutable source revisions rather than tracking a floating branch.
 
@@ -38,7 +38,7 @@ When publishing documentation changes:
    warning, navigation, rewritten links and `build-info.json` source revision.
 4. Publish the docs before advertising a new hosted page. Verify HTTP 200 and
    the expected content at the new route; the released MCP route is
-   `https://docs.ding.ing/tell-tail/mcp/`. Keep the source pin and page map
+   `https://tell-tail.dev/docs/mcp/`. Keep the source pin and page map
    together so the guide and its navigation links are published in the same build.
 
 A product release also updates the website's version, release reference, stable

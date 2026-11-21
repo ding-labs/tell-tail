@@ -1,7 +1,7 @@
 # MCP watcher implementation validation
 
 For hosted user documentation, visit the
-[MCP guide on Ding docs](https://docs.ding.ing/tell-tail/mcp/).
+[MCP guide on tell-tail.dev](https://tell-tail.dev/docs/mcp/).
 The [local MCP guide](MCP.md) describes this checkout's implementation;
 the [publication checklist](RELEASING.md#hosted-documentation) covers updating the site.
 

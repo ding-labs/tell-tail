@@ -1,8 +1,8 @@
 # Tell-Tail documentation
 
-Read the [hosted released guides](https://docs.ding.ing/tell-tail/) or the
-[hosted unreleased preview](https://docs.ding.ing/tell-tail/next/) on
-[Ding docs](https://docs.ding.ing/). This directory is the source of truth;
+Read the [hosted released guides](https://tell-tail.dev/docs/) or the
+[hosted unreleased preview](https://tell-tail.dev/docs/next/) on
+[tell-tail.dev](https://tell-tail.dev/). This directory is the source of truth;
 hosted builds use pinned revisions and may lag this checkout.
 
 Tell-Tail provides local observability through Logs and AI Activity workspaces.

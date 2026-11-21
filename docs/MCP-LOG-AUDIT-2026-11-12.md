@@ -1,7 +1,7 @@
 # Local MCP log feasibility audit
 
 This audit is historical evidence for the [MCP guide](MCP.md). Hosted user
-documentation lives in the [Tell-Tail preview on Ding docs](https://docs.ding.ing/tell-tail/next/),
+documentation lives in the [Tell-Tail preview on tell-tail.dev](https://tell-tail.dev/docs/next/),
 which may lag the source checkout.
 
 Inspected November 12, 2026, on one macOS workstation. Existing local logs are
