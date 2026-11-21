@@ -1,7 +1,7 @@
 use super::{Evidence, Locator, Tool, bounded, tag};
 use serde_json::Value;
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::HashMap,
     fs,
     io::{self, Read, Seek, SeekFrom},
     path::{Path, PathBuf},
@@ -73,10 +73,8 @@ fn native_tool(item: &Value) -> Option<Tool> {
         "CommandExecution" => (
             "functions.exec_command".into(),
             item.get("command")
-                .and_then(|v| v.as_array())
-                .and_then(|v| v.last())
-                .and_then(Value::as_str)
-                .map(super::super::inspection::shell_operation),
+                .and_then(|v| v.as_str().or_else(|| v.as_array()?.last()?.as_str()))
+                .map(|s| bounded(s, 200)),
         ),
         "WebSearch" => ("web.run".into(), None),
         "McpToolCall" | "MCPToolCall" => {
@@ -213,7 +211,7 @@ fn project(
     }
     let turn = candidates.pop_first().unwrap();
     evidence.matched = true;
-    let mut tools = BTreeMap::<String, usize>::new();
+    let mut tools = Vec::<(String, Tool)>::new();
     for line in lines() {
         let Ok(r) = serde_json::from_slice::<Value>(line) else {
             evidence.partial = true;
@@ -316,15 +314,31 @@ fn project(
             }
         }
         tool.selected = key == loc.call;
-        if let Some(idx) = tools.get(&key) {
-            evidence.tools[*idx] = tool;
-        } else if evidence.tools.len() < MAX_TOOLS {
-            tools.insert(key, evidence.tools.len());
-            evidence.tools.push(tool);
-        } else {
-            evidence.partial = true;
+        if let Some((_, existing)) = tools.iter_mut().find(|(id, _)| id == &key) {
+            if !existing.failed() || tool.failed() {
+                *existing = tool;
+            }
+            continue;
         }
+        if tools.len() >= MAX_TOOLS {
+            evidence.partial = true;
+            let victim = tools
+                .iter()
+                .position(|(_, t)| !t.selected && !t.failed())
+                .or_else(|| {
+                    tool.selected
+                        .then(|| tools.iter().position(|(_, t)| !t.selected))
+                        .flatten()
+                });
+            if let Some(index) = victim {
+                tools.remove(index);
+            } else {
+                continue;
+            }
+        }
+        tools.push((key, tool));
     }
+    evidence.tools = tools.into_iter().map(|(_, t)| t).collect();
     evidence.partial |= data
         .split(|b| *b == b'\n')
         .any(|line| line.len() > MAX_LINE);

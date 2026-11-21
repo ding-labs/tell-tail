@@ -158,6 +158,7 @@ impl Running {
                 .lock()
                 .map_err(|_| io::Error::other("Trace state failed"))?;
             s.inspecting = inspect;
+            s.turn_root = chat_index.and_then(Path::parent).map(Path::to_path_buf);
             s.enabled = true;
             s.running = true;
         }

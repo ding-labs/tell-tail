@@ -254,11 +254,15 @@ fn record(
     };
     let o = Observation {
         inspection: inspect.then(|| {
-            std::sync::Arc::new(super::inspection::Inspection::capture(
+            let mut context = super::inspection::Inspection::capture(
                 &tool,
                 text(attrs.get("arguments")),
                 text(attrs.get("output")),
-            ))
+            );
+            context.locator = execution
+                .zip(text(attrs.get("call_id")))
+                .and_then(|(chat, call)| super::turn::Locator::new(chat, call));
+            std::sync::Arc::new(context)
         }),
         schema_version: SCHEMA_VERSION,
         source: "codex-otlp-tool-result-v1".into(),

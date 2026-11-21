@@ -366,6 +366,17 @@ impl Store {
         self.validate_watermark(as_of)?;
         self.at(id, as_of).cloned().ok_or("Trace call unavailable")
     }
+    pub fn chat_tools(&self, chat: &str) -> std::collections::HashMap<String, super::turn::Tool> {
+        self.calls
+            .values()
+            .filter_map(|tracked| {
+                let call = &tracked.call;
+                let locator = call.inspection.as_ref()?.locator.as_ref()?;
+                (locator.chat == chat)
+                    .then(|| (locator.call.clone(), super::turn::Tool::from_call(call)))
+            })
+            .collect()
+    }
     pub fn page(
         &self,
         filter: &Filter,

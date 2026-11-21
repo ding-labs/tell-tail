@@ -55,6 +55,49 @@ pub struct Tool {
     pub selected: bool,
 }
 
+impl Tool {
+    pub fn from_call(call: &super::model::Call) -> Self {
+        use super::model::Status;
+        let context = call.inspection.as_deref();
+        let exit_code = context.and_then(|c| c.exit_code);
+        let outcome = match call.status {
+            Status::Conflict => "conflict",
+            Status::Failed => "failed",
+            Status::Denied => "denied",
+            Status::Cancelled => "interrupted",
+            Status::Incomplete => "incomplete",
+            Status::Running => "running",
+            Status::Completed if call.tool_error == Some(true) => "failed",
+            Status::Completed if exit_code.is_some_and(|c| c != 0) => "nonzero_exit",
+            Status::Completed => "completed",
+        };
+        let operation = context.and_then(|ctx| {
+            if call.tool == "functions.exec_command" {
+                ctx.input
+                    .as_deref()
+                    .map(|cmd| bounded(cmd, 200))
+                    .or_else(|| ctx.operation.clone())
+            } else {
+                ctx.operation.clone()
+            }
+        });
+        Self {
+            name: call.tool.clone(),
+            operation,
+            outcome,
+            exit_code,
+            selected: false,
+        }
+    }
+
+    pub fn failed(&self) -> bool {
+        matches!(
+            self.outcome,
+            "failed" | "nonzero_exit" | "denied" | "interrupted" | "conflict"
+        )
+    }
+}
+
 #[derive(Default, Serialize)]
 pub struct Evidence {
     pub matched: bool,

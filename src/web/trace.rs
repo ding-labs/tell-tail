@@ -15,10 +15,14 @@ use tokio::sync::Semaphore;
 struct App {
     shared: Shared,
     streams: Arc<Semaphore>,
+    turn_reads: Arc<Semaphore>,
 }
 fn json(value: &impl serde::Serialize) -> Response {
+    json_bounded(value, 64 * 1024)
+}
+fn json_bounded(value: &impl serde::Serialize, limit: usize) -> Response {
     match serde_json::to_vec(value) {
-        Ok(b) if b.len() <= 64 * 1024 => {
+        Ok(b) if b.len() <= limit => {
             ([(header::CONTENT_TYPE, "application/json")], b).into_response()
         }
         _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
@@ -170,6 +174,50 @@ async fn detail(State(app): State<App>, Path(id): Path<u64>, req: Request) -> Re
         Err(e) => failure(e),
     }
 }
+async fn turn(State(app): State<App>, Path(id): Path<u64>, req: Request) -> Response {
+    if req
+        .headers()
+        .get("x-tell-tail-inspect")
+        .and_then(|v| v.to_str().ok())
+        != Some("local-turn")
+    {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    let Ok(params) = query(&req, &["source"]) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    let Ok(permit) = app.turn_reads.try_acquire_owned() else {
+        return StatusCode::TOO_MANY_REQUESTS.into_response();
+    };
+    let (root, locator, live) = {
+        let Ok(state) = app.shared.lock() else {
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        };
+        let Some(root) = state.turn_root.clone() else {
+            return StatusCode::NOT_FOUND.into_response();
+        };
+        let Ok(call) = state.store.detail(id, state.store.snapshot().watermark) else {
+            return StatusCode::GONE.into_response();
+        };
+        if params.get("source") != Some(&call.source) {
+            return StatusCode::GONE.into_response();
+        }
+        let Some(locator) = call.inspection.and_then(|c| c.locator.clone()) else {
+            return StatusCode::NOT_FOUND.into_response();
+        };
+        let live = state.store.chat_tools(&locator.chat);
+        (root, locator, live)
+    };
+    let result = tokio::task::spawn_blocking(move || {
+        let _permit = permit;
+        crate::tool_trace::turn::read(&root, &locator, None, &live)
+    })
+    .await;
+    match result {
+        Ok(Ok(evidence)) => json_bounded(&evidence, 512 * 1024),
+        _ => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+    }
+}
 async fn events(State(app): State<App>) -> Response {
     let Ok(permit) = app.streams.try_acquire_owned() else {
         return StatusCode::TOO_MANY_REQUESTS.into_response();
@@ -221,10 +269,12 @@ pub(super) fn router(shared: Shared) -> Router {
         .route("/api/traces/snapshot", get(snapshot))
         .route("/api/traces/calls", get(calls))
         .route("/api/traces/call/{id}", get(detail))
+        .route("/api/traces/call/{id}/turn", get(turn))
         .route("/api/traces/events", get(events))
         .with_state(App {
             shared,
             streams: Arc::new(Semaphore::new(super::STREAMS)),
+            turn_reads: Arc::new(Semaphore::new(2)),
         })
 }
 #[cfg(test)]

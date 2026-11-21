@@ -80,6 +80,11 @@ pub fn call(call: &Call) -> Item {
     item.plugin = call.plugin.clone();
     item.server = call.server.clone();
     item.source_ref = format!("trace-{}", call.source);
+    item.trace_call_id = call
+        .inspection
+        .as_ref()
+        .and_then(|ctx| ctx.locator.as_ref())
+        .map(|_| call.id.to_string());
     item.inspection = call.inspection.clone();
     item.scope = if call.inspection.as_ref().is_some_and(|c| c.chat.is_some()) {
         "named_chat"

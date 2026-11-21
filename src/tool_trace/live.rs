@@ -7,6 +7,7 @@ pub struct State {
     pub store: Store,
     pub enabled: bool,
     pub inspecting: bool,
+    pub turn_root: Option<std::path::PathBuf>,
     pub replay: bool,
     pub running: bool,
     pub last_received_ms: Option<i64>,
