@@ -137,8 +137,14 @@ impl Store {
         let diagnostic = item.diagnostic;
         // Conservative charge covers map nodes, keys, string capacity and Vec overhead.
         let entry = Entry {
+            bytes: size
+                + 1024
+                + item
+                    .inspection
+                    .as_ref()
+                    .and_then(|c| c.input.as_ref())
+                    .map_or(0, |v| v.len()),
             item,
-            bytes: size + 1024,
         };
         if let Some(old) = self.current.insert(id, entry.clone()) {
             self.charged -= old.bytes;

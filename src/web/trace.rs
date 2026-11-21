@@ -130,8 +130,25 @@ async fn calls(State(app): State<App>, req: Request) -> Response {
         Err(e) => failure(e),
     }
 }
+pub(super) fn private_input(
+    req: &Request,
+    context: Option<&crate::tool_trace::inspection::Inspection>,
+) -> Response {
+    if req
+        .headers()
+        .get("x-tell-tail-inspect")
+        .and_then(|v| v.to_str().ok())
+        != Some("local-input")
+    {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    match context.and_then(|c| c.input.as_deref()) {
+        Some(input) => json(&serde_json::json!({"input":input})),
+        None => StatusCode::NOT_FOUND.into_response(),
+    }
+}
 async fn detail(State(app): State<App>, Path(id): Path<u64>, req: Request) -> Response {
-    let p = match query(&req, &["as_of", "epoch"]) {
+    let p = match query(&req, &["as_of", "epoch", "input"]) {
         Ok(p) => p,
         Err(e) => return e.into_response(),
     };
@@ -148,6 +165,7 @@ async fn detail(State(app): State<App>, Path(id): Path<u64>, req: Request) -> Re
         return StatusCode::GONE.into_response();
     }
     match s.store.detail(id, as_of.unwrap_or(snap.watermark)) {
+        Ok(call) if p.contains_key("input") => private_input(&req, call.inspection.as_deref()),
         Ok(call) => json(&call),
         Err(e) => failure(e),
     }

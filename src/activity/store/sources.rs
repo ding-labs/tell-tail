@@ -24,6 +24,7 @@ pub struct Sources {
 }
 #[derive(Clone, PartialEq, Eq, Serialize)]
 pub struct TraceSource {
+    pub inspecting: bool,
     pub enabled: bool,
     pub status: &'static str,
     pub last_received_ms: Option<i64>,
@@ -37,6 +38,7 @@ impl Default for TraceSource {
     fn default() -> Self {
         Self {
             enabled: false,
+            inspecting: false,
             status: "disabled",
             last_received_ms: None,
             rejected_batches: 0,
@@ -49,6 +51,7 @@ impl TraceSource {
     pub fn from_state(s: &crate::tool_trace::live::State) -> Self {
         Self {
             enabled: s.enabled,
+            inspecting: s.inspecting,
             status: if !s.enabled {
                 "disabled"
             } else if s.replay {

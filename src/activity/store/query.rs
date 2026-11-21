@@ -55,7 +55,15 @@ impl Filter {
                 .is_none_or(|t| i.occurred_ms.is_some_and(|v| v < t))
             && (self.search.is_empty()
                 || format!(
-                    "{} {} {} {} {} {}",
+                    "{} {} {} {} {} {} {} {}",
+                    i.inspection
+                        .as_ref()
+                        .and_then(|c| c.chat.as_deref())
+                        .unwrap_or(""),
+                    i.inspection
+                        .as_ref()
+                        .and_then(|c| c.operation.as_deref())
+                        .unwrap_or(""),
                     i.summary,
                     i.subject,
                     i.plugin.as_deref().unwrap_or(""),
@@ -70,6 +78,8 @@ impl Filter {
 
 #[derive(Serialize)]
 pub struct Row {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub inspection: Option<std::sync::Arc<crate::tool_trace::inspection::Inspection>>,
     #[serde(serialize_with = "crate::tool_trace::model::decimal")]
     pub id: u64,
     #[serde(serialize_with = "crate::tool_trace::model::decimal")]
@@ -94,6 +104,7 @@ pub struct Row {
 impl From<&Item> for Row {
     fn from(i: &Item) -> Self {
         Self {
+            inspection: i.inspection.clone(),
             id: i.id,
             revision: i.revision,
             category: i.category,

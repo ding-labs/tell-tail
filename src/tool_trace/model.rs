@@ -128,6 +128,8 @@ pub struct Call {
     pub source: String,
     pub execution: String,
     pub correlated: bool,
+    #[serde(skip)]
+    pub scope_known: bool,
     pub tool: String,
     pub server: Option<String>,
     pub plugin: Option<String>,

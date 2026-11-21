@@ -31,6 +31,7 @@ impl Tracked {
                 source,
                 execution,
                 correlated: observation.call_id.is_some(),
+                scope_known: observation.execution_id != "unscoped",
                 tool: observation.tool.clone(),
                 server: observation.server.clone(),
                 plugin: observation.plugin.clone(),

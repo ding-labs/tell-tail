@@ -52,7 +52,15 @@ impl Filter {
                 .is_none_or(|v| c.started_ms.or(c.completed_ms).unwrap_or(c.received_ms) >= v)
             && self.search.as_ref().is_none_or(|v| {
                 format!(
-                    "{} {} {} {}",
+                    "{} {} {} {} {} {}",
+                    c.inspection
+                        .as_ref()
+                        .and_then(|x| x.chat.as_deref())
+                        .unwrap_or(""),
+                    c.inspection
+                        .as_ref()
+                        .and_then(|x| x.operation.as_deref())
+                        .unwrap_or(""),
                     c.tool,
                     c.plugin.as_deref().unwrap_or(""),
                     c.server.as_deref().unwrap_or(""),

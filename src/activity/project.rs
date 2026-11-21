@@ -80,8 +80,15 @@ pub fn call(call: &Call) -> Item {
     item.plugin = call.plugin.clone();
     item.server = call.server.clone();
     item.source_ref = format!("trace-{}", call.source);
-    item.scope = "unlinked_execution";
-    item.scope_ref = Some(format!("tool-{}", call.execution));
+    item.inspection = call.inspection.clone();
+    item.scope = if call.inspection.as_ref().is_some_and(|c| c.chat.is_some()) {
+        "named_chat"
+    } else if call.scope_known {
+        "unlinked_execution"
+    } else {
+        "unknown"
+    };
+    item.scope_ref = call.scope_known.then(|| format!("tool-{}", call.execution));
     item.occurred_ms = call.started_ms.or(call.completed_ms);
     item.received_ms = call.received_ms;
     item.historical = call.historical;
@@ -95,23 +102,30 @@ pub fn call(call: &Call) -> Item {
     item.execution_success = call.execution_success;
     item.tool_error = call.tool_error;
     item.gap_observed = call.gap_observed;
+    let exit_code = call.inspection.as_ref().and_then(|c| c.exit_code);
     item.outcome = match call.status {
         Status::Running => "start_observed",
+        Status::Failed if call.tool_error == Some(true) => "tool_error",
         Status::Failed => "execution_failed",
         Status::Cancelled => "cancelled",
         Status::Denied => "denied",
         Status::Incomplete => "incomplete",
         Status::Conflict => "conflicting_evidence",
         Status::Completed if call.tool_error == Some(true) => "tool_error",
+        Status::Completed if exit_code.is_some_and(|code| code != 0) => "command_failed",
         Status::Completed if call.execution_success == Some(true) => "execution_succeeded",
         Status::Completed => "completed",
     };
     item.severity = match item.outcome {
-        "execution_failed" | "tool_error" => Severity::Error,
+        "execution_failed" | "tool_error" | "command_failed" => Severity::Error,
         "conflicting_evidence" => Severity::Warning,
         _ => Severity::Info,
     };
-    item.note = "Execution outcome and tool-reported error are separate. Missing starts, parent links and chat identity are not inferred.";
+    item.note = if item.scope == "named_chat" {
+        "Chat title matched by the conversation identifier in this tool result."
+    } else {
+        "The exporter reported this tool result. A local chat title is unavailable."
+    };
     item
 }
 

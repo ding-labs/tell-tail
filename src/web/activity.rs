@@ -117,6 +117,7 @@ fn filters(p: &BTreeMap<String, String>) -> Result<Filter, &'static str> {
             "failure_reported",
             "execution_succeeded",
             "execution_failed",
+            "command_failed",
             "tool_error",
             "cancelled",
             "denied",
@@ -232,7 +233,7 @@ async fn sources(State(app): State<App>, req: Request) -> Response {
     read(&app, &req, Query::Sources)
 }
 async fn detail(State(app): State<App>, Path(id): Path<u64>, req: Request) -> Response {
-    let p = match super::trace::query(&req, &["epoch", "as_of"]) {
+    let p = match super::trace::query(&req, &["epoch", "as_of", "input"]) {
         Ok(p) => p,
         Err(e) => return e.into_response(),
     };
@@ -241,6 +242,9 @@ async fn detail(State(app): State<App>, Path(id): Path<u64>, req: Request) -> Re
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
     match watermark(&s, &p).and_then(|at| s.detail(id, at)) {
+        Ok(item) if p.contains_key("input") => {
+            super::trace::private_input(&req, item.inspection.as_deref())
+        }
         Ok(item) => json(&item, 16 * 1024),
         Err(e) => failure(e),
     }
