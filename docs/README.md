@@ -9,15 +9,15 @@ Tell-Tail provides local observability through Logs and AI Activity workspaces.
 Start with the [installation and quick start](../README.md#install-and-try-it).
 The built-in demo, expanded parsers, parsing coverage, severity history, and
 activity freshness require **0.3.0 or later**. Their guides use the installed
-`tell-tail` command. MCP diagnostics require **0.4.0 or later**.
+`tell-tail` command. MCP diagnostics require **0.4.0 or later**. AI Activity, managed log sources and local call inspection require **0.5.0 or later**.
 
 ## Using Tell-Tail
 
 | Guide | What it answers |
 | --- | --- |
-| [Application log sources (unreleased)](LOG-SOURCES.md) | Add and manage local files in the installed dashboard; persistence and API boundaries |
-| [Workspaces (unreleased)](WORKSPACES.md) | Logs and AI Activity in one Tell-Tail; navigation, input boundaries and appearance |
-| [Desktop activity (unreleased)](DESKTOP-ACTIVITY.md) | Unified ChatGPT/Codex observations, tools and MCP; time navigator, inspector, source coverage and migration |
+| [Application log sources](LOG-SOURCES.md) | Add and manage local files in the installed dashboard; persistence and API boundaries |
+| [Workspaces](WORKSPACES.md) | Logs and AI Activity in one Tell-Tail; navigation, input boundaries and appearance |
+| [Desktop activity](DESKTOP-ACTIVITY.md) | Unified ChatGPT/Codex observations, tools and MCP; time navigator, inspector, source coverage and migration |
 | [MCP diagnostics](MCP.md) | Existing desktop MCP logs, grouped failures, live timeline, safe evidence, source coverage, demo, and API |
 | [Log format recognition](LOG-FORMATS.md) | Automatic styles, one-flag profiles, nested keys, container wrappers, parser hints, and precise limits |
 | [Understanding a live log stream](MONITORING.md) | What coverage, histories, ratios, and activity ages mean; worked examples, parser conventions, time scopes, and controls |

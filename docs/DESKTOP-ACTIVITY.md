@@ -1,6 +1,6 @@
 # Tell-Tail · AI Activity
 
-Available in this source checkout; not included in published 0.4.0 binaries.
+Available in Tell-Tail 0.5.0 and later.
 The AI Activity workspace combines supported local desktop observations, MCP
 server diagnostics, and opted-in Codex tool results. It does not read conversation
 databases or claim to observe every ChatGPT cloud operation.

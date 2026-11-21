@@ -1,7 +1,6 @@
 # Tool-call tracing
 
-Available in this checkout; not a claim about published packages. Build with the
-default `web` feature to receive **Codex OTLP HTTP/protobuf tool results**. The
+Available in Tell-Tail 0.5.0 with the default `web` feature. The collector receives **Codex OTLP HTTP/protobuf tool results**. The
 passive `tell-tail mcp --open` command still requires no client configuration.
 
 The [Activity workspace](DESKTOP-ACTIVITY.md) is the default for new managed
@@ -180,10 +179,11 @@ This test requires macOS with an active GUI launchd domain. It covers active and
 disabled upgrades, explicit rollback, failed activation recovery, credential/config
 preservation, edited-exporter refusal, uninstall and interrupted cleanup recovery.
 
-## Installable plugin preview
+## Install the desktop plugin
 
-The plugin source is `packaging/codex-plugin`. Build a self-contained native
-preview with Python 3.11+ and the repository's Rust toolchain:
+On an Apple Silicon Mac, download the [local marketplace ZIP](https://github.com/zuchka/tell-tail/releases/download/v0.5.0/tell-tail-macos-arm64.zip). It includes plugin 0.3.0 and Tell-Tail 0.5.0.
+
+To build the same layout from source, use Python 3.11+ and the repository's Rust toolchain:
 
 ```sh
 python3 scripts/package-tracing-plugin.py
@@ -200,7 +200,7 @@ from the cached plugin, clean collector setup, app restart, and live GitHub and
 Railway capture were [verified](validation/plugin-trace-desktop-install-2026-11-19.json).
 Desktop install/setup clicks were user-assisted because Codex blocks automated
 control of its own window; catalog, files, service, calls and dashboard were
-independently checked. This preview has not been published to the public directory.
+independently checked. GitHub Releases distributes the local marketplace ZIP.
 
 The [supported onboarding mechanism](https://developers.openai.com/plugins/build/plugins#add-an-onboarding-skill)
 is a skill invoked when users run setup after installation. This package has no
@@ -208,7 +208,7 @@ silent lifecycle hooks. Setup installs the service/config described above. Befor
 removing the plugin, run `tracing uninstall` to clean up the separately installed
 service. Automatic installed-plugin inventory, durable
 history, and guaranteed coverage of every Codex execution path remain outside
-this preview.
+this release.
 
 ## Build the public directory ZIP
 

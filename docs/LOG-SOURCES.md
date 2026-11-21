@@ -1,6 +1,6 @@
 # Application log sources in Tell-Tail
 
-Unreleased source-checkout functionality. The desktop/plugin dashboard can follow
+Starting with Tell-Tail 0.5.0, the desktop/plugin dashboard can follow
 user-selected application files alongside AI Activity, without another dashboard,
 process, or plugin installation. Existing file/stdin CLI commands remain unchanged.
 

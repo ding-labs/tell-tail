@@ -2,7 +2,7 @@
 
 Tell-Tail is the product. Logs and AI Activity are complementary workspaces;
 ChatGPT and Codex are integrations. The workspace switch and shared appearance
-are unreleased source-checkout features, not a claim about published 0.4.0 builds.
+are available in Tell-Tail 0.5.0 and later.
 
 | Entry point | Opens first | What switching does |
 | --- | --- | --- |

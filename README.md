@@ -8,7 +8,7 @@ Tell-Tail's **Logs** workspace monitors throughput, severity, rolling statistics
 and recent errors from a file or stdin. The terminal dashboard, plain text,
 NDJSON, Prometheus, and local HTTP/SSE metrics API remain core capabilities.
 
-The unreleased **AI Activity** workspace adds supported desktop events, plugin
+The **AI Activity** workspace adds supported desktop events, plugin
 results, connections, and MCP diagnostics. Both workspaces share Tell-Tail's
 navigation and appearance; ChatGPT and Codex are integrations within the product.
 The installed dashboard can also follow your own application files through
@@ -54,12 +54,12 @@ terminal shows up to 20 error/fatal previews, each capped at 512 bytes and kept
 only in memory. Long previews are marked with an ellipsis. Previews are omitted
 from CLI JSON, text, Prometheus, and webhook payloads.
 
-[GitHub Releases](https://github.com/zuchka/tell-tail/releases/tag/v0.4.0)
+[GitHub Releases](https://github.com/zuchka/tell-tail/releases/tag/v0.5.0)
 provides native archives for Apple Silicon on macOS 14+ and static Linux binaries
 for x86_64 and ARM64. The dashboard is embedded; the archives need no Rust, Node,
 or Python. See the [distribution guide](docs/RELEASING.md) for platform details.
 
-The examples below target **0.4.0 or later**, including MCP diagnostics. Upgrade an existing Homebrew
+The examples below target **0.5.0 or later**. Upgrade an existing Homebrew
 installation with `brew upgrade ding-labs/tap/tell-tail`, or reinstall with Cargo.
 Check `tell-tail --version` before trying the demo or parser profiles.
 
@@ -85,37 +85,38 @@ See [MCP diagnostics](docs/MCP.md) for sources, headless output, and coverage li
 Read the [hosted MCP guide](https://tell-tail.dev/docs/mcp/) for installation
 and usage. MCP diagnostics require 0.4.0 or later; no source build is needed.
 
-### AI Activity for ChatGPT and Codex (unreleased)
+### AI Activity for ChatGPT and Codex
 
 The new desktop workspace brings general desktop events, connections, plugin
 results and MCP diagnostics into one Activity timeline. Compact rows, a time
 navigator and an evidence inspector keep activity visible immediately.
 
 ```sh
-cargo run --locked -- desktop --demo --open
-cargo run --locked -- desktop --open
+tell-tail desktop --demo --open
+tell-tail desktop --open
 ```
 
 Use Activity, Tools & MCP, Problems and Sources to inspect supported local
 observations. Pause freezes the evidence; filters search all retained history.
 See [Desktop activity](docs/DESKTOP-ACTIVITY.md) for coverage, controls and API.
-This feature is available in the source checkout, not published 0.4.0 builds.
 
-### Tool-call tracing (unreleased)
+### Tool-call tracing
 
 Capture exported Codex tool results across hosted plugin namespaces, with a
 compact table, automatic provider filters, durations and execution outcomes.
 On macOS, enable a persistent local collector and exporter with:
 
 ```sh
-cargo run --release --locked -- tracing enable
+tell-tail tracing enable
 ```
 
 Restart Codex once after first setup. Tracing stays enabled across future app
 restarts and starts at login. Use `tracing status` or `tracing disable` to manage
-it. History is bounded and in memory; this is result metadata, not guaranteed
-coverage of every client execution path. See [setup, plugin packaging and
-coverage](docs/PLUGIN-TRACING.md). These commands are not in published 0.4.0 builds.
+it. Default tracing keeps result metadata in memory. To inspect a selected call’s
+command, matching local request and failure output, explicitly enable
+[local call inspection](docs/PLUGIN-TRACING.md#local-call-inspection).
+See the [desktop plugin installation guide](docs/PLUGIN-TRACING.md#install-the-desktop-plugin)
+for the Apple Silicon bundle and setup instructions.
 
 ### Built-in demo
 
