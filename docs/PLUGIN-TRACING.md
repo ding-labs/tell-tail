@@ -48,6 +48,25 @@ unverified. No account or balance access is needed for verification.
 
 See the [capture audit](PLUGIN-TRACE-CAPTURE-AUDIT.md) for evidence and limitations.
 
+## Local call inspection
+
+On macOS, use `tell-tail tracing enable --inspect-calls` for a new installation.
+For an existing installation, run the **new executable** with
+`tracing upgrade --inspect-calls`. The upgrade restarts the collector, which clears
+in-memory history. A subsequent upgrade preserves the setting. Use
+`tracing upgrade --inspect-calls=false` to return to metadata-only capture.
+For a standalone web receiver, pass `--inspect-chat-index PATH/TO/session_index.jsonl`.
+
+The collector matches the result's conversation ID exactly against the most
+recent 512 KiB of the local chat-name index. The displayed title is the name at
+capture time. For recognized shell and scripting tools it can retain up to
+1,536 UTF-8 bytes of submitted command or script in memory. A command may itself
+contain private paths or secrets. The local inspector fetches that text when
+expanded. Lists expose the operation label and, when matched, chat title.
+**Copy diagnostic summary** omits the inspection fields. Tool output bodies and
+complete conversation histories are never stored by this mode. Unsupported
+inputs, absent names and unavailable process exit codes remain unknown.
+
 ## Persistent macOS setup
 
 Build this checkout with the default `web` feature, then:
@@ -200,8 +219,8 @@ do not paste their contents into issues, chats, URLs, or command arguments.
    does not prove plugin coverage.
 
 The generated fragment disables prompt and agent-response logging. The exporter
-may still send tool arguments/output in a batch; Tell-Tail discards them before
-queueing or retaining normalized observations. Unknown fields are never printed.
+may still send tool arguments/output in a batch. The default receiver discards
+these fields. Opt-in local call inspection retains the bounded fields described above. Unknown fields are never printed.
 The receiver is an in-memory diagnostic tool, not a durable audit system.
 
 On later collector starts, reuse `--trace-port` and `--trace-token-file`, and omit

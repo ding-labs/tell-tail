@@ -75,8 +75,16 @@ require it. Demo and trace replay read no client logs and cannot enable an intak
 
 Select a row to inspect its outcome, timing, provenance, and safe diagnostic
 metadata. **Linked evidence** uses a shared local execution scope. **Nearby in
-time** only compares timestamps and explicitly does not imply causation. No
-cross-source chat identity is established by the current adapter.
+time** compares recorded timestamps. When a result lacks a source timestamp, the
+feed labels its collector receipt time.
+
+With local call inspection enabled, search for a chat title or operation. Select
+**Show calls in this chat** to filter by the matching execution identifier, even
+if two chats have the same title. Expand **Show shell command** or **Show tool
+script** for the submitted input. A reported shell exit code appears separately
+from the tool transport outcome. The collector reads names from the local Codex
+name index. It keeps unmatched calls accessible by their execution label.
+See the [inspection settings and data limits](PLUGIN-TRACING.md#local-call-inspection).
 
 Pause, inspection, keyboard focus on evidence, and scrolling into history hold a
 fixed view. Counts, filters, time bins, source status and details share its

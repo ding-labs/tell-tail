@@ -44,8 +44,12 @@ tool results. These are not verified installed-plugin manifest IDs. Tools from
 other namespaces remain visible by their qualified names. Skills alone have no
 tool call to trace. Results depend on what the client exports; starts, parent
 relationships, cancellations, and complete coverage of all execution paths are
-not guaranteed. Arguments, outputs, credentials and raw chat/call IDs are not
-retained. History is bounded and in memory, and resets when the collector restarts.
+not guaranteed. Default tracing retains result metadata. For requested local
+call inspection, use `tracing enable --inspect-calls` on first install or
+`tracing upgrade --inspect-calls` on an existing install of a supporting build.
+This mode reads the local chat-name index and can display bounded command/script
+inputs containing private values. Copied diagnostics omit them. History is
+bounded and in memory and resets when the collector restarts.
 
 When the user requests an update, run this packaged executable's `tracing upgrade`.
 It replaces the independent collector, preserves credentials and ports, and checks
