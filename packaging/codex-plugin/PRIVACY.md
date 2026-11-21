@@ -1,6 +1,6 @@
 # Tell-Tail desktop plugin privacy policy
 
-This policy covers the Tell-Tail desktop plugin from Ding Labs. The bundled collector runs on your Mac. Installing the plugin puts the executable and setup instructions on your machine. Collection starts when you open a local session or enable persistent capture.
+This policy covers the Tell-Tail desktop plugin maintained by Matt Abrams. The bundled collector runs on your Mac. Installing the plugin puts the executable and setup instructions on your machine. Collection starts when you open a local session or enable persistent capture.
 
 ## What the collector reads
 
@@ -10,7 +10,7 @@ This policy covers the Tell-Tail desktop plugin from Ding Labs. The bundled coll
 
 ## Who can see the data
 
-The collector serves the dashboard on your Mac's loopback interface. It does not send logs, traces, or usage analytics to Ding Labs. No Tell-Tail account is required. Other processes on the Mac that can reach the dashboard can read its displayed data.
+The collector serves the dashboard on your Mac's loopback interface. It does not send logs, traces, or usage analytics to Matt Abrams or a Tell-Tail server. No Tell-Tail account is required. Other processes on the Mac that can reach the dashboard can read its displayed data.
 
 When you ask ChatGPT or Codex to inspect Tell-Tail, the results it reads for you can become part of that conversation and are handled under that service's data settings. Copying a diagnostic summary, sharing a screenshot, or posting a support request also shares the information you choose to include with its recipients.
 
@@ -24,4 +24,4 @@ Persistent setup installs a per-user login service, writes exporter settings to 
 - To remove the service, its owned exporter settings, credential, and setup backup, ask Tell-Tail to **uninstall the collector** before removing the plugin in the desktop app. Restart Codex to unload the exporter.
 - To forget a saved log source, remove it in **Logs → Manage sources**. After uninstall, you can delete the saved `log-sources.json` file if it remains. Your original application and desktop logs stay under your control.
 
-For privacy questions, contact Ding Labs through [Tell-Tail support](https://github.com/ding-labs/tell-tail/issues). Issues are public. Describe the question without attaching logs, credentials, or configuration backups.
+For privacy questions, contact Matt Abrams through [Tell-Tail support](https://github.com/zuchka/tell-tail/issues). Issues are public. Describe the question without attaching logs, credentials, or configuration backups.
