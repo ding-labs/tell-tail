@@ -1,4 +1,4 @@
-import {inputDisclosure} from './call-input.mjs';
+import {inputDisclosure,turnPanel} from './call-input.mjs';
 import {outcomes,scopes,sourceNames,clientNames,dateTime,duration,el} from './activity-format.mjs';
 import {title} from './activity-feed.mjs';
 function fields(values){const dl=el('dl','detail-fields');for(const [key,value] of values){dl.append(el('dt','',key),el('dd','',value));}return dl;}
@@ -16,6 +16,7 @@ export function renderDetail(container,item,group,loadRelated,onSelect,inputUrl,
     if(context?.parameters?.length)values.push(['Input fields',context.parameters.join(', ')]);
     if(context?.exit_code!=null)values.push(['Shell exit code',context.exit_code]);
     container.append(fields(values));
+    if(item.trace_call_id)container.append(turnPanel(item.trace_call_id,item.source_ref.slice(6),item.subject));
     if(context?.input_kind)container.append(inputDisclosure(context,inputUrl));
     if(item.scope_ref){
       const button=el('button','related-event',context?.chat?'Show calls in this chat':'Show calls in this execution');

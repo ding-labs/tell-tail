@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -94,4 +94,50 @@ test('Activity resolves exact chat titles and reveals private command input only
   await page.getByRole('button',{name:'Show calls in this chat'}).click();
   await page.waitForFunction(()=>document.querySelectorAll('.event-row').length===1);
   assert.match(await page.locator('.event-row').textContent(),/Release checklist/);
+});
+
+test('selecting a wrapper shows its own request, nested manifest and turn failures', async t => {
+  const dir = await mkdtemp(join(tmpdir(),'tell-tail-turn-'));
+  t.after(()=>rm(dir,{recursive:true,force:true}));
+  const chat='01900000-0000-7000-b000-000000000001', key=join(dir,'key');
+  const index=join(dir,'index.jsonl'), config=join(dir,'otel.toml');
+  await writeFile(index,JSON.stringify({id:chat,thread_name:'Build repair'}));
+  await mkdir(join(dir,'archived_sessions'));
+  const event=(turn,item)=>({type:'event_msg',payload:{type:'item_completed',thread_id:chat,turn_id:turn,item}});
+  const message=text=>({type:'UserMessage',content:[{type:'text',text}]});
+  const metadata={turn_id:'wanted'};
+  const records=[
+    {type:'session_meta',payload:{id:chat}},event('other',message('OTHER_PRIVATE_REQUEST')),
+    event('wanted', message('Why did cargo test exit early?')),
+    {type:'response_item',payload:{type:'custom_tool_call',call_id:'wrapper',name:'exec',internal_chat_message_metadata_passthrough:metadata}},
+    event('wanted',{type:'CommandExecution',id:'command',command:['sh','-c','cargo test --lib'],exit_code:101,status:'failed'}),
+    {type:'response_item',payload:{type:'custom_tool_call_output',call_id:'wrapper',internal_chat_message_metadata_passthrough:{
+      ...metadata,executed_tool_calls:[{name:'functions.exec_command'}],tool_calls_complete:true}}},
+  ];
+  await writeFile(join(dir,'archived_sessions','rollout-test-'+chat+'.jsonl'),records.map(r=>JSON.stringify(r)).join('\n'));
+  const server=await monitorDesktop(['--source','codex-desktop','--log-dir',dir,'--trace-port','0','--trace-token-file',key,'--trace-config-out',config,'--inspect-chat-index',index]);
+  t.after(()=>server.close());
+  const url=(await readFile(config,'utf8')).match(/endpoint = "([^"]+)"/)[1];
+  const fields={'event.name':'codex.tool_result','conversation.id':chat,call_id:'wrapper',tool_namespace:'functions',tool_name:'exec',success:'true'};
+  const result=await fetch(url,{method:'POST',headers:{'content-type':'application/x-protobuf','x-tell-tail-probe-key':(await readFile(key,'utf8')).trim()},
+    body:batch([Buffer.concat(Object.entries(fields).map(([k,v])=>attr(k,v)))])});
+  assert.equal(result.status,200);
+  const browser=await chromium.launch(); t.after(()=>browser.close());
+  const page=await browser.newPage();
+  await page.context().grantPermissions(['clipboard-read','clipboard-write'],{origin:server.url});
+  await page.goto(server.url);
+  await page.locator('.event-row').filter({hasText:'functions.exec'}).first().click();
+  await page.getByText('Why did cargo test exit early?',{exact:true}).waitFor();
+  const panel=page.locator('.turn-panel');
+  assert.match(await panel.innerText(),/Tools inside this call\s+functions.exec_command/);
+  assert.match(await panel.innerText(),/Failures in this turn\s+cargo test --lib\s+functions.exec_command · Exit 101/);
+  assert.doesNotMatch(await panel.innerText(),/OTHER_PRIVATE/);
+  await panel.getByText('All tools in this turn (2)').click();
+  await panel.getByText('Selected call · Completed').waitFor();
+  const paths=[server.url+'api/traces/call/1/turn?source=stale',server.url+'api/traces/calls'];
+  assert.equal((await fetch(paths[0])).status,403);
+  assert.equal((await fetch(paths[0],{headers:{'x-tell-tail-inspect':'local-turn'}})).status,410);
+  assert.doesNotMatch(await(await fetch(paths[1])).text(),/exit early|01900000|OTHER_PRIVATE/);
+  await page.locator('#copy').click();
+  assert.doesNotMatch(await page.evaluate(()=>navigator.clipboard.readText()),/exit early|cargo test|OTHER_PRIVATE/);
 });

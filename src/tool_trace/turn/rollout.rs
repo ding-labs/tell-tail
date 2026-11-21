@@ -225,6 +225,11 @@ fn project(
                     && event_turn(p, &loc.chat).is_some_and(|s| tag(s) == turn) =>
             {
                 if item["type"] == "UserMessage" {
+                    if evidence.requested_ms.is_none() {
+                        evidence.requested_ms = p["started_at_ms"]
+                            .as_i64()
+                            .or_else(|| p["completed_at_ms"].as_i64());
+                    }
                     if let Some(parts) = item["content"].as_array() {
                         for t in parts
                             .iter()

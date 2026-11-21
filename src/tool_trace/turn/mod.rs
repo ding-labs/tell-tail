@@ -102,6 +102,7 @@ impl Tool {
 pub struct Evidence {
     pub matched: bool,
     pub requests: Vec<String>,
+    pub requested_ms: Option<i64>,
     pub tools: Vec<Tool>,
     pub children: Vec<Tool>,
     pub children_complete: Option<bool>,
