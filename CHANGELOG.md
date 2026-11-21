@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.0
 
 - Add unified application log sources to the desktop/plugin dashboard: add, edit,
   pause, resume and remove files from Logs or AI Activity → Sources. Reuse the
@@ -24,22 +24,23 @@
   and watermark SSE; preserve the existing MCP command and APIs.
 - New managed collectors open Activity. Upgrade migrates owned MCP launch
   definitions; rollback and failed activation restore the executable and command.
-  No beta packaging or release changes accompany this source implementation.
 
 - Add managed collector upgrade, rollback, and uninstall commands. Preserve
   credentials and client settings during replacement, recover failed activation,
   and retain user-added files during removal.
 
-## 0.4.0
-
 - Capture Codex OTLP tool results across hosted provider namespaces, with automatic
-  observed-plugin filters and a compact inspectable call table; payloads are discarded.
+  observed-plugin filters and a compact inspectable call table. Default capture retains diagnostic metadata.
 - Add macOS `tracing enable/status/disable` for an owned exporter and persistent
   login service. Preserve unrelated config and refuse existing/edited exporters.
-- Add a native Codex plugin preview bundle with an explicit onboarding skill.
-  Neither this plugin nor the tracing commands have been publicly released.
+- Add opt-in local call inspection for chat and turn context, bounded command inputs,
+  nested tool dispatches, process exit codes and failure excerpts.
+- Package the Apple Silicon desktop plugin 0.3.0 with onboarding, a privacy policy,
+  a local marketplace ZIP and a standalone directory ZIP.
 - Reserve `tracing` for service management; use `./tracing` or `-- tracing` to
   monitor a file with that name.
+
+## 0.4.0
 
 - Add `tell-tail mcp --open`: passive macOS Codex/Claude Desktop log discovery,
   bounded multi-file following, scoped failure/recovery groups, Claude mirror
