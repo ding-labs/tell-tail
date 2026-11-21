@@ -25,6 +25,7 @@ web = ["dep:toml_edit", "snapshot-notifications", "dep:axum", "dep:bytes", "dep:
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
 memchr = "2.7"
+time = { version = "0.3", default-features = false }
 tempfile = "3"
 ratatui = { version = "0.30.2", default-features = false, features = ["crossterm"] }
 crossterm = { version = "0.29", features = ["use-dev-tty"] }

@@ -7,6 +7,8 @@ const PREVIEW_BYTES: usize = 1536;
 
 #[derive(Clone, Default, Debug, Eq, PartialEq, Serialize)]
 pub struct Inspection {
+    #[serde(skip)]
+    pub locator: Option<super::turn::Locator>,
     pub chat: Option<String>,
     pub operation: Option<String>,
     pub exit_code: Option<i32>,
@@ -91,7 +93,7 @@ fn patch_operation(raw: &str) -> Option<String> {
     })
 }
 
-fn shell_operation(command: &str) -> String {
+pub(super) fn shell_operation(command: &str) -> String {
     let mut words = command.split_ascii_whitespace();
     let first = words.next().unwrap_or("").rsplit('/').next().unwrap_or("");
     let verb = match first {
