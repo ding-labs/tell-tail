@@ -1,8 +1,9 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "tell-tail",
-  "version": "0.2.0",
-  "description": "Tell-Tail local observability, with AI Activity for ChatGPT and Codex and a first-class Logs workspace.",
+  "version": "0.2.1",
+  "description": "Inspect local desktop logs and trace Codex tool results on Apple Silicon Macs.",
+  "author": { "name": "Matt Abrams", "url": "https://tell-tail.dev/" },
   "license": "MIT",
   "homepage": "https://tell-tail.dev/",
   "extensions": {
@@ -11,13 +12,19 @@
       "onboardingSkill": "./skills/tell-tail/SKILL.md",
       "interface": {
         "displayName": "Tell-Tail",
-        "shortDescription": "AI Activity for ChatGPT and Codex",
-        "longDescription": "Open Tell-Tail AI Activity for supported desktop events, connections, MCP diagnostics and plugin results. Switch to Logs for desktop metrics or add your own application log files, with parsing, charts and recent errors. Persistent tool capture requires setup and a one-time Codex restart. AI capture is metadata only; added application logs include error previews. History stays bounded and in memory.",
-        "developerName": "Ding Labs",
-        "category": "Productivity",
+        "shortDescription": "Inspect local AI activity",
+        "longDescription": "See which Codex tools ran, how long they took, and which reported failures. Tell-Tail runs on Apple Silicon Macs. After installing, ask to open your Codex logs for a live local dashboard of supported desktop events and MCP connections. For ongoing tool-call tracing, run setup once and restart Codex. Setup configures a local exporter and a service that starts at login. Ask Tell-Tail to uninstall the collector before removing the plugin. Activity and tool results retain diagnostic metadata in memory. Application logs you add can show excerpts of the original errors.",
+        "developerName": "Matt Abrams",
+        "category": "Developer Tools",
+        "websiteURL": "https://tell-tail.dev/",
+        "supportURL": "https://github.com/zuchka/tell-tail/issues",
+        "privacyPolicyURL": "https://tell-tail.dev/privacy",
+        "logo": "./assets/tell-tail.svg",
+        "composerIcon": "./assets/tell-tail.svg",
         "defaultPrompt": [
-          "Set up Tell-Tail for ChatGPT and Codex.",
-          "Check Tell-Tail capture health and open Activity."
+          "Open my Codex logs.",
+          "Set up persistent tool-call tracing.",
+          "Check Tell-Tail capture health."
         ]
       }
     }

@@ -205,10 +205,29 @@ independently checked. This preview has not been published to the public directo
 The [supported onboarding mechanism](https://developers.openai.com/plugins/build/plugins#add-an-onboarding-skill)
 is a skill invoked when users run setup after installation. This package has no
 silent lifecycle hooks. Setup installs the service/config described above. Before
-removing the plugin, run `tracing disable`: plugin removal alone cannot stop the
-separately installed service. Automatic installed-plugin inventory, durable
+removing the plugin, run `tracing uninstall` to clean up the separately installed
+service. Automatic installed-plugin inventory, durable
 history, and guaranteed coverage of every Codex execution path remain outside
 this preview.
+
+## Build the public directory ZIP
+
+On an Apple Silicon Mac, build from the release commit:
+
+```sh
+python3 scripts/package-tracing-plugin.py --submission
+```
+
+The command prints the path and SHA-256 of
+`dist/tell-tail-plugin-<version>-macos-arm64.zip`. Its root contains the manifest,
+onboarding skill, native executable, privacy policy, icons, and license notices.
+The default packaging command still builds the local marketplace for desktop tests.
+
+In the [OpenAI publishing portal](https://platform.openai.com/plugins), select
+the verified publisher, choose a skills-only upload, and upload the plugin-only
+ZIP. Check the imported listing, [privacy link](https://tell-tail.dev/privacy),
+and Desktop only setting. Resolve automated findings, complete the policy
+attestations, submit for review, and select **Publish plugin** after approval.
 
 ## Manual foreground exporter setup
 
