@@ -2,9 +2,9 @@
 
 **Requires Tell-Tail 0.4.0 or later, with the default web feature.**
 
-Read this guide on [Ding docs](https://docs.ding.ing/tell-tail/mcp/).
-The [released guides](https://docs.ding.ing/tell-tail/) describe installed
-packages; the [preview channel](https://docs.ding.ing/tell-tail/next/) tracks a
+Read this guide on [Tell-Tail docs](https://tell-tail.dev/docs/mcp/).
+The [released guides](https://tell-tail.dev/docs/) describe installed
+packages; the [preview channel](https://tell-tail.dev/docs/next/) tracks a
 separate pinned revision.
 
 Install the native binary with Homebrew:

@@ -14,9 +14,9 @@ The installed dashboard can also follow your own application files through
 See [workspaces](docs/WORKSPACES.md) and [application sources](docs/LOG-SOURCES.md)
 for entry points, saved settings and source boundaries.
 
-Hosted documentation: [released guides](https://docs.ding.ing/tell-tail/) ·
-[unreleased preview](https://docs.ding.ing/tell-tail/next/) ·
-[Ding docs](https://docs.ding.ing/).
+Hosted documentation: [released guides](https://tell-tail.dev/docs/) ·
+[unreleased preview](https://tell-tail.dev/docs/next/) ·
+[Tell-Tail home](https://tell-tail.dev/).
 
 ## Install and try it
 
@@ -80,7 +80,7 @@ The local dashboard groups reported failures by server and execution, shows a
 live searchable timeline, and distinguishes history, recovery, and source
 freshness. No server configuration change, plugin, or account is needed.
 See [MCP diagnostics](docs/MCP.md) for sources, headless output, and coverage limits.
-Read the [hosted MCP guide](https://docs.ding.ing/tell-tail/mcp/) for installation
+Read the [hosted MCP guide](https://tell-tail.dev/docs/mcp/) for installation
 and usage. MCP diagnostics require 0.4.0 or later; no source build is needed.
 
 ### AI Activity for ChatGPT and Codex (unreleased)
