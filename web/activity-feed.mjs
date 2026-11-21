@@ -25,6 +25,7 @@ export function renderRows(container,rows,selected,onSelect,groups=new Map()) {
     const context=row.inspection;
     const scope=context?.chat || (row.scope==='unlinked_execution' && row.scope_ref ? `Execution ${row.scope_ref.slice(5,13)}` : scopes[row.scope]);
     const meta=[scope||'Scope unknown',context?.operation ? row.subject : categories[row.category]];
+    if(context?.directory)meta.push(context.directory);
     if(row.occurred_ms==null)meta.push('Receipt time');
     if(row.client==='claude_desktop')meta.push(clientNames[row.client]);
     if(row.historical)meta.push('Imported history');

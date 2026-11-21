@@ -56,6 +56,8 @@ export function initTraces({ chooseDefault, pause }) {
       $('trace-detail-note').textContent = outcome(c);
       const fields = [['Tool',c.tool],['Plugin',c.plugin || 'Unidentified'],['Attribution',c.historical ? 'Synthetic fixture label' : c.plugin ? 'Hosted provider namespace; not a manifest ID' : 'Source namespace retained; plugin mapping unverified'],['Transport server',c.server || 'Unavailable'],['Completed',date(c.completed_ms)],['Received',date(c.received_ms)],['Duration',c.duration_ms == null ? 'Unavailable' : `${c.duration_ms} ms (${c.duration_basis})`],['Timing scope','Client-reported tool duration; queue and approval scope unverified'],['Execution',c.execution],['Call / revision',`${c.id} / ${c.revision}`],['Lifecycle',`${c.start_observed ? 'Start observed' : 'Start not observed'}; ${c.completion_observed ? 'completion observed' : 'completion not observed'}`],['Provider-level outcome',c.historical ? 'Synthetic fixture only' : 'Unavailable from this adapter'],['Parent call','Unavailable'],['Evidence gap',c.gap_observed ? 'Yes' : 'None recorded; completeness is not guaranteed'],['Origin',c.historical ? 'Imported replay' : 'Live telemetry']];
       if(c.inspection?.chat)fields.unshift(['Chat',c.inspection.chat]);
+      if(c.inspection?.directory)fields.unshift(['Working directory',c.inspection.directory]);
+      if(c.inspection?.parameters?.length)fields.push(['Input fields',c.inspection.parameters.join(', ')]);
       if(c.inspection?.operation)fields.unshift(['Operation',c.inspection.operation]);
       if(c.inspection?.exit_code!=null)fields.unshift(['Shell exit code',c.inspection.exit_code]);
       const input=$('trace-input');input.replaceChildren();

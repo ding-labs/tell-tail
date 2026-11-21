@@ -12,6 +12,8 @@ export function renderDetail(container,item,group,loadRelated,onSelect,inputUrl,
     const context=item.inspection;
     const values=[['Tool',item.subject]];
     if(context?.chat)values.unshift(['Chat',context.chat]);
+    if(context?.directory)values.push(['Working directory',context.directory]);
+    if(context?.parameters?.length)values.push(['Input fields',context.parameters.join(', ')]);
     if(context?.exit_code!=null)values.push(['Shell exit code',context.exit_code]);
     container.append(fields(values));
     if(context?.input_kind)container.append(inputDisclosure(context,inputUrl));

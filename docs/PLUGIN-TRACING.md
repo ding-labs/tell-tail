@@ -63,7 +63,9 @@ capture time. For recognized shell and scripting tools it can retain up to
 1,536 UTF-8 bytes of submitted command or script in memory. A command may itself
 contain private paths or secrets. The local inspector fetches that text when
 expanded. Lists expose the operation label and, when matched, chat title.
-**Copy diagnostic summary** omits the inspection fields. Tool output bodies and
+Other recognized tools can show a file basename, terminal polling, a browser action
+title, web operations or recognized parameter names. The shell working directory
+is shown by its basename. **Copy diagnostic summary** omits the inspection fields. Tool output bodies and
 complete conversation histories are never stored by this mode. Unsupported
 inputs, absent names and unavailable process exit codes remain unknown.
 

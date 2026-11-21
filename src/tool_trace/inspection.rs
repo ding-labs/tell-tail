@@ -1,5 +1,6 @@
 //! Private, bounded call context. Only the inspector can request the input preview.
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
+use serde_json::Value;
 use std::sync::Arc;
 
 const PREVIEW_BYTES: usize = 1536;
@@ -9,6 +10,10 @@ pub struct Inspection {
     pub chat: Option<String>,
     pub operation: Option<String>,
     pub exit_code: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub directory: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub parameters: Vec<&'static str>,
     pub input_kind: Option<&'static str>,
     pub truncated: bool,
     #[serde(skip)]
@@ -32,10 +37,58 @@ pub fn display_name(value: &str) -> Option<String> {
     .then(|| value.to_owned())
 }
 
-#[derive(Deserialize)]
-struct Arguments {
-    cmd: Option<String>,
-    code: Option<String>,
+fn basename(path: &str) -> Option<String> {
+    std::path::Path::new(path)
+        .file_name()?
+        .to_str()
+        .and_then(display_name)
+}
+
+// Only known parameter names can reach the UI. Arbitrary map keys may contain user content.
+const PARAMETERS: &[&str] = &[
+    "owner",
+    "repo",
+    "repository",
+    "path",
+    "branch",
+    "ref",
+    "query",
+    "q",
+    "url",
+    "document_id",
+    "file_id",
+    "project_id",
+    "account_id",
+    "issue_number",
+    "pull_number",
+    "method",
+    "limit",
+    "code",
+    "cmd",
+    "workdir",
+    "session_id",
+    "search_query",
+    "open",
+    "find",
+    "click",
+];
+
+fn patch_operation(raw: &str) -> Option<String> {
+    if raw.lines().next()? != "*** Begin Patch" {
+        return None;
+    }
+    let mut targets = raw.lines().filter_map(|line| {
+        ["*** Update File: ", "*** Add File: ", "*** Delete File: "]
+            .iter()
+            .find_map(|prefix| line.strip_prefix(prefix))
+    });
+    let first = basename(targets.next()?)?;
+    let others = targets.count();
+    Some(if others == 0 {
+        format!("Patch {first}")
+    } else {
+        format!("Patch {first} and {others} more")
+    })
 }
 
 fn shell_operation(command: &str) -> String {
@@ -112,43 +165,81 @@ fn script_operation(script: &str) -> String {
 impl Inspection {
     pub fn capture(tool: &str, arguments: Option<&str>, output: Option<&str>) -> Self {
         let mut result = Self::default();
-        if tool == "functions.exec_command" {
-            // Parse only the CLI envelope before stdout. User-controlled stdout can contain exit messages.
+        if matches!(tool, "functions.exec_command" | "functions.write_stdin") {
             result.exit_code = output.and_then(shell_exit);
         }
         let Some(raw) = arguments.filter(|v| !v.is_empty() && v.len() <= 64 * 1024) else {
             return result;
         };
+        let parsed = serde_json::from_str::<Value>(raw).ok();
+        let value = |key: &str| parsed.as_ref()?.get(key)?.as_str();
+        if let Some(fields) = parsed.as_ref().and_then(Value::as_object) {
+            result.parameters = PARAMETERS
+                .iter()
+                .copied()
+                .filter(|key| fields.contains_key(*key))
+                .take(8)
+                .collect();
+        }
         let (kind, input) = match tool {
-            "functions.exec_command" => (
-                "Shell command",
-                serde_json::from_str::<Arguments>(raw)
-                    .ok()
-                    .and_then(|a| a.cmd),
-            ),
+            "functions.exec_command" => {
+                result.directory = value("workdir").and_then(basename);
+                ("Shell command", value("cmd"))
+            }
             "functions.exec" => {
-                let code = if raw.trim_start().starts_with('{') {
-                    serde_json::from_str::<Arguments>(raw)
-                        .ok()
-                        .and_then(|a| a.code)
-                } else if raw.trim_start().starts_with('"') {
-                    serde_json::from_str::<String>(raw).ok()
-                } else {
-                    Some(raw.to_owned())
+                let code = match parsed.as_ref() {
+                    Some(Value::Object(_)) => value("code"),
+                    Some(Value::String(s)) => Some(s.as_str()),
+                    _ => Some(raw),
                 };
                 ("Tool script", code)
             }
-            _ => return result,
+            _ => {
+                result.operation = match tool {
+                    "functions.write_stdin" => value("chars").map(|s| {
+                        if s.is_empty() {
+                            "Poll terminal session".into()
+                        } else {
+                            "Send terminal input".into()
+                        }
+                    }),
+                    "functions.view_image" => value("path")
+                        .and_then(basename)
+                        .map(|f| format!("View {f}")),
+                    "functions.apply_patch" => {
+                        patch_operation(parsed.as_ref().and_then(Value::as_str).unwrap_or(raw))
+                    }
+                    "mcp__cua_repl.js" | "mcp__node_repl.js" => {
+                        value("title").and_then(display_name)
+                    }
+                    "web.run" => {
+                        let labels: Vec<_> = [
+                            ("search_query", "Search"),
+                            ("open", "Open"),
+                            ("find", "Find text"),
+                            ("click", "Follow link"),
+                            ("image_query", "Image search"),
+                        ]
+                        .into_iter()
+                        .filter(|(key, _)| parsed.as_ref().and_then(|v| v.get(key)).is_some())
+                        .map(|(_, label)| label)
+                        .collect();
+                        (!labels.is_empty()).then(|| format!("Web · {}", labels.join(", ")))
+                    }
+                    _ => None,
+                };
+                return result;
+            }
         };
         if let Some(input) = input.filter(|s| !s.trim().is_empty()) {
             result.operation = Some(if kind == "Shell command" {
                 shell_operation(input.trim())
             } else {
-                script_operation(&input)
+                script_operation(input)
             });
             result.truncated = input.len() > PREVIEW_BYTES;
             result.input_kind = Some(kind);
-            result.input = Some(Arc::from(prefix(&input, PREVIEW_BYTES)));
+            result.input = Some(Arc::from(prefix(input, PREVIEW_BYTES)));
         }
         result
     }
@@ -175,6 +266,55 @@ fn shell_exit(output: &str) -> Option<i32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn other_tools_report_recognizable_operations_without_retaining_payloads() {
+        let cases = [
+            (
+                "functions.view_image",
+                r#"{"path":"/private/work/screen.png"}"#,
+                "View screen.png",
+            ),
+            (
+                "functions.write_stdin",
+                r#"{"session_id":42,"chars":""}"#,
+                "Poll terminal session",
+            ),
+            (
+                "functions.write_stdin",
+                r#"{"session_id":42,"chars":"SECRET"}"#,
+                "Send terminal input",
+            ),
+            (
+                "functions.apply_patch",
+                "*** Begin Patch\n*** Update File: src/app.rs\n+SECRET\n*** End Patch",
+                "Patch app.rs",
+            ),
+            (
+                "mcp__cua_repl.js",
+                r#"{"title":"Check app layout","code":"SECRET"}"#,
+                "Check app layout",
+            ),
+            (
+                "web.run",
+                r#"{"search_query":[{"q":"SECRET"}]}"#,
+                "Web · Search",
+            ),
+        ];
+        for (tool, args, expected) in cases {
+            let c = Inspection::capture(tool, Some(args), None);
+            assert_eq!(c.operation.as_deref(), Some(expected));
+            assert!(c.input.is_none());
+            assert!(!serde_json::to_string(&c).unwrap().contains("SECRET"));
+        }
+        let c = Inspection::capture(
+            "mcp__codex_apps__github.lookup",
+            Some(r#"{"repo":"SECRET","SECRET":"SECRET"}"#),
+            None,
+        );
+        assert_eq!(c.parameters, vec!["repo"]);
+        assert!(!serde_json::to_string(&c).unwrap().contains("SECRET"));
+    }
+
     #[test]
     fn context_is_bounded_and_inputs_are_omitted_from_summaries() {
         let cmd = format!("git diff {}", "私".repeat(1000));
