@@ -1,6 +1,8 @@
 import {categories,outcomes,scopes,clientNames,clock,duration,dateTime,el,rangeForBin} from './activity-format.mjs';
 const symbols={tools:'↗',mcp:'⌘',connections:'◎',desktop:'▣'};
 export function title(row) {
+  if(row.inspection?.operation)return row.inspection.operation;
+  if(row.plugin && row.category==='tools')return `${row.plugin} · ${row.subject.split('.').pop().replace(/^_/, '').replaceAll('_',' ')}`;
   if(row.category==='tools')return `${row.plugin||'Tool'} · ${row.subject}`;
   if(row.category==='mcp')return `${row.subject} · ${row.summary}`;
   return row.summary;
@@ -20,7 +22,9 @@ export function renderRows(container,rows,selected,onSelect,groups=new Map()) {
     const symbol=el('span','event-symbol',row.severity==='error'?'!':row.severity==='warning'?'△':symbols[row.category]);symbol.setAttribute('aria-hidden','true');
     const body=el('span','event-body');
     const heading=el('span','event-title',title(row));heading.title=title(row);
-    const meta=[categories[row.category],scopes[row.scope]||'Scope unknown'];
+    const context=row.inspection;
+    const scope=context?.chat || (row.scope==='unlinked_execution' && row.scope_ref ? `Execution ${row.scope_ref.slice(5,13)}` : scopes[row.scope]);
+    const meta=[scope||'Scope unknown',context?.operation ? row.subject : categories[row.category]];
     if(row.occurred_ms==null)meta.push('Receipt time');
     if(row.client==='claude_desktop')meta.push(clientNames[row.client]);
     if(row.historical)meta.push('Imported history');
@@ -29,6 +33,7 @@ export function renderRows(container,rows,selected,onSelect,groups=new Map()) {
     if(group)meta.push(`${group.observations} observation${group.observations===1?'':'s'}`);
     body.append(heading,el('span','event-meta',meta.join(' · ')));
     const result=el('span','event-result',group?.recovered_ms!==null&&group?.recovered_ms!==undefined?'Recovery observed':outcomes[row.outcome]||'Unknown outcome');
+    if(context?.exit_code!=null)result.append(el('span','command-exit',`Exit ${context.exit_code}`));
     if(row.duration_ms!==null)result.append(el('span','duration',duration(row.duration_ms)));
     button.replaceChildren(time,symbol,body,result);
     container.append(wrapper);

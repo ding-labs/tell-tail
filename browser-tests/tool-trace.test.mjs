@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { chromium, monitorMcp } from './helpers.mjs';
+import { chromium, monitorMcp, monitorDesktop } from './helpers.mjs';
 const vi = n => { const out=[]; while(n>127){out.push((n&127)|128); n=Math.floor(n/128);} out.push(n); return Buffer.from(out); };
 const msg = (n,b) => Buffer.concat([vi(n*8+2),vi(b.length),b]);
 const attr = (k,v) => msg(6,Buffer.concat([msg(1,Buffer.from(k)),msg(2,msg(1,Buffer.from(v)))]));
@@ -59,4 +59,39 @@ test('offline trace replay opens the tool workspace without a live receiver or c
   assert.doesNotMatch(await page.locator('body').textContent(),/PRIVATE_/);
   const mcp=await(await fetch(server.url+'api/mcp/snapshot')).json();assert.equal(mcp.sources.length,0);
   const trace=await(await fetch(server.url+'api/traces/snapshot')).json();assert.equal(trace.mode,'synthetic_replay');assert.equal(trace.adapter,'normalized_fixture_v1');assert.equal(trace.capabilities.live_capture_verified,false);assert.equal(trace.accepted_batches,'0');
+});
+
+test('Activity resolves exact chat titles and reveals private command input only on request', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'tell-tail-inspection-'));
+  t.after(() => rm(dir, {recursive:true, force:true}));
+  const key = join(dir, 'key'), config = join(dir, 'otel.toml'), index = join(dir, 'index.jsonl');
+  await writeFile(index, '{"id":"thread-A","thread_name":"Release checklist"}\n{"id":"thread-B","thread_name":"Second chat"}\n');
+  const server = await monitorDesktop(['--source','codex-desktop','--log-dir',dir,'--trace-port','0','--trace-token-file',key,'--trace-config-out',config,'--inspect-chat-index',index]);
+  t.after(() => server.close());
+  const endpoint = (await readFile(config, 'utf8')).match(/endpoint = "([^"]+)"/)[1];
+  const records = ['thread-A','thread-B'].map(thread => Buffer.concat(Object.entries({
+    'event.name':'codex.tool_result','conversation.id':thread,call_id:'same-call',tool_namespace:'functions',
+    tool_name:'exec_command',success:'true',arguments:'{"cmd":"git diff PRIVATE_FILE"}',
+    output:'Chunk ID: abc\nWall time: 0.1 seconds\nProcess exited with code 7\nOutput:\nPRIVATE_OUTPUT',
+  }).map(([k,v])=>attr(k,v))));
+  assert.equal((await fetch(endpoint,{method:'POST',headers:{'content-type':'application/x-protobuf','x-tell-tail-probe-key':(await readFile(key,'utf8')).trim()},body:batch(records)})).status,200);
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  await page.context().grantPermissions(['clipboard-read','clipboard-write'],{origin:server.url});
+  await page.goto(server.url);
+  const row = page.locator('.event-row').filter({hasText:'Release checklist'});
+  await row.waitFor();
+  assert.match(await row.textContent(),/git diff.*Exit 7/s);
+  assert.doesNotMatch(await page.locator('body').textContent(),/PRIVATE_/);
+  await row.click();
+  await page.getByText('Show shell command',{exact:true}).click();
+  await page.getByText('git diff PRIVATE_FILE',{exact:true}).waitFor();
+  const id = await row.getAttribute('data-id');
+  assert.equal((await fetch(server.url+'api/activity/item/'+id+'?input=1')).status,403);
+  await page.locator('#copy').click();
+  assert.doesNotMatch(await page.evaluate(()=>navigator.clipboard.readText()),/Release checklist|PRIVATE_|thread-A/);
+  await page.getByRole('button',{name:'Show calls in this chat'}).click();
+  await page.waitForFunction(()=>document.querySelectorAll('.event-row').length===1);
+  assert.match(await page.locator('.event-row').textContent(),/Release checklist/);
 });

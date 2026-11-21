@@ -1,3 +1,4 @@
+import {diagnosticField,inputDisclosure} from './call-input.mjs';
 const $ = id => document.getElementById(id);
 const el = (tag, text) => { const n = document.createElement(tag); if (text != null) n.textContent = text; return n; };
 const date = ms => ms == null ? 'Unavailable' : new Date(ms).toLocaleString();
@@ -33,7 +34,8 @@ export function initTraces({ chooseDefault, pause }) {
       $('trace-rows').replaceChildren(...data.calls.map(c => {
         const row = el('tr'); const time = el('td', date(c.completed_ms ?? c.received_ms)); time.append(el('small', c.historical ? 'Imported replay' : c.completed_ms == null ? 'Received · completion time unavailable' : 'Completed'));
         const tool = el('td', c.plugin || (c.tool.startsWith('functions.') ? 'Client tool' : 'Unidentified plugin')); tool.append(el('small', c.tool));
-        const execution = el('td', c.execution.slice(0, 8)); execution.title = c.execution;
+        if(c.inspection?.operation)tool.append(el('small',c.inspection.operation));
+        const execution = el('td', c.inspection?.chat || c.execution.slice(0, 8)); execution.title = c.execution;
         const action = el('td'); const b = el('button', 'Inspect'); b.dataset.call = c.id; b.setAttribute('aria-label', `Inspect call ${c.id}`); b.addEventListener('click', () => inspect(c.id)); action.append(b);
         row.append(time, tool, el('td', outcome(c)), el('td', c.duration_ms == null ? 'Unavailable' : `${c.duration_ms.toLocaleString()} ms`), execution, action); return row;
       }));
@@ -53,6 +55,11 @@ export function initTraces({ chooseDefault, pause }) {
       const c = await r.json(); if (own !== detailSerial) return; detail = c;
       $('trace-detail-note').textContent = outcome(c);
       const fields = [['Tool',c.tool],['Plugin',c.plugin || 'Unidentified'],['Attribution',c.historical ? 'Synthetic fixture label' : c.plugin ? 'Hosted provider namespace; not a manifest ID' : 'Source namespace retained; plugin mapping unverified'],['Transport server',c.server || 'Unavailable'],['Completed',date(c.completed_ms)],['Received',date(c.received_ms)],['Duration',c.duration_ms == null ? 'Unavailable' : `${c.duration_ms} ms (${c.duration_basis})`],['Timing scope','Client-reported tool duration; queue and approval scope unverified'],['Execution',c.execution],['Call / revision',`${c.id} / ${c.revision}`],['Lifecycle',`${c.start_observed ? 'Start observed' : 'Start not observed'}; ${c.completion_observed ? 'completion observed' : 'completion not observed'}`],['Provider-level outcome',c.historical ? 'Synthetic fixture only' : 'Unavailable from this adapter'],['Parent call','Unavailable'],['Evidence gap',c.gap_observed ? 'Yes' : 'None recorded; completeness is not guaranteed'],['Origin',c.historical ? 'Imported replay' : 'Live telemetry']];
+      if(c.inspection?.chat)fields.unshift(['Chat',c.inspection.chat]);
+      if(c.inspection?.operation)fields.unshift(['Operation',c.inspection.operation]);
+      if(c.inspection?.exit_code!=null)fields.unshift(['Shell exit code',c.inspection.exit_code]);
+      const input=$('trace-input');input.replaceChildren();
+      if(c.inspection?.input_kind){p.set('input','1');input.append(inputDisclosure(c.inspection,`/api/traces/call/${id}?${p}`));}
       $('trace-detail-fields').replaceChildren(...fields.flatMap(([k,v]) => [el('dt',k),el('dd',v)])); $('trace-copy').disabled = false;
     } catch (e) { if (own === detailSerial) $('trace-detail-note').textContent = e.message; }
   }
@@ -67,8 +74,8 @@ export function initTraces({ chooseDefault, pause }) {
   $('trace-latest').addEventListener('click', () => pause(false));
   $('trace-older').addEventListener('click', () => { const next = page?.next_cursor; if (!next) return; pause(true); cursor = next; load(); });
   $('trace-close').addEventListener('click', () => $('trace-detail').close());
-  $('trace-detail').addEventListener('close', () => { detailSerial++; detail = null; });
-  $('trace-copy').addEventListener('click', async () => { if (!detail) return; try { await navigator.clipboard.writeText(JSON.stringify({ schema_version: 1, note: 'Diagnostic metadata only; provider outcome unverified', call: detail }, null, 2)); $('trace-copy-status').textContent = 'Copied call metadata'; } catch { $('trace-copy-status').textContent = 'Clipboard unavailable; copy the visible fields.'; } });
+  $('trace-detail').addEventListener('close', () => { detailSerial++; detail = null; $('trace-input').replaceChildren(); });
+  $('trace-copy').addEventListener('click', async () => { if (!detail) return; try { await navigator.clipboard.writeText(JSON.stringify({ schema_version: 1, note: 'Diagnostic metadata only; provider outcome unverified', call: detail }, diagnosticField, 2)); $('trace-copy-status').textContent = 'Copied call metadata'; } catch { $('trace-copy-status').textContent = 'Clipboard unavailable; copy the visible fields.'; } });
   function receive(s) {
     if (s.schema_version !== 1 || !s.snapshot) return;
     const changed = !source || source.snapshot.watermark !== s.snapshot.watermark || source.snapshot.collector_epoch !== s.snapshot.collector_epoch;

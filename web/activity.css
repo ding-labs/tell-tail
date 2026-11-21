@@ -18,3 +18,5 @@
 @media(prefers-reduced-motion:no-preference){.inspector[open]{animation:detail-in 140ms ease-out}@keyframes detail-in{from{opacity:.6}to{opacity:1}}}
 
 @media(max-width:420px){.nav-links button{flex:1;min-width:0;padding-inline:4px}.nav-icon{display:none}}
+
+.call-input{white-space:pre-wrap;overflow-wrap:anywhere;max-height:20rem;overflow:auto;padding:.75rem;font:12px/1.55 ui-monospace,monospace;text-align:left;user-select:text}

@@ -209,6 +209,15 @@ async fn events(State(app): State<App>) -> Response {
 }
 pub(super) fn router(shared: Shared) -> Router {
     Router::new()
+        .route(
+            "/call-input.mjs",
+            get(|| async {
+                (
+                    [(header::CONTENT_TYPE, "text/javascript")],
+                    include_str!("../../web/call-input.mjs"),
+                )
+            }),
+        )
         .route("/api/traces/snapshot", get(snapshot))
         .route("/api/traces/calls", get(calls))
         .route("/api/traces/call/{id}", get(detail))

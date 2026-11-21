@@ -20,7 +20,7 @@ export function renderSources(container,sources,now,snapshot) {
   container.append(telemetry);
   const retention=section('Retention and coverage',sources.demo?'Synthetic data':'Metadata only','History is bounded and in memory. Collector restarts clear it. Source silence is not a failure, and records close in time are not necessarily related.');
   counters(retention,[['Retained activity items',snapshot?.retained_items??'—'],['Evicted items',snapshot?.evicted_items??'0'],['Evicted revisions',snapshot?.evicted_revisions??'0'],['Coalesced or missed projections',sources.projection_gaps||'0']]);
-  retention.append(el('p','','Chat correlation is unverified. App-wide observations and unlinked executions remain separate; no conversation databases are read.'));
+  retention.append(el('p','',trace.inspecting?'Local call inspection is enabled. Tool results can include a matched chat title, shell exit code and an on-demand input preview.':'Local call inspection is off. Enable with tracing upgrade --inspect-calls to match chat titles and inspect shell and tool-script inputs.'));
   container.append(retention);
 }
 export function sourceSummary(sources,now){const trace=sources.trace||{};return {logs:sources.running?`${sources.files?.length||0} log source${sources.files?.length===1?'':'s'} followed`:'Collector stopped',trace:`Tools: ${traceNames[trace.status]||'status unknown'}`,freshness:trace.last_received_ms?`Last telemetry ${age(trace.last_received_ms,now)}`:''};}
