@@ -1,18 +1,23 @@
 # Distribution and publishing
 
-Tell-Tail **0.4.0** was published on November 12, 2026 from commit
-`09df02f7c233b819b94c08c6229b2ea0934ec206`. It is available on
-[GitHub Releases](https://github.com/zuchka/tell-tail/releases/tag/v0.4.0),
-[crates.io](https://crates.io/crates/tell-tail/0.4.0), and
+Tell-Tail **0.5.0** was published on November 21, 2026 from
+`2f2eb2c373e63d18b18272640ba63777d0ecf08b`. It includes AI Activity,
+managed log sources and opt-in local call inspection. Install the CLI through
+[GitHub Releases](https://github.com/zuchka/tell-tail/releases/tag/v0.5.0),
+[crates.io](https://crates.io/crates/tell-tail/0.5.0) or
 [Homebrew](https://github.com/ding-labs/homebrew-tap/blob/main/tell-tail.rb).
-Normal installations include `tell-tail mcp --open` and its embedded dashboard.
-The [completed publication workflow](https://github.com/zuchka/tell-tail/actions/runs/43317916073)
-and [publication receipt](validation/0.4.0-release/publication.json) verify all
-three channels against the same frozen source. The
-[0.4 validation record](VALIDATION-0.4-RELEASE.md) records reviewed gates and the
-Mac runner-capacity retry. Passing package checks alone does not publish a release.
-Historical [0.3](VALIDATION-0.3-RELEASE.md) and
-[0.2](VALIDATION-0.2-RELEASE.md) release evidence remains separate.
+The [Apple Silicon plugin catalog](https://github.com/zuchka/tell-tail-plugins)
+serves plugin 0.3.0 with the same collector. The release also provides the
+local marketplace and standalone plugin ZIPs.
+
+The [release workflow](https://github.com/zuchka/tell-tail/actions/runs/44951126749)
+includes a fresh registry installation. The
+[Homebrew import](https://github.com/ding-labs/homebrew-tap/actions/runs/44951921164)
+installed and tested all three native targets. The [validation measurements](validation/0.5.0-release/measurements.json)
+and [publication receipt](validation/0.5.0-release/publication.json) record the
+tested source, artifact hashes and catalog contents. Earlier validation records
+cover [0.4](VALIDATION-0.4-RELEASE.md), [0.3](VALIDATION-0.3-RELEASE.md) and
+[0.2](VALIDATION-0.2-RELEASE.md).
 
 ## Hosted documentation
 

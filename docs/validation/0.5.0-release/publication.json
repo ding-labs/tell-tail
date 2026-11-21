@@ -1,0 +1,85 @@
+{
+  "version": "0.5.0",
+  "source_commit": "2f2eb2c373e63d18b18272640ba63777d0ecf08b",
+  "verified_at_utc": "2026-11-21T21:32:48.814204+00:00",
+  "workflow": {
+    "url": "https://github.com/zuchka/tell-tail/actions/runs/44951126749",
+    "headSha": "3fe1fd42fdf6cad4e42625965737988f37bd8cfd",
+    "attempt": 1,
+    "conclusion": "success"
+  },
+  "github": {
+    "url": "https://github.com/zuchka/tell-tail/releases/tag/v0.5.0",
+    "published_at": "2026-11-21T21:29:07Z",
+    "latest": true,
+    "tag_commit": "2f2eb2c373e63d18b18272640ba63777d0ecf08b",
+    "archives": [
+      {
+        "target": "aarch64-apple-darwin",
+        "name": "tell-tail-0.5.0-aarch64-apple-darwin.tar.gz",
+        "sha256": "30bf225e7eb36041090e0d165c6b0d402f64a342d18b328879d6758f6ed788f5",
+        "size": 2758575
+      },
+      {
+        "target": "aarch64-unknown-linux-musl",
+        "name": "tell-tail-0.5.0-aarch64-unknown-linux-musl.tar.gz",
+        "sha256": "689487a26f78927e42fca578b2890ad3ec4ea8da7aeb27303010b53a987296fe",
+        "size": 2690449
+      },
+      {
+        "target": "x86_64-unknown-linux-musl",
+        "name": "tell-tail-0.5.0-x86_64-unknown-linux-musl.tar.gz",
+        "sha256": "0cef94e74ed31d6929ea0528d36b080d6216b702a1a9ed86ae53fc493ae319bd",
+        "size": 2901318
+      }
+    ],
+    "plugin_archives": {
+      "tell-tail-macos-arm64.zip": {
+        "url": "https://github.com/zuchka/tell-tail/releases/download/v0.5.0/tell-tail-macos-arm64.zip",
+        "version": "0.3.0",
+        "sha256": "ec119069ac3842e99b440b5ab5c5d821cf333a6404605711cf71422ae001dba7",
+        "size": 3302710
+      },
+      "tell-tail-plugin-0.3.0-macos-arm64.zip": {
+        "url": "https://github.com/zuchka/tell-tail/releases/download/v0.5.0/tell-tail-plugin-0.3.0-macos-arm64.zip",
+        "version": "0.3.0",
+        "sha256": "1e918c8c5cfcaa6a590a00848acb9f06cfb4d9f69f2906317115f7e1e529f4d4",
+        "size": 3286368
+      }
+    }
+  },
+  "crates_io": {
+    "url": "https://crates.io/crates/tell-tail/0.5.0",
+    "checksum": "2d94c3e10ca5828a5e5369b66bf10a7d0495560d24a1d97e93cd1b732626adce",
+    "git_sha1": "2f2eb2c373e63d18b18272640ba63777d0ecf08b",
+    "matches_ci_package": true,
+    "yanked": false
+  },
+  "homebrew": {
+    "workflow": {
+      "url": "https://github.com/ding-labs/homebrew-tap/actions/runs/44951921164",
+      "headSha": "69c098d9e16cb2f60debe1247b76a234e145baaa",
+      "attempt": 1,
+      "conclusion": "success"
+    },
+    "commit": "2d6d1b1db675ee31f4e4dcad705195078c5cb332",
+    "formula_sha256": "b9dc4db1c65f7e465534acbf16fa7e35d79e2d7121d0ff02644e867680b49b49",
+    "matches_published_archives": true
+  },
+  "plugin_catalog": {
+    "url": "https://github.com/zuchka/tell-tail-plugins",
+    "commit": "707b1747f6c9228e3b6f85b1bbe6c4138a1effa3",
+    "plugin_version": "0.3.0",
+    "source_commit": "2f2eb2c373e63d18b18272640ba63777d0ecf08b",
+    "verified_files": 273,
+    "matches_release_asset": "tell-tail-plugin-0.3.0-macos-arm64.zip"
+  },
+  "website": {
+    "url": "https://tell-tail.dev/",
+    "guide": "https://tell-tail.dev/docs/plugin-tracing/",
+    "site_commit": "6fc652edf74f0babd93688ef135f35bd6c98fc2a",
+    "deployment": "9bd15ba4-ad2e-4e13-891a-95a85a871dd7",
+    "docs_source_commit": "2f2eb2c373e63d18b18272640ba63777d0ecf08b",
+    "docs_version": "0.5.0"
+  }
+}
