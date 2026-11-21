@@ -1,7 +1,9 @@
 //! Restricted OTLP logs/protobuf adapter for the verified Codex tool_result shape.
 //! Payload fields and resource attributes are skipped without allocating them.
+#[cfg(any(feature = "web", test))]
 mod spans;
 use super::model::{Observation, Phase, SCHEMA_VERSION};
+#[cfg(any(feature = "web", test))]
 pub(super) use spans::decode_links;
 use std::collections::BTreeMap;
 

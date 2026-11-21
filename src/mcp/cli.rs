@@ -46,7 +46,7 @@ pub struct Args {
     /// Receive Codex OTLP results on a separate loopback port (0 chooses a free port).
     #[arg(long, conflicts_with_all = ["once", "demo", "trace_replay"], requires = "trace_token_file")]
     pub trace_port: Option<u16>,
-    /// Inspect local shell/script inputs and match chat titles against this Codex name index.
+    /// Inspect local call inputs, chat names, and selected turns using this Codex session index.
     #[arg(long, requires = "trace_port", value_name = "SESSION_INDEX")]
     pub inspect_chat_index: Option<PathBuf>,
     /// Private local credential file; created if absent. Never pass the credential itself.

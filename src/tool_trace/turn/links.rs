@@ -25,6 +25,9 @@ pub struct Scope {
 }
 
 impl Links {
+    pub fn retained_records(&self) -> usize {
+        self.0.len()
+    }
     pub fn push(&mut self, link: Link) {
         if self.0.len() == 8192 {
             self.0.pop_front();
