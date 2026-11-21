@@ -45,11 +45,20 @@ pub fn disable(raw: &str, owned: &str) -> io::Result<String> {
     Ok(config.to_string())
 }
 
-pub fn fragment(port: u16, token: &str) -> String {
-    // Token is validated by receiver::token before use; no user text interpolation.
-    format!(
-        "[otel]\nlog_user_prompt = false\nlog_agent_responses = false\nexporter = {{ otlp-http = {{ endpoint = \"http://127.0.0.1:{port}/v1/logs\", protocol = \"binary\", headers = {{ \"x-tell-tail-probe-key\" = \"{token}\" }} }} }}\n"
-    )
+pub fn fragment(port: u16, token: &str, links: bool) -> String {
+    let exporter = |route| {
+        format!(
+            "{{ otlp-http = {{ endpoint = \"http://127.0.0.1:{port}/v1/{route}\", protocol = \"binary\", headers = {{ \"x-tell-tail-probe-key\" = \"{token}\" }} }} }}"
+        )
+    };
+    let mut fragment = format!(
+        "[otel]\nlog_user_prompt = false\nlog_agent_responses = false\nexporter = {}\n",
+        exporter("logs")
+    );
+    if links {
+        fragment.push_str(&format!("trace_exporter = {}\n", exporter("traces")));
+    }
+    fragment
 }
 
 #[cfg(test)]
@@ -59,7 +68,7 @@ mod tests {
     fn ownership_survives_round_trip_and_preserves_unrelated_edits() {
         let original =
             "# user preferences\nmodel = 'my-model'\n\n[plugins.example]\nenabled = true\n";
-        let fragment = fragment(63701, &"a".repeat(64));
+        let fragment = fragment(63701, &"a".repeat(64), false);
         let installed = enable(original, None, &fragment).unwrap();
         assert_eq!(
             enable(&installed, Some(&fragment), &fragment).unwrap(),
@@ -73,7 +82,7 @@ mod tests {
     }
     #[test]
     fn refuses_existing_exporters_and_edited_owned_settings_without_leaking_values() {
-        let fragment = fragment(63701, &"a".repeat(64));
+        let fragment = fragment(63701, &"a".repeat(64), false);
         for raw in [
             "[otel]\nexporter = 'PRIVATE'",
             "otel = { exporter = 'PRIVATE' }",
@@ -89,7 +98,7 @@ mod tests {
     }
     #[test]
     fn missing_table_can_be_reenabled_or_disabled() {
-        let fragment = fragment(63701, &"a".repeat(64));
+        let fragment = fragment(63701, &"a".repeat(64), false);
         assert_eq!(
             disable("model = 'x'\n", &fragment).unwrap(),
             "model = 'x'\n"

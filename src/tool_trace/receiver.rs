@@ -100,9 +100,8 @@ impl Running {
                 .create_new(true)
                 .mode(0o600)
                 .open(path)?;
-            writeln!(
-                f,
-                "[otel]\nlog_user_prompt = false\nlog_agent_responses = false\nexporter = {{ otlp-http = {{ endpoint = \"http://{host}/v1/logs\", protocol = \"binary\", headers = {{ \"x-tell-tail-probe-key\" = \"{token}\" }} }} }}"
+            f.write_all(
+                super::setup_config::fragment(port, &token, chat_index.is_some()).as_bytes(),
             )?;
         }
         let inspect = chat_index.is_some();

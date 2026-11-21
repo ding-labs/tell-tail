@@ -62,12 +62,14 @@ fn replace(
     version: Option<String>,
     command: CollectorCommand,
     inspecting: Option<bool>,
+    trace_links: Option<bool>,
 ) -> io::Result<()> {
     let mut install = paths.install()?;
     let metadata_path = paths.root.join("install.json");
     let original_metadata = read(&metadata_path)?;
     let original_config = read_optional(&install.config)?;
-    let owned = read(&paths.root.join("otel.toml"))?;
+    let owned_path = paths.root.join("otel.toml");
+    let owned = read(&owned_path)?;
     // Validate ownership even for a disabled installation; never reconfigure a different exporter.
     setup_config::disable(original_config.as_deref().unwrap_or(""), &owned)?;
     let configured = setup_config::is_enabled(original_config.as_deref().unwrap_or(""), &owned);
@@ -87,6 +89,22 @@ fn replace(
             "Service definition changed since setup; preserved it",
         ));
     }
+    let links_changed = trace_links.is_some_and(|setting| setting != install.trace_links);
+    let replacement_owned = if links_changed {
+        let key = receiver::token(&paths.root.join("trace.key"))?;
+        setup_config::fragment(install.trace_port, &key, trace_links.unwrap_or_default())
+    } else {
+        owned.clone()
+    };
+    let replacement_config = if configured && links_changed {
+        Some(setup_config::enable(
+            original_config.as_deref().unwrap_or_default(),
+            Some(&owned),
+            &replacement_owned,
+        )?)
+    } else {
+        original_config.clone()
+    };
     // Stage before replacing the backup so rollback can use the previous binary as its input.
     let candidate = tempfile::NamedTempFile::new_in(&paths.root)?;
     copy_binary(source, candidate.path())?;
@@ -105,8 +123,11 @@ fn replace(
     if let Some(enable) = inspecting {
         install.inspect_calls = enable;
     }
+    install.trace_links = trace_links.unwrap_or(install.trace_links);
     let replacement_plist = plist(&paths.root, &install, &paths.label);
-    let transaction = || -> io::Result<()> {
+    let mut wrote_config = false;
+    let mut wrote_owned = false;
+    let mut transaction = || -> io::Result<()> {
         if configured {
             stop(paths, &original_install)?;
         }
@@ -119,9 +140,21 @@ fn replace(
             )?;
             start(paths, &install)?;
         }
-        // Configuration is not rewritten by upgrades. Detect edits made during activation.
+        // Only an explicit setting change may update our exporter after activation.
         if read_optional(&install.config)? != original_config {
             return Err(io::Error::other("Client settings changed during upgrade"));
+        }
+        if replacement_owned != owned {
+            write_atomic(&owned_path, replacement_owned.as_bytes(), Some(&owned))?;
+            wrote_owned = true;
+        }
+        if replacement_config != original_config {
+            write_atomic(
+                &install.config,
+                replacement_config.as_deref().unwrap_or_default().as_bytes(),
+                original_config.as_deref(),
+            )?;
+            wrote_config = true;
         }
         write_atomic(
             &metadata_path,
@@ -131,6 +164,16 @@ fn replace(
     };
     if let Err(cause) = transaction() {
         let recover = || -> io::Result<()> {
+            if wrote_config {
+                write_atomic(
+                    &install.config,
+                    original_config.as_deref().unwrap_or_default().as_bytes(),
+                    replacement_config.as_deref(),
+                )?;
+            }
+            if wrote_owned {
+                write_atomic(&owned_path, owned.as_bytes(), Some(&replacement_owned))?;
+            }
             if configured {
                 stop(paths, &original_install)?;
             }
@@ -161,8 +204,13 @@ fn replace(
         };
     }
     status(paths)?;
+    if links_changed {
+        eprintln!(
+            "Local turn-link exporter settings updated. Restart Codex to load the new settings."
+        );
+    }
     eprintln!(
-        "Collector replaced. Credential, ports and client settings preserved. In-memory call history resets on collector restart. Use tracing rollback to restore the previous executable and launch command."
+        "Collector replaced. Credential and ports preserved. In-memory call history resets on collector restart. Use tracing rollback to restore the previous executable and launch command."
     );
     Ok(())
 }
@@ -173,6 +221,7 @@ pub(super) fn upgrade(paths: &Paths, source: &Path, inspecting: Option<bool>) ->
         source,
         Some(env!("CARGO_PKG_VERSION").into()),
         CollectorCommand::Desktop,
+        inspecting,
         inspecting,
     )
 }
@@ -195,6 +244,7 @@ pub(super) fn rollback(paths: &Paths) -> io::Result<()> {
         old.version,
         old.command,
         Some(old.inspect_calls),
+        Some(old.trace_links),
     )
 }
 
@@ -331,6 +381,17 @@ mod tests {
         rollback(&paths).unwrap();
         assert!(paths.install().unwrap().command == CollectorCommand::Mcp);
         assert!(response_json(web, "/api/activity/snapshot").is_none());
+        upgrade(&paths, &binary, Some(true)).unwrap();
+        assert!(paths.install().unwrap().trace_links);
+        let linked_config = read(&paths.config).unwrap();
+        assert!(linked_config.contains("/v1/traces") && linked_config.contains("model = 'test'"));
+        assert!(setup_config::is_enabled(
+            &linked_config,
+            &read(&paths.root.join("otel.toml")).unwrap()
+        ));
+        rollback(&paths).unwrap();
+        assert!(!paths.install().unwrap().trace_links);
+        assert_eq!(fs::read(&paths.config).unwrap(), config);
         let current = fs::read(paths.root.join("tell-tail")).unwrap();
         assert!(
             upgrade(&paths, Path::new("/usr/bin/false"), None)

@@ -35,7 +35,7 @@ enum Action {
         trace_port: u16,
         #[arg(long, default_value_t = 61193)]
         web_port: u16,
-        /// Show local chat titles and bounded shell/script inputs in the dashboard.
+        /// Inspect local chat turns, nested calls, and bounded command inputs.
         #[arg(long)]
         inspect_calls: bool,
         /// Migrate a previous receiver credential without putting its value on the command line.
@@ -82,6 +82,8 @@ struct Install {
     config: PathBuf,
     #[serde(default)]
     inspect_calls: bool,
+    #[serde(default)]
+    trace_links: bool,
     trace_port: u16,
     web_port: u16,
 }
@@ -278,6 +280,8 @@ fn status(paths: &Paths) -> io::Result<()> {
         let config = read_optional(&install.config)?.unwrap_or_default();
         value["exporter_configured"] = setup_config::is_enabled(&config, &owned).into();
         value["dashboard"] = format!("http://127.0.0.1:{}/", install.web_port).into();
+        value["turn_links_configured"] =
+            (install.trace_links && setup_config::is_enabled(&config, &owned)).into();
         value["trace_port"] = install.trace_port.into();
         value["installed_version"] = install.version.clone().into();
         value["collector_command"] = install.command.argument().into();
@@ -304,7 +308,7 @@ fn enable(
     }
     if launchctl(&["print", &paths.job()])? {
         let installed = paths.install()?;
-        if inspect_calls && !installed.inspect_calls {
+        if inspect_calls && (!installed.inspect_calls || !installed.trace_links) {
             return Err(io::Error::other(
                 "Use tracing upgrade --inspect-calls to enable inspection on the running collector",
             ));
@@ -359,7 +363,7 @@ fn enable(
         }
     }
     let key = receiver::token(&key_path)?;
-    let fragment = setup_config::fragment(trace_port, &key);
+    let fragment = setup_config::fragment(trace_port, &key, inspect_calls);
     let updated = setup_config::enable(old.as_deref().unwrap_or(""), owned.as_deref(), &fragment)?;
     if paths.root.join("install.json").exists() && paths.install()?.config != paths.config {
         return Err(io::Error::other(
@@ -377,6 +381,7 @@ fn enable(
         version: Some(env!("CARGO_PKG_VERSION").into()),
         command: CollectorCommand::Desktop,
         inspect_calls,
+        trace_links: inspect_calls,
         config: paths.config.clone(),
         trace_port,
         web_port,
@@ -584,6 +589,7 @@ mod tests {
                 command: CollectorCommand::Desktop,
                 config: PathBuf::new(),
                 inspect_calls: false,
+                trace_links: false,
                 trace_port: 63701,
                 web_port: 61193,
             },
