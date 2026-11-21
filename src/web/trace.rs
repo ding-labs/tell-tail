@@ -189,7 +189,7 @@ async fn turn(State(app): State<App>, Path(id): Path<u64>, req: Request) -> Resp
     let Ok(permit) = app.turn_reads.try_acquire_owned() else {
         return StatusCode::TOO_MANY_REQUESTS.into_response();
     };
-    let (root, locator, live) = {
+    let (root, locator, live, scope) = {
         let Ok(state) = app.shared.lock() else {
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         };
@@ -206,11 +206,12 @@ async fn turn(State(app): State<App>, Path(id): Path<u64>, req: Request) -> Resp
             return StatusCode::NOT_FOUND.into_response();
         };
         let live = state.store.chat_tools(&locator.chat);
-        (root, locator, live)
+        let scope = state.links.resolve(&locator, &live);
+        (root, locator, live, scope)
     };
     let result = tokio::task::spawn_blocking(move || {
         let _permit = permit;
-        crate::tool_trace::turn::read(&root, &locator, None, &live)
+        crate::tool_trace::turn::read(&root, &locator, &scope, &live)
     })
     .await;
     match result {

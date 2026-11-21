@@ -32,7 +32,7 @@ fn exact_chat_call_and_turn_keep_requests_failures_and_sibling_calls_scoped() {
     ].map(|r|r.to_string()).join("\n");
     fs::write(&file, &log).unwrap();
     let loc = Locator::new(CHAT, "wrapper").unwrap();
-    let found = read(dir.path(), &loc, None, &HashMap::new()).unwrap();
+    let found = read(dir.path(), &loc, &Default::default(), &HashMap::new()).unwrap();
     assert!(found.matched);
     assert_eq!(found.requests, ["fix these tests"]);
     assert_eq!(found.tools.len(), 3);
@@ -45,13 +45,21 @@ fn exact_chat_call_and_turn_keep_requests_failures_and_sibling_calls_scoped() {
     assert_eq!(found.children_complete, Some(true));
     assert!(!serde_json::to_string(&found).unwrap().contains("private"));
     assert!(
-        !read(dir.path(), &loc, Some(&tag("conflict")), &HashMap::new())
-            .unwrap()
-            .matched
+        !read(
+            dir.path(),
+            &loc,
+            &links::Scope {
+                turn: Some(tag("conflict")),
+                ..Default::default()
+            },
+            &HashMap::new()
+        )
+        .unwrap()
+        .matched
     );
     fs::write(&file, log.replacen(CHAT, "another-chat", 1)).unwrap();
     assert!(
-        !read(dir.path(), &loc, None, &HashMap::new())
+        !read(dir.path(), &loc, &Default::default(), &HashMap::new())
             .unwrap()
             .matched
     );

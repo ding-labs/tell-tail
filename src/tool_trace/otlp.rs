@@ -1,6 +1,8 @@
 //! Restricted OTLP logs/protobuf adapter for the verified Codex tool_result shape.
 //! Payload fields and resource attributes are skipped without allocating them.
+mod spans;
 use super::model::{Observation, Phase, SCHEMA_VERSION};
+pub(super) use spans::decode_links;
 use std::collections::BTreeMap;
 
 pub const MAX_BODY: usize = 1024 * 1024;
@@ -142,6 +144,7 @@ const ATTRS: &[&str] = &[
 fn attribute<'a>(
     b: &'a [u8],
     budget: &mut usize,
+    allowed: &[&str],
     inspect: bool,
 ) -> Result<Option<(&'a str, Scalar<'a>)>, Invalid> {
     let mut key = None;
@@ -163,7 +166,7 @@ fn attribute<'a>(
         Ok(())
     })?;
     let Some(key) =
-        key.filter(|k| ATTRS.contains(k) || (inspect && matches!(*k, "arguments" | "output")))
+        key.filter(|k| allowed.contains(k) || (inspect && matches!(*k, "arguments" | "output")))
     else {
         return Ok(None);
     };
@@ -217,7 +220,7 @@ fn record(
         match (n, v) {
             (1, Value::Fixed(ns)) if ns > 0 => timestamp = Some((ns / 1_000_000) as i64),
             (6, Value::Bytes(b)) => {
-                if let Some((k, v)) = attribute(b, budget, inspect)? {
+                if let Some((k, v)) = attribute(b, budget, ATTRS, inspect)? {
                     if attrs.insert(k, v).is_some() {
                         return Err(Invalid("malformed_protobuf"));
                     }
@@ -288,7 +291,9 @@ fn record(
     o.validate().map_err(|_| Invalid("invalid_observation"))?;
     Ok(Some(o))
 }
+#[derive(Default)]
 pub struct Batch {
+    pub links: Vec<super::turn::links::Link>,
     pub observations: Vec<Observation>,
     pub ignored: usize,
 }
@@ -299,10 +304,7 @@ pub(super) fn decode_inspected(body: &[u8], epoch: &str, inspect: bool) -> Resul
     if body.len() > MAX_BODY {
         return Err(Invalid("malformed_protobuf"));
     }
-    let mut result = Batch {
-        observations: Vec::new(),
-        ignored: 0,
-    };
+    let mut result = Batch::default();
     let mut records = 0;
     let mut budget = MAX_FIELDS;
     walk(body, &mut budget, |n, v, budget| {
@@ -372,6 +374,63 @@ mod tests {
             b.extend(attr(k, v));
         }
         b
+    }
+    #[test]
+    fn spans_project_only_native_owners_and_nested_dispatches() {
+        let attrs = |field: u64, values: &[(&str, &str)]| -> Vec<u8> {
+            values
+                .iter()
+                .flat_map(|(k, v)| {
+                    msg(
+                        field,
+                        &[msg(1, k.as_bytes()), msg(2, &msg(1, v.as_bytes()))].concat(),
+                    )
+                })
+                .collect()
+        };
+        let ids = [
+            ("conversation.id", "private-chat"),
+            ("turn_id", "t"),
+            ("call_id", "wrapper"),
+            ("cell.id", "2"),
+        ];
+        let owner = [msg(5, b"code_mode.handler.execute"), attrs(9, &ids)].concat();
+        let mut child = ids;
+        child[2] = ("call_id", "child");
+        let event = [
+            msg(2, b"codex.code_mode.nested_tool_dispatched"),
+            attrs(3, &child),
+            attrs(
+                3,
+                &[
+                    ("tool_source", "code_mode"),
+                    ("tool_name", "exec_command"),
+                    ("tool_namespace", "functions"),
+                    ("arguments", "private-input"),
+                ],
+            ),
+        ]
+        .concat();
+        let broker = [msg(5, b"code_mode.broker.invoke_tool"), msg(11, &event)].concat();
+        let wait = [msg(5, b"code_mode.handler.wait"), attrs(9, &ids)].concat();
+        let body = msg(
+            1,
+            &msg(
+                2,
+                &[msg(2, &broker), msg(2, &wait), msg(2, &owner)].concat(),
+            ),
+        );
+        let batch = decode_links(&body).unwrap();
+        assert!(batch.observations.is_empty());
+        assert_eq!(batch.links.len(), 2);
+        assert_eq!(
+            batch.links[0].child_tool.as_deref(),
+            Some("functions.exec_command")
+        );
+        assert_eq!(batch.links[0].cell, batch.links[1].cell);
+        assert_ne!(batch.links[0].call, batch.links[1].call);
+        assert!(batch.links[1].child_tool.is_none());
+        assert!(!format!("{:?}", batch.links).contains("private"));
     }
     #[test]
     fn verified_namespaced_result_is_payload_free_and_deduplicated() {

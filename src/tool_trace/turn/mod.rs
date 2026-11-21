@@ -1,6 +1,8 @@
 //! Read a single local chat only when its tool inspector requests turn evidence.
+pub mod links;
 mod rollout;
 pub use rollout::read;
+const MAX_TOOLS: usize = 128;
 
 use super::identity::Identity;
 use serde::Serialize;

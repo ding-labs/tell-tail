@@ -1,4 +1,4 @@
-use super::{Evidence, Locator, Tool, bounded, tag};
+use super::{Evidence, Locator, MAX_TOOLS, Tool, bounded, links::Scope, tag};
 use serde_json::Value;
 use std::{
     collections::HashMap,
@@ -9,7 +9,6 @@ use std::{
 
 const WINDOW: usize = 16 * 1024 * 1024;
 const MAX_LINE: usize = 1024 * 1024;
-const MAX_TOOLS: usize = 128;
 
 fn find_file(root: &Path, locator: &Locator) -> Option<PathBuf> {
     let mut dirs = Vec::new();
@@ -117,12 +116,15 @@ fn native_tool(item: &Value) -> Option<Tool> {
 pub fn read(
     root: &Path,
     loc: &Locator,
-    known_turn: Option<&str>,
+    scope: &Scope,
     live: &HashMap<String, Tool>,
 ) -> io::Result<Evidence> {
+    if scope.conflict {
+        return Ok(Evidence::default());
+    }
     let root = root.canonicalize()?;
     let Some(path) = find_file(&root, loc) else {
-        return Ok(Evidence::default());
+        return Ok(project(&[], loc, scope, live, false));
     };
     let mut file = crate::platform::open_regular(&path)?;
     let len = file.metadata()?.len();
@@ -144,22 +146,22 @@ pub fn read(
     file.seek(SeekFrom::Start(start))?;
     let mut buffer = Vec::new();
     file.take(len - start).read_to_end(&mut buffer)?;
-    Ok(project(&buffer, loc, known_turn, live, start > 0))
+    Ok(project(&buffer, loc, scope, live, start > 0))
 }
 
 fn project(
     data: &[u8],
     loc: &Locator,
-    known_turn: Option<&str>,
+    scope: &Scope,
     live: &HashMap<String, Tool>,
     cut: bool,
 ) -> Evidence {
     let mut evidence = Evidence {
-        partial: cut,
+        partial: cut || scope.partial,
         ..Default::default()
     };
     let mut candidates = std::collections::BTreeSet::new();
-    if let Some(t) = known_turn {
+    if let Some(t) = &scope.turn {
         candidates.insert(t.to_string());
     }
     // Decode headers and recognized tool/event shapes only. Prompt and result bodies never enter the trace store.
@@ -342,6 +344,38 @@ fn project(
             }
         }
         tools.push((key, tool));
+    }
+    if !scope.children.is_empty() {
+        let mut native: Vec<_> = evidence.children.iter().map(|t| t.name.as_str()).collect();
+        let mut agrees = true;
+        for child in &scope.children {
+            if let Some(index) = native.iter().position(|name| *name == child.name) {
+                native.remove(index);
+            } else {
+                agrees = false;
+            }
+        }
+        let complete = evidence.children_complete == Some(true) && agrees && native.is_empty();
+        evidence.children_complete = Some(complete);
+        evidence.children = scope.children.clone();
+    }
+    for (key, tool) in &scope.tools {
+        if tools.iter().any(|(id, _)| id == key) {
+            continue;
+        }
+        if tools.len() == MAX_TOOLS {
+            evidence.partial = true;
+            if tool.selected || tool.failed() {
+                if let Some(idx) = tools.iter().position(|(_, t)| !t.selected && !t.failed()) {
+                    tools.remove(idx);
+                } else {
+                    continue;
+                }
+            } else {
+                continue;
+            }
+        }
+        tools.push((key.clone(), tool.clone()));
     }
     evidence.tools = tools.into_iter().map(|(_, t)| t).collect();
     evidence.partial |= data

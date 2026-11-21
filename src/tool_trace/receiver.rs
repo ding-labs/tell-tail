@@ -123,12 +123,15 @@ impl Running {
                             }
                         }
                     }
-                    let count = batch.observations.len();
+                    let count = batch.observations.len() + batch.links.len();
                     let Ok(mut s) = queue_state.lock() else { break };
                     s.accepted_batches += 1;
                     s.ignored_records += batch.ignored as u64;
                     let now = crate::mcp::time::now_ms();
                     s.last_received_ms = Some(now);
+                    for link in batch.links {
+                        s.links.push(link);
+                    }
                     for o in batch.observations {
                         if s.store.accept(o, now, false).is_err() {
                             s.rejected_records += 1;
@@ -267,12 +270,18 @@ async fn intake(State(app): State<App>, req: Request) -> Response {
             }
             return status;
         }
+        let spans = req.uri().path() == "/v1/traces";
         let body =
             match tokio::time::timeout(TIMEOUT, to_bytes(req.into_body(), otlp::MAX_BODY)).await {
                 Ok(Ok(b)) => b,
                 _ => return StatusCode::BAD_REQUEST,
             };
-        let batch = match otlp::decode_inspected(&body, &app.epoch, app.inspect) {
+        let decoded = if spans {
+            otlp::decode_links(&body)
+        } else {
+            otlp::decode_inspected(&body, &app.epoch, app.inspect)
+        };
+        let batch = match decoded {
             Ok(b) => b,
             Err(e) => {
                 if let Ok(mut s) = app.shared.lock() {
@@ -281,7 +290,7 @@ async fn intake(State(app): State<App>, req: Request) -> Response {
                 return StatusCode::BAD_REQUEST;
             }
         };
-        let count = batch.observations.len();
+        let count = batch.observations.len() + batch.links.len();
         if app
             .queued_events
             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
@@ -321,9 +330,11 @@ async fn intake(State(app): State<App>, req: Request) -> Response {
 }
 async fn serve(listener: TcpListener, app: App, stop: Arc<AtomicUsize>) -> io::Result<()> {
     let listener = tokio::net::TcpListener::from_std(listener)?;
-    let router = Router::new()
-        .route("/v1/logs", post(intake))
-        .with_state(app);
+    let mut router = Router::new().route("/v1/logs", post(intake));
+    if app.inspect {
+        router = router.route("/v1/traces", post(intake));
+    }
+    let router = router.with_state(app);
     let slots = Arc::new(Semaphore::new(4));
     let mut tasks = JoinSet::new();
     let mut tick = tokio::time::interval(Duration::from_millis(100));
