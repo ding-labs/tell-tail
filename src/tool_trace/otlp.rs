@@ -230,6 +230,7 @@ fn record(b: &[u8], budget: &mut usize, epoch: &str) -> Result<Option<Observatio
         _ => None,
     };
     let o = Observation {
+        inspection: None,
         schema_version: SCHEMA_VERSION,
         source: "codex-otlp-tool-result-v1".into(),
         source_epoch: epoch.into(),

@@ -443,6 +443,7 @@ mod tests {
     use super::*;
     fn observation(id: &str, phase: Phase) -> Observation {
         Observation {
+            inspection: None,
             schema_version: 1,
             source: "PRIVATE_SOURCE".into(),
             source_epoch: "PRIVATE_EPOCH".into(),

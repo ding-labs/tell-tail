@@ -2,6 +2,7 @@
 //! A replay contract is not a claim of desktop capture support.
 mod correlate;
 pub(crate) mod identity;
+pub mod inspection;
 pub mod model;
 pub mod replay;
 pub mod store;

@@ -25,6 +25,7 @@ impl Tracked {
     ) -> Self {
         Self {
             call: Call {
+                inspection: observation.inspection.clone(),
                 id,
                 revision: 0,
                 source,
@@ -130,6 +131,7 @@ mod tests {
     use super::*;
     fn observation(phase: Phase, time: Option<i64>) -> Observation {
         Observation {
+            inspection: None,
             schema_version: 1,
             source: "private-source".into(),
             source_epoch: "private-epoch".into(),
