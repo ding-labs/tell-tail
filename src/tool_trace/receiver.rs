@@ -37,6 +37,7 @@ struct App {
     host: String,
     token: String,
     epoch: String,
+    inspect: bool,
     queue: SyncSender<Batch>,
     queued_events: Arc<AtomicUsize>,
 }
@@ -83,6 +84,7 @@ impl Running {
         port: u16,
         key_path: &Path,
         config_out: Option<&Path>,
+        chat_index: Option<&Path>,
         shared: Shared,
         stop: Arc<AtomicUsize>,
     ) -> io::Result<Self> {
@@ -103,6 +105,8 @@ impl Running {
                 "[otel]\nlog_user_prompt = false\nlog_agent_responses = false\nexporter = {{ otlp-http = {{ endpoint = \"http://{host}/v1/logs\", protocol = \"binary\", headers = {{ \"x-tell-tail-probe-key\" = \"{token}\" }} }} }}"
             )?;
         }
+        let inspect = chat_index.is_some();
+        let mut names = chat_index.map(|p| super::chat_names::Names::new(p.to_owned()));
         let (tx, rx) = mpsc::sync_channel::<Batch>(4);
         let queue_state = shared.clone();
         let queued_events = Arc::new(AtomicUsize::new(0));
@@ -110,7 +114,15 @@ impl Running {
         let consumer = thread::Builder::new()
             .name("tell-tail-trace-store".into())
             .spawn(move || {
-                while let Ok(batch) = rx.recv() {
+                while let Ok(mut batch) = rx.recv() {
+                    if let Some(names) = names.as_mut().filter(|_| !batch.observations.is_empty()) {
+                        names.refresh();
+                        for observation in &mut batch.observations {
+                            if let Some(context) = &mut observation.inspection {
+                                Arc::make_mut(context).chat = names.get(&observation.execution_id);
+                            }
+                        }
+                    }
                     let count = batch.observations.len();
                     let Ok(mut s) = queue_state.lock() else { break };
                     s.accepted_batches += 1;
@@ -136,6 +148,7 @@ impl Running {
             host: host.clone(),
             token,
             epoch,
+            inspect,
             queue: tx,
             queued_events,
         };
@@ -144,6 +157,7 @@ impl Running {
             let mut s = shared
                 .lock()
                 .map_err(|_| io::Error::other("Trace state failed"))?;
+            s.inspecting = inspect;
             s.enabled = true;
             s.running = true;
         }
@@ -257,7 +271,7 @@ async fn intake(State(app): State<App>, req: Request) -> Response {
                 Ok(Ok(b)) => b,
                 _ => return StatusCode::BAD_REQUEST,
             };
-        let batch = match otlp::decode(&body, &app.epoch) {
+        let batch = match otlp::decode_inspected(&body, &app.epoch, app.inspect) {
             Ok(b) => b,
             Err(e) => {
                 if let Ok(mut s) = app.shared.lock() {
@@ -345,7 +359,7 @@ mod tests {
         let state = Arc::new(Mutex::new(super::super::live::State::default()));
         let stop = Arc::new(AtomicUsize::new(0));
         let mut running =
-            Running::start(0, &path, Some(&config), state.clone(), stop.clone()).unwrap();
+            Running::start(0, &path, Some(&config), None, state.clone(), stop.clone()).unwrap();
         let key = std::fs::read_to_string(&path).unwrap();
         let key = key.trim();
         for (extra, credential, status) in [
@@ -394,6 +408,7 @@ mod saturation_tests {
             host: "127.0.0.1:4318".into(),
             token: "a".repeat(64),
             epoch: "epoch".into(),
+            inspect: false,
             queue,
             queued_events: budget.clone(),
         };

@@ -46,6 +46,9 @@ pub struct Args {
     /// Receive Codex OTLP results on a separate loopback port (0 chooses a free port).
     #[arg(long, conflicts_with_all = ["once", "demo", "trace_replay"], requires = "trace_token_file")]
     pub trace_port: Option<u16>,
+    /// Inspect local shell/script inputs and match chat titles against this Codex name index.
+    #[arg(long, requires = "trace_port", value_name = "SESSION_INDEX")]
+    pub inspect_chat_index: Option<PathBuf>,
     /// Private local credential file; created if absent. Never pass the credential itself.
     #[arg(long, requires = "trace_port")]
     pub trace_token_file: Option<PathBuf>,
@@ -59,6 +62,9 @@ impl Args {
             .unwrap_or(if self.open { Output::Web } else { Output::Text })
     }
     pub fn validate(&self) -> Result<(), &'static str> {
+        if self.inspect_chat_index.is_some() && self.mode() != Output::Web {
+            return Err("Call inspection requires web output");
+        }
         if self.sources_file.is_some() && self.mode() != Output::Web {
             return Err("--sources-file requires web output");
         }

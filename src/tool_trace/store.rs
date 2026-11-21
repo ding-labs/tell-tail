@@ -102,6 +102,7 @@ pub struct Store {
     next_id: u64,
     floor: u64,
     counts: Counts,
+    has_private_context: bool,
     max_calls: usize,
     max_revisions: usize,
 }
@@ -122,6 +123,7 @@ impl Default for Store {
             next_id: 1,
             floor: 0,
             counts: Counts::default(),
+            has_private_context: false,
             max_calls: MAX_CALLS,
             max_revisions: MAX_REVISIONS,
         }
@@ -163,7 +165,8 @@ impl Store {
         values
     }
     fn charged_bytes(&self) -> usize {
-        (self.calls.len() + self.revisions.len()) * ENTRY_CHARGE
+        (self.calls.len() + self.revisions.len())
+            * (ENTRY_CHARGE + if self.has_private_context { 2048 } else { 0 })
             + self.deliveries.len() * 256
             + self.sources.len() * 128
     }
@@ -188,6 +191,7 @@ impl Store {
         historical: bool,
     ) -> Result<Option<Call>, &'static str> {
         o.validate()?;
+        self.has_private_context |= o.inspection.is_some();
         if self.sequence == u64::MAX || self.next_id == u64::MAX {
             return Err("Trace sequence exhausted");
         }

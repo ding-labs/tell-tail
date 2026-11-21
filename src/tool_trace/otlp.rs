@@ -104,7 +104,11 @@ enum Scalar<'a> {
     Int(u64),
     Bool(bool),
 }
-fn scalar<'a>(b: &'a [u8], budget: &mut usize) -> Result<Option<Scalar<'a>>, Invalid> {
+fn scalar<'a>(
+    b: &'a [u8],
+    budget: &mut usize,
+    max_text: usize,
+) -> Result<Option<Scalar<'a>>, Invalid> {
     let mut result = None;
     let mut count = 0;
     walk(b, budget, |n, v, _| {
@@ -113,7 +117,9 @@ fn scalar<'a>(b: &'a [u8], budget: &mut usize) -> Result<Option<Scalar<'a>>, Inv
             return Err(Invalid("malformed_protobuf"));
         }
         result = match (n, v) {
-            (1, Value::Bytes(s)) if s.len() <= 256 => std::str::from_utf8(s).ok().map(Scalar::Text),
+            (1, Value::Bytes(s)) if s.len() <= max_text => {
+                std::str::from_utf8(s).ok().map(Scalar::Text)
+            }
             (2, Value::Int(v)) if v <= 1 => Some(Scalar::Bool(v == 1)),
             (3, Value::Int(v)) => Some(Scalar::Int(v)),
             _ => None,
@@ -136,6 +142,7 @@ const ATTRS: &[&str] = &[
 fn attribute<'a>(
     b: &'a [u8],
     budget: &mut usize,
+    inspect: bool,
 ) -> Result<Option<(&'a str, Scalar<'a>)>, Invalid> {
     let mut key = None;
     let mut value = None;
@@ -155,11 +162,22 @@ fn attribute<'a>(
         };
         Ok(())
     })?;
-    let Some(key) = key.filter(|k| ATTRS.contains(k)) else {
+    let Some(key) =
+        key.filter(|k| ATTRS.contains(k) || (inspect && matches!(*k, "arguments" | "output")))
+    else {
         return Ok(None);
     };
     Ok(match value {
-        Some(v) => scalar(v, budget)?.map(|v| (key, v)),
+        Some(v) => scalar(
+            v,
+            budget,
+            if matches!(key, "output" | "arguments") {
+                MAX_BODY
+            } else {
+                256
+            },
+        )?
+        .map(|v| (key, v)),
         None => None,
     })
 }
@@ -186,7 +204,12 @@ fn label(s: &str) -> bool {
         && s.bytes()
             .all(|b| b.is_ascii_alphanumeric() || b"_./:-".contains(&b))
 }
-fn record(b: &[u8], budget: &mut usize, epoch: &str) -> Result<Option<Observation>, Invalid> {
+fn record(
+    b: &[u8],
+    budget: &mut usize,
+    epoch: &str,
+    inspect: bool,
+) -> Result<Option<Observation>, Invalid> {
     let mut attrs = BTreeMap::new();
     let mut event = None;
     let mut timestamp = None;
@@ -194,7 +217,7 @@ fn record(b: &[u8], budget: &mut usize, epoch: &str) -> Result<Option<Observatio
         match (n, v) {
             (1, Value::Fixed(ns)) if ns > 0 => timestamp = Some((ns / 1_000_000) as i64),
             (6, Value::Bytes(b)) => {
-                if let Some((k, v)) = attribute(b, budget)? {
+                if let Some((k, v)) = attribute(b, budget, inspect)? {
                     if attrs.insert(k, v).is_some() {
                         return Err(Invalid("malformed_protobuf"));
                     }
@@ -230,7 +253,13 @@ fn record(b: &[u8], budget: &mut usize, epoch: &str) -> Result<Option<Observatio
         _ => None,
     };
     let o = Observation {
-        inspection: None,
+        inspection: inspect.then(|| {
+            std::sync::Arc::new(super::inspection::Inspection::capture(
+                &tool,
+                text(attrs.get("arguments")),
+                text(attrs.get("output")),
+            ))
+        }),
         schema_version: SCHEMA_VERSION,
         source: "codex-otlp-tool-result-v1".into(),
         source_epoch: epoch.into(),
@@ -260,6 +289,9 @@ pub struct Batch {
     pub ignored: usize,
 }
 pub fn decode(body: &[u8], epoch: &str) -> Result<Batch, Invalid> {
+    decode_inspected(body, epoch, false)
+}
+pub(super) fn decode_inspected(body: &[u8], epoch: &str, inspect: bool) -> Result<Batch, Invalid> {
     if body.len() > MAX_BODY {
         return Err(Invalid("malformed_protobuf"));
     }
@@ -279,7 +311,7 @@ pub fn decode(body: &[u8], epoch: &str) -> Result<Batch, Invalid> {
                             if records > MAX_RECORDS {
                                 return Err(Invalid("malformed_protobuf"));
                             }
-                            match record(raw, budget, epoch)? {
+                            match record(raw, budget, epoch, inspect)? {
                                 Some(o) => result.observations.push(o),
                                 None => result.ignored += 1,
                             }
@@ -354,6 +386,29 @@ mod tests {
         assert!(!page.calls[0].start_observed);
         assert_eq!(page.calls[0].execution_success, Some(true));
         assert!(!serde_json::to_string(&page).unwrap().contains("PRIVATE"));
+    }
+    #[test]
+    fn only_opted_in_shell_input_is_exposed_to_the_private_inspector() {
+        let raw = batch(&[
+            attr("event.name", "codex.tool_result"), attr("tool_namespace", "functions"),
+            attr("tool_name", "exec_command"), attr("arguments", r#"{"cmd":"git diff PRIVATE_ARG","other":"PRIVATE_OTHER"}"#),
+            attr("output", "Chunk ID: abc\nWall time: 0.2 seconds\nProcess exited with code 2\nOutput:\nPRIVATE_OUT"),
+        ].concat());
+        assert!(
+            decode(&raw, "epoch").unwrap().observations[0]
+                .inspection
+                .is_none()
+        );
+        let mut batch = decode_inspected(&raw, "epoch", true).unwrap();
+        let o = batch.observations.pop().unwrap();
+        let c = o.inspection.as_deref().unwrap();
+        assert_eq!(c.input.as_deref(), Some("git diff PRIVATE_ARG"));
+        assert_eq!(c.exit_code, Some(2));
+        let call = super::super::store::Store::default()
+            .accept(o, 1, false)
+            .unwrap()
+            .unwrap();
+        assert!(!serde_json::to_string(&call).unwrap().contains("PRIVATE"));
     }
     #[test]
     fn event_clock_fills_absent_otlp_time_without_using_receipt_time() {

@@ -6,6 +6,7 @@ pub type Shared = Arc<Mutex<State>>;
 pub struct State {
     pub store: Store,
     pub enabled: bool,
+    pub inspecting: bool,
     pub replay: bool,
     pub running: bool,
     pub last_received_ms: Option<i64>,
@@ -41,6 +42,6 @@ impl State {
             "capabilities":if self.replay {serde_json::json!({"synthetic_fixture":true,"live_capture_verified":false})} else {serde_json::json!({"starts":false,"nested_calls":"verified_railway","parallel_calls":"verified_railway","subagents":"unverified","cancellation":"unverified","tool_errors":"unverified","parent_calls":false})},
             "attribution":if self.replay {"Fixture supplied labels; no verified plugin mapping"} else {"Hosted provider namespace suffix; not an installed manifest identity"},
             "observed_plugins":self.store.observed_plugins(),"last_received_ms":self.last_received_ms,"accepted_batches":self.accepted_batches.to_string(),"rejected_batches":self.rejected_batches.to_string(),
-            "last_rejection":self.last_rejection,"ignored_records":self.ignored_records.to_string(),"rejected_records":self.rejected_records.to_string(),"durable":false,"snapshot":self.store.snapshot()})
+            "last_rejection":self.last_rejection,"ignored_records":self.ignored_records.to_string(),"rejected_records":self.rejected_records.to_string(),"inspecting":self.inspecting,"durable":false,"snapshot":self.store.snapshot()})
     }
 }
