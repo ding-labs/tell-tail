@@ -48,6 +48,7 @@ impl Running {
                         .as_deref()
                         .expect("clap requires credential file"),
                     args.trace_config_out.as_deref(),
+                    args.inspect_chat_index.as_deref(),
                     traces.clone(),
                     stop.clone(),
                 )

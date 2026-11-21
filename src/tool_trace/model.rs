@@ -1,4 +1,6 @@
+use super::inspection::Inspection;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 pub const SCHEMA_VERSION: u32 = 1;
 pub const MAX_RECORD_BYTES: usize = 16 * 1024;
@@ -18,6 +20,8 @@ pub enum Phase {
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Observation {
+    #[serde(skip)]
+    pub inspection: Option<Arc<Inspection>>,
     pub schema_version: u32,
     pub source: String,
     pub source_epoch: String,
@@ -115,6 +119,8 @@ pub enum DurationBasis {
 
 #[derive(Clone, Debug, Serialize, Eq, PartialEq)]
 pub struct Call {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub inspection: Option<Arc<Inspection>>,
     #[serde(serialize_with = "decimal")]
     pub id: u64,
     #[serde(serialize_with = "decimal")]
@@ -122,6 +128,8 @@ pub struct Call {
     pub source: String,
     pub execution: String,
     pub correlated: bool,
+    #[serde(skip)]
+    pub scope_known: bool,
     pub tool: String,
     pub server: Option<String>,
     pub plugin: Option<String>,

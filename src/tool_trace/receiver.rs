@@ -37,6 +37,7 @@ struct App {
     host: String,
     token: String,
     epoch: String,
+    inspect: bool,
     queue: SyncSender<Batch>,
     queued_events: Arc<AtomicUsize>,
 }
@@ -83,6 +84,7 @@ impl Running {
         port: u16,
         key_path: &Path,
         config_out: Option<&Path>,
+        chat_index: Option<&Path>,
         shared: Shared,
         stop: Arc<AtomicUsize>,
     ) -> io::Result<Self> {
@@ -98,11 +100,12 @@ impl Running {
                 .create_new(true)
                 .mode(0o600)
                 .open(path)?;
-            writeln!(
-                f,
-                "[otel]\nlog_user_prompt = false\nlog_agent_responses = false\nexporter = {{ otlp-http = {{ endpoint = \"http://{host}/v1/logs\", protocol = \"binary\", headers = {{ \"x-tell-tail-probe-key\" = \"{token}\" }} }} }}"
+            f.write_all(
+                super::setup_config::fragment(port, &token, chat_index.is_some()).as_bytes(),
             )?;
         }
+        let inspect = chat_index.is_some();
+        let mut names = chat_index.map(|p| super::chat_names::Names::new(p.to_owned()));
         let (tx, rx) = mpsc::sync_channel::<Batch>(4);
         let queue_state = shared.clone();
         let queued_events = Arc::new(AtomicUsize::new(0));
@@ -110,13 +113,24 @@ impl Running {
         let consumer = thread::Builder::new()
             .name("tell-tail-trace-store".into())
             .spawn(move || {
-                while let Ok(batch) = rx.recv() {
-                    let count = batch.observations.len();
+                while let Ok(mut batch) = rx.recv() {
+                    if let Some(names) = names.as_mut().filter(|_| !batch.observations.is_empty()) {
+                        names.refresh();
+                        for observation in &mut batch.observations {
+                            if let Some(context) = &mut observation.inspection {
+                                Arc::make_mut(context).chat = names.get(&observation.execution_id);
+                            }
+                        }
+                    }
+                    let count = batch.observations.len() + batch.links.len();
                     let Ok(mut s) = queue_state.lock() else { break };
                     s.accepted_batches += 1;
                     s.ignored_records += batch.ignored as u64;
                     let now = crate::mcp::time::now_ms();
                     s.last_received_ms = Some(now);
+                    for link in batch.links {
+                        s.links.push(link);
+                    }
                     for o in batch.observations {
                         if s.store.accept(o, now, false).is_err() {
                             s.rejected_records += 1;
@@ -136,6 +150,7 @@ impl Running {
             host: host.clone(),
             token,
             epoch,
+            inspect,
             queue: tx,
             queued_events,
         };
@@ -144,6 +159,8 @@ impl Running {
             let mut s = shared
                 .lock()
                 .map_err(|_| io::Error::other("Trace state failed"))?;
+            s.inspecting = inspect;
+            s.turn_root = chat_index.and_then(Path::parent).map(Path::to_path_buf);
             s.enabled = true;
             s.running = true;
         }
@@ -252,12 +269,18 @@ async fn intake(State(app): State<App>, req: Request) -> Response {
             }
             return status;
         }
+        let spans = req.uri().path() == "/v1/traces";
         let body =
             match tokio::time::timeout(TIMEOUT, to_bytes(req.into_body(), otlp::MAX_BODY)).await {
                 Ok(Ok(b)) => b,
                 _ => return StatusCode::BAD_REQUEST,
             };
-        let batch = match otlp::decode(&body, &app.epoch) {
+        let decoded = if spans {
+            otlp::decode_links(&body)
+        } else {
+            otlp::decode_inspected(&body, &app.epoch, app.inspect)
+        };
+        let batch = match decoded {
             Ok(b) => b,
             Err(e) => {
                 if let Ok(mut s) = app.shared.lock() {
@@ -266,7 +289,7 @@ async fn intake(State(app): State<App>, req: Request) -> Response {
                 return StatusCode::BAD_REQUEST;
             }
         };
-        let count = batch.observations.len();
+        let count = batch.observations.len() + batch.links.len();
         if app
             .queued_events
             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
@@ -306,9 +329,11 @@ async fn intake(State(app): State<App>, req: Request) -> Response {
 }
 async fn serve(listener: TcpListener, app: App, stop: Arc<AtomicUsize>) -> io::Result<()> {
     let listener = tokio::net::TcpListener::from_std(listener)?;
-    let router = Router::new()
-        .route("/v1/logs", post(intake))
-        .with_state(app);
+    let mut router = Router::new().route("/v1/logs", post(intake));
+    if app.inspect {
+        router = router.route("/v1/traces", post(intake));
+    }
+    let router = router.with_state(app);
     let slots = Arc::new(Semaphore::new(4));
     let mut tasks = JoinSet::new();
     let mut tick = tokio::time::interval(Duration::from_millis(100));
@@ -345,7 +370,7 @@ mod tests {
         let state = Arc::new(Mutex::new(super::super::live::State::default()));
         let stop = Arc::new(AtomicUsize::new(0));
         let mut running =
-            Running::start(0, &path, Some(&config), state.clone(), stop.clone()).unwrap();
+            Running::start(0, &path, Some(&config), None, state.clone(), stop.clone()).unwrap();
         let key = std::fs::read_to_string(&path).unwrap();
         let key = key.trim();
         for (extra, credential, status) in [
@@ -394,6 +419,7 @@ mod saturation_tests {
             host: "127.0.0.1:4318".into(),
             token: "a".repeat(64),
             epoch: "epoch".into(),
+            inspect: false,
             queue,
             queued_events: budget.clone(),
         };

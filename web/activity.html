@@ -43,9 +43,10 @@
             <label>Source<select id="source"><option value="">All sources</option><option value="desktop_logs">Desktop logs</option><option value="mcp_logs">MCP logs</option><option value="tool_telemetry">Tool telemetry</option></select></label>
             <label>Plugin namespace<select id="plugin"><option value="">All observed plugins</option></select></label>
             <label>MCP server<select id="server"><option value="">All observed servers</option></select></label>
-            <label>Outcome<select id="outcome"><option value="">All outcomes</option><option value="failure_reported">Failure reported</option><option value="execution_failed">Execution failed</option><option value="tool_error">Tool reported error</option><option value="execution_succeeded">Execution succeeded</option><option value="completed">Completed</option><option value="ready_observed">Ready observed</option><option value="incomplete">Incomplete</option><option value="conflicting_evidence">Conflicting evidence</option><option value="denied">Denied</option><option value="cancelled">Cancelled</option></select></label>
+            <label>Outcome<select id="outcome"><option value="">All outcomes</option><option value="failure_reported">Failure reported</option><option value="command_failed">Command exited nonzero</option><option value="execution_failed">Execution failed</option><option value="tool_error">Tool reported error</option><option value="execution_succeeded">Execution succeeded</option><option value="completed">Completed</option><option value="ready_observed">Ready observed</option><option value="incomplete">Incomplete</option><option value="conflicting_evidence">Conflicting evidence</option><option value="denied">Denied</option><option value="cancelled">Cancelled</option></select></label>
             <label>Origin<select id="historical"><option value="">History and live</option><option value="true">Imported history</option><option value="false">Received after startup</option></select></label>
           </div></details>
+          <button type="button" id="scope-filter" title="Clear execution filter" hidden></button>
           <button id="clear" type="button" class="quiet">Reset</button>
         </form>
         <section id="time-navigator" class="time-navigator" aria-label="Activity over time"><div id="lanes"></div><div class="time-axis"><span id="time-start"></span><span id="time-middle"></span><span id="time-end"></span></div></section>
@@ -58,7 +59,7 @@
       <p id="display-note" class="display-note" role="status">Reading supported desktop observations…</p>
       <div id="workspace" class="workspace">
         <section id="feed" class="feed" aria-label="Activity evidence" tabindex="0">
-          <div id="list-heading" class="list-heading"><span>Recorded time</span><span>Observation</span><span>Outcome / duration</span></div>
+          <div id="list-heading" class="list-heading"><span>Time</span><span>Observation</span><span>Outcome / duration</span></div>
           <div id="rows" role="list"></div>
           <div id="empty" class="empty" hidden><div class="empty-symbol" aria-hidden="true">≋</div><h2 id="empty-title">Waiting for activity</h2><p id="empty-note"></p><button id="empty-reset" hidden>Clear filters</button></div>
           <section id="sources-view" hidden aria-label="Capture sources"><section id="user-sources" class="source-section"></section><div id="capture-sources"></div></section>

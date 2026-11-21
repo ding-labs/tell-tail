@@ -25,10 +25,11 @@ web = ["dep:toml_edit", "snapshot-notifications", "dep:axum", "dep:bytes", "dep:
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
 memchr = "2.7"
+time = { version = "0.3", default-features = false }
 tempfile = "3"
 ratatui = { version = "0.30.2", default-features = false, features = ["crossterm"] }
 crossterm = { version = "0.29", features = ["use-dev-tty"] }
-serde = { version = "1", features = ["derive"] }
+serde = { version = "1", features = ["derive", "rc"] }
 serde_json = { version = "1", features = ["raw_value"] }
 ureq = { version = "3.4.2", default-features = false, features = ["rustls"] }
 tokio = { version = "=1.52.3", default-features = false, features = ["sync"], optional = true }

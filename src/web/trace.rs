@@ -15,10 +15,14 @@ use tokio::sync::Semaphore;
 struct App {
     shared: Shared,
     streams: Arc<Semaphore>,
+    turn_reads: Arc<Semaphore>,
 }
 fn json(value: &impl serde::Serialize) -> Response {
+    json_bounded(value, 64 * 1024)
+}
+fn json_bounded(value: &impl serde::Serialize, limit: usize) -> Response {
     match serde_json::to_vec(value) {
-        Ok(b) if b.len() <= 64 * 1024 => {
+        Ok(b) if b.len() <= limit => {
             ([(header::CONTENT_TYPE, "application/json")], b).into_response()
         }
         _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
@@ -130,8 +134,25 @@ async fn calls(State(app): State<App>, req: Request) -> Response {
         Err(e) => failure(e),
     }
 }
+pub(super) fn private_input(
+    req: &Request,
+    context: Option<&crate::tool_trace::inspection::Inspection>,
+) -> Response {
+    if req
+        .headers()
+        .get("x-tell-tail-inspect")
+        .and_then(|v| v.to_str().ok())
+        != Some("local-input")
+    {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    match context.and_then(|c| c.input.as_deref()) {
+        Some(input) => json(&serde_json::json!({"input":input})),
+        None => StatusCode::NOT_FOUND.into_response(),
+    }
+}
 async fn detail(State(app): State<App>, Path(id): Path<u64>, req: Request) -> Response {
-    let p = match query(&req, &["as_of", "epoch"]) {
+    let p = match query(&req, &["as_of", "epoch", "input"]) {
         Ok(p) => p,
         Err(e) => return e.into_response(),
     };
@@ -148,8 +169,54 @@ async fn detail(State(app): State<App>, Path(id): Path<u64>, req: Request) -> Re
         return StatusCode::GONE.into_response();
     }
     match s.store.detail(id, as_of.unwrap_or(snap.watermark)) {
+        Ok(call) if p.contains_key("input") => private_input(&req, call.inspection.as_deref()),
         Ok(call) => json(&call),
         Err(e) => failure(e),
+    }
+}
+async fn turn(State(app): State<App>, Path(id): Path<u64>, req: Request) -> Response {
+    if req
+        .headers()
+        .get("x-tell-tail-inspect")
+        .and_then(|v| v.to_str().ok())
+        != Some("local-turn")
+    {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    let Ok(params) = query(&req, &["source"]) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    let Ok(permit) = app.turn_reads.try_acquire_owned() else {
+        return StatusCode::TOO_MANY_REQUESTS.into_response();
+    };
+    let (root, locator, live, scope) = {
+        let Ok(state) = app.shared.lock() else {
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        };
+        let Some(root) = state.turn_root.clone() else {
+            return StatusCode::NOT_FOUND.into_response();
+        };
+        let Ok(call) = state.store.detail(id, state.store.snapshot().watermark) else {
+            return StatusCode::GONE.into_response();
+        };
+        if params.get("source") != Some(&call.source) {
+            return StatusCode::GONE.into_response();
+        }
+        let Some(locator) = call.inspection.and_then(|c| c.locator.clone()) else {
+            return StatusCode::NOT_FOUND.into_response();
+        };
+        let live = state.store.chat_tools(&locator.chat);
+        let scope = state.links.resolve(&locator, &live);
+        (root, locator, live, scope)
+    };
+    let result = tokio::task::spawn_blocking(move || {
+        let _permit = permit;
+        crate::tool_trace::turn::read(&root, &locator, &scope, &live)
+    })
+    .await;
+    match result {
+        Ok(Ok(evidence)) => json_bounded(&evidence, 512 * 1024),
+        _ => StatusCode::SERVICE_UNAVAILABLE.into_response(),
     }
 }
 async fn events(State(app): State<App>) -> Response {
@@ -191,13 +258,24 @@ async fn events(State(app): State<App>) -> Response {
 }
 pub(super) fn router(shared: Shared) -> Router {
     Router::new()
+        .route(
+            "/call-input.mjs",
+            get(|| async {
+                (
+                    [(header::CONTENT_TYPE, "text/javascript")],
+                    include_str!("../../web/call-input.mjs"),
+                )
+            }),
+        )
         .route("/api/traces/snapshot", get(snapshot))
         .route("/api/traces/calls", get(calls))
         .route("/api/traces/call/{id}", get(detail))
+        .route("/api/traces/call/{id}/turn", get(turn))
         .route("/api/traces/events", get(events))
         .with_state(App {
             shared,
             streams: Arc::new(Semaphore::new(super::STREAMS)),
+            turn_reads: Arc::new(Semaphore::new(2)),
         })
 }
 #[cfg(test)]

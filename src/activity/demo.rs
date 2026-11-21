@@ -23,6 +23,7 @@ pub fn seed(traces: &Shared) {
             .store
             .accept(
                 Observation {
+                    inspection: None,
                     schema_version: 1,
                     source: "synthetic".into(),
                     source_epoch: "demo".into(),

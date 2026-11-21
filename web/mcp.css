@@ -80,3 +80,6 @@ main { padding-top: 20px; }
 #trace-copy-status { font-size: 12px; color: var(--ding-muted); }
 #trace-rows td:nth-child(2) { min-width: 190px; max-width: 300px; }
 @media(max-width:600px) { .activity-tabs { gap: 12px; flex-wrap: wrap; } .activity-tabs [role="tab"] { padding-block: 10px; } }
+
+.call-input{white-space:pre-wrap;overflow-wrap:anywhere;max-height:20rem;overflow:auto;padding:.75rem;font:12px/1.55 ui-monospace,monospace;text-align:left;user-select:text}
+.turn-panel{text-align:left;overflow-wrap:anywhere}.turn-panel blockquote{margin:8px 0;white-space:pre-wrap}.turn-tools{padding-left:1rem}.turn-tools small{display:block}.turn-tools .turn-failure small{color:var(--error)}.turn-panel button{margin-top:10px}

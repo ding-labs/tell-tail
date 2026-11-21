@@ -1,10 +1,11 @@
+import {diagnosticField} from './call-input.mjs';
 import {categories,age,el,safePreferences,savePreferences} from './activity-format.mjs';
 import {renderRows,renderBins,renderExactTimes} from './activity-feed.mjs';
 import {renderSources,sourceSummary} from './activity-sources.mjs';
 import {renderDetail} from './activity-detail.mjs';
 
 const $=id=>document.getElementById(id);
-const defaults=()=>({q:'',category:'',range:'all',interval:null,client:'',source:'',plugin:'',server:'',outcome:'',historical:'',diagnostics:false});
+const defaults=()=>({q:'',scope:'',scopeLabel:'',category:'',range:'all',interval:null,client:'',source:'',plugin:'',server:'',outcome:'',historical:'',diagnostics:false});
 const preferences=safePreferences();
 const state={view:'activity',filters:{activity:defaults(),tools:defaults(),problems:defaults()},snapshot:null,sources:null,page:null,bins:null,groups:new Map(),epoch:null,at:null,latest:null,latestEpoch:null,paused:false,held:false,cursor:null,next:null,selected:null,item:null,group:null,loading:false,connected:false,error:'',generation:0,request:null,detailRequest:null,detailGeneration:0,returnFocus:null,now:Date.now()};
 const labels={activity:'Activity',tools:'Tools & MCP',problems:'Problems',sources:'Sources'};
@@ -21,7 +22,7 @@ function persist(){savePreferences({compact:!!preferences.compact});}
 function cancelView(){state.request?.abort();state.generation++;state.loading=false;}
 function params(at,epoch,withCursor=false,now=state.now){
   const f=filter(),p=new URLSearchParams({as_of:at,epoch,view:state.view==='sources'?'activity':state.view});
-  for(const key of ['q','category','client','source','plugin','server','outcome','historical'])if(f[key])p.set(key,f[key]);
+  for(const key of ['q','scope','category','client','source','plugin','server','outcome','historical'])if(f[key])p.set(key,f[key]);
   if(f.diagnostics)p.set('diagnostics','true');
   if(f.range==='custom'&&f.interval){p.set('since',String(f.interval[0]));p.set('until',String(f.interval[1]));}
   else if(f.range!=='all'){p.set('since',String(Math.max(0,Math.floor(now-Number(f.range)))));}
@@ -65,7 +66,8 @@ function facetOptions(id,values,caption){
   node.replaceChildren(new Option(caption,''),...wanted.map(v=>new Option(v,v)));node.value=value;
 }
 function syncControls(){
-  const f=filter();$('view-title').textContent=labels[state.view];
+  const f=filter();$('scope-filter').hidden=!f.scope;$('scope-filter').textContent=f.scope ? `×  ${f.scopeLabel}` : '';
+  $('view-title').textContent=labels[state.view];
   document.querySelectorAll('[data-view]').forEach(n=>{if(n.dataset.view===state.view)n.setAttribute('aria-current','page');else n.removeAttribute('aria-current');});
   $('query-controls').hidden=state.view==='sources';$('sources-view').hidden=state.view!=='sources';$('rows').hidden=state.view==='sources';$('list-heading').hidden=state.view==='sources';$('pagination').hidden=state.view==='sources';
   for(const id of ['client','source','plugin','server','outcome','historical'])$(id).value=f[id];
@@ -157,7 +159,12 @@ async function inspect(id,focus,group=null){
       else {query.set('since',String(Math.max(0,selected.occurred_ms-5000)));query.set('until',String(selected.occurred_ms+5001));}
       return json(`/api/activity/items?${query}`,request.signal);
     };
-    renderDetail($('detail-content'),item,group,related,inspect);$('copy').disabled=false;
+    const inputUrl=`/api/activity/item/${encodeURIComponent(id)}?${new URLSearchParams({as_of:at,epoch,input:'1'})}`;
+    renderDetail($('detail-content'),item,group,related,inspect,inputUrl,selected=>{
+      state.view='tools';
+      state.filters.tools={...defaults(),category:'tools',scope:selected.scope_ref,scopeLabel:selected.inspection?.chat || `Execution ${selected.scope_ref.slice(5,13)}`};
+      changed();
+    });$('copy').disabled=false;
   }catch(error){if(error.name==='AbortError')return;placeholder.textContent='Evidence unavailable';$('detail-content').append(el('p','detail-note',error.message));}
 }
 function changed(){
@@ -196,6 +203,7 @@ for(const button of document.querySelectorAll('[data-view]'))button.onclick=()=>
   if(state.view===button.dataset.view)return;
   closeInspector(false);state.cursor=null;state.view=button.dataset.view;syncControls();$('feed').scrollTop=0;load({live:!frozen()});
 };
+$('scope-filter').onclick=()=>{filter().scope='';filter().scopeLabel='';changed();};
 for(const id of ['clear','empty-reset'])$(id).onclick=()=>{state.filters[state.view]=defaults();changed();};
 $('pause').onclick=()=>{if(state.paused){returnLive();return;}cancelView();state.paused=true;updateStatus();};
 $('pending').onclick=returnLive;$('latest').onclick=returnLive;
@@ -207,7 +215,7 @@ $('lanes').addEventListener('focusin',hold);
 $('close-detail').onclick=()=>closeInspector();
 $('inspector').addEventListener('cancel',event=>{event.preventDefault();closeInspector();});
 narrow.addEventListener('change',()=>{if($('inspector').open){$('inspector').close();showInspector();}});
-$('copy').onclick=async()=>{if(!state.item)return;try{await navigator.clipboard.writeText(`Tell-Tail diagnostic summary · Metadata only\n${JSON.stringify({event:state.item,group:state.group||undefined},null,2)}`);$('copy-status').textContent='Copied sanitized metadata.';}catch{$('copy-status').textContent='Clipboard unavailable in this browser.';}};
+$('copy').onclick=async()=>{if(!state.item)return;try{await navigator.clipboard.writeText(`Tell-Tail diagnostic summary · Metadata only\n${JSON.stringify({event:state.item,group:state.group||undefined},diagnosticField,2)}`);$('copy-status').textContent='Copied sanitized metadata.';}catch{$('copy-status').textContent='Clipboard unavailable in this browser.';}};
 $('exact-times').onclick=()=>{if(!state.bins)return;hold();renderExactTimes($('times-values'),state.bins,selectRange);$('times-dialog').showModal();updateStatus();};
 $('close-times').onclick=()=>$('times-dialog').close();
 $('density').onclick=()=>{preferences.compact=!preferences.compact;applyPreferences();persist();};

@@ -33,7 +33,7 @@ test('desktop timeline freezes evidence, filters all retained data, and supports
   await page.locator('#rows .event-row').click();await page.waitForFunction(()=>document.getElementById('detail-content').textContent.includes('Failure group'));
   assert.match(await page.locator('#detail-content').textContent(),/Sign in/);await page.keyboard.press('Escape');
   await page.locator('[data-view="sources"]').click();await page.waitForFunction(()=>document.getElementById('sources-view').textContent.includes('Unrecognized records'));
-  assert.match(await page.locator('#sources-view').textContent(),/Chat correlation is unverified/);
+  assert.match(await page.locator('#sources-view').textContent(),/Local call inspection is off/);
   await page.locator('[data-view="activity"]').click();await page.locator('#clear').click();await page.locator('#pending').click();
   await page.waitForFunction(()=>document.querySelectorAll('#rows .event-row').length===13);
   await page.locator('#rows .event-row').filter({hasText:'Browser runtime reported ready'}).click();await page.waitForFunction(()=>document.getElementById('detail-title').textContent.includes('Browser runtime'));

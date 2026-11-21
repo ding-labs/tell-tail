@@ -1,6 +1,10 @@
 //! Restricted OTLP logs/protobuf adapter for the verified Codex tool_result shape.
 //! Payload fields and resource attributes are skipped without allocating them.
+#[cfg(any(feature = "web", test))]
+mod spans;
 use super::model::{Observation, Phase, SCHEMA_VERSION};
+#[cfg(any(feature = "web", test))]
+pub(super) use spans::decode_links;
 use std::collections::BTreeMap;
 
 pub const MAX_BODY: usize = 1024 * 1024;
@@ -104,7 +108,11 @@ enum Scalar<'a> {
     Int(u64),
     Bool(bool),
 }
-fn scalar<'a>(b: &'a [u8], budget: &mut usize) -> Result<Option<Scalar<'a>>, Invalid> {
+fn scalar<'a>(
+    b: &'a [u8],
+    budget: &mut usize,
+    max_text: usize,
+) -> Result<Option<Scalar<'a>>, Invalid> {
     let mut result = None;
     let mut count = 0;
     walk(b, budget, |n, v, _| {
@@ -113,7 +121,9 @@ fn scalar<'a>(b: &'a [u8], budget: &mut usize) -> Result<Option<Scalar<'a>>, Inv
             return Err(Invalid("malformed_protobuf"));
         }
         result = match (n, v) {
-            (1, Value::Bytes(s)) if s.len() <= 256 => std::str::from_utf8(s).ok().map(Scalar::Text),
+            (1, Value::Bytes(s)) if s.len() <= max_text => {
+                std::str::from_utf8(s).ok().map(Scalar::Text)
+            }
             (2, Value::Int(v)) if v <= 1 => Some(Scalar::Bool(v == 1)),
             (3, Value::Int(v)) => Some(Scalar::Int(v)),
             _ => None,
@@ -124,6 +134,7 @@ fn scalar<'a>(b: &'a [u8], budget: &mut usize) -> Result<Option<Scalar<'a>>, Inv
 }
 const ATTRS: &[&str] = &[
     "event.name",
+    "event.timestamp",
     "tool_name",
     "tool_namespace",
     "mcp_server",
@@ -135,6 +146,8 @@ const ATTRS: &[&str] = &[
 fn attribute<'a>(
     b: &'a [u8],
     budget: &mut usize,
+    allowed: &[&str],
+    inspect: bool,
 ) -> Result<Option<(&'a str, Scalar<'a>)>, Invalid> {
     let mut key = None;
     let mut value = None;
@@ -154,11 +167,22 @@ fn attribute<'a>(
         };
         Ok(())
     })?;
-    let Some(key) = key.filter(|k| ATTRS.contains(k)) else {
+    let Some(key) =
+        key.filter(|k| allowed.contains(k) || (inspect && matches!(*k, "arguments" | "output")))
+    else {
         return Ok(None);
     };
     Ok(match value {
-        Some(v) => scalar(v, budget)?.map(|v| (key, v)),
+        Some(v) => scalar(
+            v,
+            budget,
+            if matches!(key, "output" | "arguments") {
+                MAX_BODY
+            } else {
+                256
+            },
+        )?
+        .map(|v| (key, v)),
         None => None,
     })
 }
@@ -185,7 +209,12 @@ fn label(s: &str) -> bool {
         && s.bytes()
             .all(|b| b.is_ascii_alphanumeric() || b"_./:-".contains(&b))
 }
-fn record(b: &[u8], budget: &mut usize, epoch: &str) -> Result<Option<Observation>, Invalid> {
+fn record(
+    b: &[u8],
+    budget: &mut usize,
+    epoch: &str,
+    inspect: bool,
+) -> Result<Option<Observation>, Invalid> {
     let mut attrs = BTreeMap::new();
     let mut event = None;
     let mut timestamp = None;
@@ -193,7 +222,7 @@ fn record(b: &[u8], budget: &mut usize, epoch: &str) -> Result<Option<Observatio
         match (n, v) {
             (1, Value::Fixed(ns)) if ns > 0 => timestamp = Some((ns / 1_000_000) as i64),
             (6, Value::Bytes(b)) => {
-                if let Some((k, v)) = attribute(b, budget)? {
+                if let Some((k, v)) = attribute(b, budget, ATTRS, inspect)? {
                     if attrs.insert(k, v).is_some() {
                         return Err(Invalid("malformed_protobuf"));
                     }
@@ -229,6 +258,17 @@ fn record(b: &[u8], budget: &mut usize, epoch: &str) -> Result<Option<Observatio
         _ => None,
     };
     let o = Observation {
+        inspection: inspect.then(|| {
+            let mut context = super::inspection::Inspection::capture(
+                &tool,
+                text(attrs.get("arguments")),
+                text(attrs.get("output")),
+            );
+            context.locator = execution
+                .zip(text(attrs.get("call_id")))
+                .and_then(|(chat, call)| super::turn::Locator::new(chat, call));
+            std::sync::Arc::new(context)
+        }),
         schema_version: SCHEMA_VERSION,
         source: "codex-otlp-tool-result-v1".into(),
         source_epoch: epoch.into(),
@@ -243,7 +283,9 @@ fn record(b: &[u8], budget: &mut usize, epoch: &str) -> Result<Option<Observatio
             .map(str::to_owned),
         plugin,
         phase: Phase::Completed,
-        timestamp_ms: timestamp,
+        timestamp_ms: timestamp.or_else(|| {
+            text(attrs.get("event.timestamp")).and_then(crate::mcp::time::timestamp_ms)
+        }),
         duration_ms: number(attrs.get("duration_ms")).filter(|n| *n <= 86_400_000),
         execution_success: outcome,
         tool_error: None,
@@ -251,18 +293,20 @@ fn record(b: &[u8], budget: &mut usize, epoch: &str) -> Result<Option<Observatio
     o.validate().map_err(|_| Invalid("invalid_observation"))?;
     Ok(Some(o))
 }
+#[derive(Default)]
 pub struct Batch {
+    pub links: Vec<super::turn::links::Link>,
     pub observations: Vec<Observation>,
     pub ignored: usize,
 }
 pub fn decode(body: &[u8], epoch: &str) -> Result<Batch, Invalid> {
+    decode_inspected(body, epoch, false)
+}
+pub(super) fn decode_inspected(body: &[u8], epoch: &str, inspect: bool) -> Result<Batch, Invalid> {
     if body.len() > MAX_BODY {
         return Err(Invalid("malformed_protobuf"));
     }
-    let mut result = Batch {
-        observations: Vec::new(),
-        ignored: 0,
-    };
+    let mut result = Batch::default();
     let mut records = 0;
     let mut budget = MAX_FIELDS;
     walk(body, &mut budget, |n, v, budget| {
@@ -275,7 +319,7 @@ pub fn decode(body: &[u8], epoch: &str) -> Result<Batch, Invalid> {
                             if records > MAX_RECORDS {
                                 return Err(Invalid("malformed_protobuf"));
                             }
-                            match record(raw, budget, epoch)? {
+                            match record(raw, budget, epoch, inspect)? {
                                 Some(o) => result.observations.push(o),
                                 None => result.ignored += 1,
                             }
@@ -334,6 +378,63 @@ mod tests {
         b
     }
     #[test]
+    fn spans_project_only_native_owners_and_nested_dispatches() {
+        let attrs = |field: u64, values: &[(&str, &str)]| -> Vec<u8> {
+            values
+                .iter()
+                .flat_map(|(k, v)| {
+                    msg(
+                        field,
+                        &[msg(1, k.as_bytes()), msg(2, &msg(1, v.as_bytes()))].concat(),
+                    )
+                })
+                .collect()
+        };
+        let ids = [
+            ("conversation.id", "private-chat"),
+            ("turn_id", "t"),
+            ("call_id", "wrapper"),
+            ("cell.id", "2"),
+        ];
+        let owner = [msg(5, b"code_mode.handler.execute"), attrs(9, &ids)].concat();
+        let mut child = ids;
+        child[2] = ("call_id", "child");
+        let event = [
+            msg(2, b"codex.code_mode.nested_tool_dispatched"),
+            attrs(3, &child),
+            attrs(
+                3,
+                &[
+                    ("tool_source", "code_mode"),
+                    ("tool_name", "exec_command"),
+                    ("tool_namespace", "functions"),
+                    ("arguments", "private-input"),
+                ],
+            ),
+        ]
+        .concat();
+        let broker = [msg(5, b"code_mode.broker.invoke_tool"), msg(11, &event)].concat();
+        let wait = [msg(5, b"code_mode.handler.wait"), attrs(9, &ids)].concat();
+        let body = msg(
+            1,
+            &msg(
+                2,
+                &[msg(2, &broker), msg(2, &wait), msg(2, &owner)].concat(),
+            ),
+        );
+        let batch = decode_links(&body).unwrap();
+        assert!(batch.observations.is_empty());
+        assert_eq!(batch.links.len(), 2);
+        assert_eq!(
+            batch.links[0].child_tool.as_deref(),
+            Some("functions.exec_command")
+        );
+        assert_eq!(batch.links[0].cell, batch.links[1].cell);
+        assert_ne!(batch.links[0].call, batch.links[1].call);
+        assert!(batch.links[1].child_tool.is_none());
+        assert!(!format!("{:?}", batch.links).contains("private"));
+    }
+    #[test]
     fn verified_namespaced_result_is_payload_free_and_deduplicated() {
         let b = batch(&fixture());
         let mut store = super::super::store::Store::default();
@@ -350,6 +451,50 @@ mod tests {
         assert!(!page.calls[0].start_observed);
         assert_eq!(page.calls[0].execution_success, Some(true));
         assert!(!serde_json::to_string(&page).unwrap().contains("PRIVATE"));
+    }
+    #[test]
+    fn only_opted_in_shell_input_is_exposed_to_the_private_inspector() {
+        let raw = batch(&[
+            attr("event.name", "codex.tool_result"), attr("tool_namespace", "functions"),
+            attr("tool_name", "exec_command"), attr("arguments", r#"{"cmd":"git diff PRIVATE_ARG","other":"PRIVATE_OTHER"}"#),
+            attr("output", "Chunk ID: abc\nWall time: 0.2 seconds\nProcess exited with code 2\nOutput:\nPRIVATE_OUT"),
+        ].concat());
+        assert!(
+            decode(&raw, "epoch").unwrap().observations[0]
+                .inspection
+                .is_none()
+        );
+        let mut batch = decode_inspected(&raw, "epoch", true).unwrap();
+        let o = batch.observations.pop().unwrap();
+        let c = o.inspection.as_deref().unwrap();
+        assert_eq!(c.input.as_deref(), Some("git diff PRIVATE_ARG"));
+        assert_eq!(c.exit_code, Some(2));
+        let call = super::super::store::Store::default()
+            .accept(o, 1, false)
+            .unwrap()
+            .unwrap();
+        assert!(!serde_json::to_string(&call).unwrap().contains("PRIVATE"));
+    }
+    #[test]
+    fn event_clock_fills_absent_otlp_time_without_using_receipt_time() {
+        let raw = [
+            fixture(),
+            attr("event.timestamp", "2026-11-21T17:38:06.123Z"),
+        ]
+        .concat();
+        let read = |bytes: &[u8]| {
+            decode(&batch(bytes), "epoch")
+                .unwrap()
+                .observations
+                .remove(0)
+                .timestamp_ms
+        };
+        assert_eq!(read(&raw), Some(1795282686123));
+        let mut timed = raw;
+        timed.push(9);
+        timed.extend(1_000_000u64.to_le_bytes());
+        assert_eq!(read(&timed), Some(1));
+        assert_eq!(read(&fixture()), None);
     }
     #[test]
     fn semantic_event_attribute_takes_precedence_over_otlp_callsite_name() {

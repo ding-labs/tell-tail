@@ -35,6 +35,10 @@ pub enum Severity {
 /// generic attributes map, raw body, URL, path, or native conversation identifier.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct Item {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub trace_call_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub inspection: Option<std::sync::Arc<crate::tool_trace::inspection::Inspection>>,
     #[serde(serialize_with = "crate::tool_trace::model::decimal")]
     pub id: u64,
     #[serde(serialize_with = "crate::tool_trace::model::decimal")]
@@ -86,6 +90,8 @@ pub struct Evidence {
 impl Item {
     pub fn observation(category: Category, kind: &'static str, summary: &'static str) -> Self {
         Self {
+            inspection: None,
+            trace_call_id: None,
             id: 0,
             revision: 0,
             ordinal: 0,

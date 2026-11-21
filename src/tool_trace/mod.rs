@@ -1,10 +1,14 @@
 //! Source-independent, bounded per-tool diagnostic evidence.
 //! A replay contract is not a claim of desktop capture support.
+#[cfg(feature = "web")]
+mod chat_names;
 mod correlate;
 pub(crate) mod identity;
+pub mod inspection;
 pub mod model;
 pub mod replay;
 pub mod store;
+pub mod turn;
 
 pub mod live;
 pub mod otlp;

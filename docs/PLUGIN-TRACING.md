@@ -38,8 +38,7 @@ initially timed out when querying all marketplaces; a later scoped query for
 Installed-but-unused plugins and skills without tool calls do not produce rows.
 This is automatic discovery of observed activity, not an installed-plugin inventory.
 
-This is result-only capture. Starts, cancellations, subagent coverage, parent
-relationships, and provider-level errors are unverified. A source `success=true`
+The default exporter captures results. Starts, cancellations, subagent coverage, and provider-level errors are unverified. The optional inspector can also link nested calls. A source `success=true`
 means reported tool execution success; it is not proof that a business operation
 succeeded. A shell command exiting nonzero can still have execution success.
 Missing source completion timestamps stay missing; the table labels receipt time
@@ -47,6 +46,44 @@ when displaying it instead. Duration is client-reported, with approval/queue sco
 unverified. No account or balance access is needed for verification.
 
 See the [capture audit](PLUGIN-TRACE-CAPTURE-AUDIT.md) for evidence and limitations.
+
+## Local call inspection
+
+On macOS, use `tell-tail tracing enable --inspect-calls` for a new installation.
+For an existing installation, run the **new executable** with
+`tracing upgrade --inspect-calls`. The upgrade restarts the collector, which clears
+in-memory history. A subsequent upgrade preserves the setting. Use
+`tracing upgrade --inspect-calls=false` to return to metadata-only capture.
+For a standalone web receiver, pass `--inspect-chat-index PATH/TO/session_index.jsonl`.
+
+The collector matches the result's conversation ID exactly against the most
+recent 512 KiB of the local chat-name index. The displayed title is the name at
+capture time. For recognized shell and scripting tools it can retain up to
+1,536 UTF-8 bytes of submitted command or script in memory. A command may itself
+contain private paths or secrets. The local inspector fetches that text when
+expanded. Lists expose the operation label and, when matched, chat title.
+Other recognized tools can show a file basename, terminal polling, a browser action
+title, web operations or recognized parameter names. The shell working directory
+is shown by its basename. **Copy diagnostic summary** omits the inspection fields. Tool output bodies and
+complete conversation histories are never stored by this mode. Unsupported
+inputs, absent names and unavailable process exit codes remain unknown.
+
+Selecting a captured call reads the matching local chat file on demand. The
+inspector shows the user message, tools recorded in that turn, process exit codes
+and a bounded excerpt of failure output. It matches the native conversation,
+call and turn identifiers. Repeated tool names and timing are insufficient to
+establish a relationship. Turn details reflect the local history available when
+opened or refreshed. The reader checks the latest 16 MiB and displays up to 128
+tools, with a partial-history notice when a limit applies. The request and failure
+excerpts stay out of the feed, copied diagnostics and collector storage.
+
+Inspection also configures an authenticated local trace exporter. Restart Codex
+after enabling it. A nested dispatch is matched to its owning script by chat,
+turn and cell. The child call ID ties the dispatch to its result. Codex may
+alternatively supply an executed-tool list in its local history. A script that
+appeared before parent links were captured can still show its turn and recorded
+failures. The inspector labels missing child evidence. It can only certify a
+complete child list when Codex explicitly records completeness.
 
 ## Persistent macOS setup
 
@@ -200,8 +237,8 @@ do not paste their contents into issues, chats, URLs, or command arguments.
    does not prove plugin coverage.
 
 The generated fragment disables prompt and agent-response logging. The exporter
-may still send tool arguments/output in a batch; Tell-Tail discards them before
-queueing or retaining normalized observations. Unknown fields are never printed.
+may still send tool arguments/output in a batch. The default receiver discards
+these fields. Opt-in local call inspection retains the bounded fields described above. Unknown fields are never printed.
 The receiver is an in-memory diagnostic tool, not a durable audit system.
 
 On later collector starts, reuse `--trace-port` and `--trace-token-file`, and omit

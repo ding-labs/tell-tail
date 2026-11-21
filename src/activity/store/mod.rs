@@ -137,8 +137,14 @@ impl Store {
         let diagnostic = item.diagnostic;
         // Conservative charge covers map nodes, keys, string capacity and Vec overhead.
         let entry = Entry {
+            bytes: size
+                + 1024
+                + item
+                    .inspection
+                    .as_ref()
+                    .and_then(|c| c.input.as_ref())
+                    .map_or(0, |v| v.len()),
             item,
-            bytes: size + 1024,
         };
         if let Some(old) = self.current.insert(id, entry.clone()) {
             self.charged -= old.bytes;
@@ -217,7 +223,9 @@ impl Store {
         while self.sources.len() > MAX_SOURCES_HISTORY {
             let old = self.sources.pop_front().unwrap();
             self.charged -= old.bytes;
-            self.floor = self.sequence;
+            if let Some(first) = self.sources.front() {
+                self.floor = self.floor.max(first.sequence);
+            }
         }
         self.enforce();
         Ok(())
@@ -321,6 +329,21 @@ mod tests {
         assert_eq!(s.view(s.sequence).unwrap().len(), 1);
         assert!(s.sources_at(frozen).unwrap().running);
         assert!(!s.sources_at(s.sequence).unwrap().running);
+    }
+    #[test]
+    fn rotating_source_status_keeps_recent_inspectors_readable() {
+        let mut s = Store::default();
+        let id = s.accept("call".into(), item(Category::Tools)).unwrap();
+        for n in 0..=MAX_SOURCES_HISTORY {
+            s.update_sources(Sources {
+                ignored_records: n as u64,
+                ..Sources::default()
+            })
+            .unwrap();
+        }
+        assert!(s.detail(id, s.sequence - 1).is_ok());
+        assert!(s.sources_at(s.sequence - 1).is_ok());
+        assert!(s.check(0).is_err());
     }
     #[test]
     fn noisy_category_does_not_evict_quiet_tools_and_expiry_is_explicit() {
